@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { HelpTooltip } from '@/components/ui/help-tooltip'
-import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge, ProgressIndicator } from '@/components/ui/enhanced-components'
-import AddressAutocomplete, { AddressData } from '@/components/ui/AddressAutocomplete'
-import CopyFromPrevious from '@/components/ui/CopyFromPrevious'
-import { useFormSmartDefaults } from '@/hooks/useSmartDefaults'
-import { BuildingFormData } from '@/types'
+import { Card } from '../ui/card'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Badge } from '../ui/badge'
+import { LoadingSpinner } from '../ui/loading-spinner'
+import { HelpTooltip } from '../ui/help-tooltip'
+import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge, ProgressIndicator } from '../ui/enhanced-components'
+import AddressAutocomplete, { AddressData } from '../ui/AddressAutocomplete'
+import CopyFromPrevious from '../ui/CopyFromPrevious'
+import { useFormSmartDefaults } from '../../hooks/useSmartDefaults'
+import { BuildingFormData } from '../../types'
 import {
   Building,
   MapPin,
@@ -33,7 +33,7 @@ import {
   Users,
   Accessibility
 } from 'lucide-react'
-import '@/styles/design-system.css'
+import '../../styles/design-system.css'
 
 interface BuildingFormProps {
   initialData?: Partial<BuildingFormData>
