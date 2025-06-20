@@ -103,6 +103,9 @@ global.console = {
   error: vi.fn(),
 }
 
+// Import vitest globals
+import { afterEach } from 'vitest'
+
 // Clean up after each test
 afterEach(() => {
   vi.clearAllMocks()
