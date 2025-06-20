@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { ToastProvider } from '@/components/ui/toast'
-import { ThemeProvider } from '@/contexts/ThemeContext'
-import { RootAuthProvider } from '@/components/auth/RootAuthProvider'
-import config from '@/lib/config'
+import { ToastProvider } from '../components/ui/toast'
+import { ThemeProvider } from '../contexts/ThemeContext'
+import { RootAuthProvider } from '../components/auth/RootAuthProvider'
+import config from '../lib/config'
 import "./globals.css";
-import "@/styles/design-system.css";
-import "@/styles/professional-light-theme.css";
+import "../styles/design-system.css";
+import "../styles/professional-light-theme.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
