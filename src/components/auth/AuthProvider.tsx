@@ -1,11 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs'
-import { UserRole, User } from '@/types'
-import config from '@/lib/config'
-import { authConfigManager, AuthMode, isDemoMode } from '@/lib/auth-config'
-import { collectUserAction } from '@/lib/data-collection'
+import { UserRole, User } from '../../types'
+import config from '../../lib/config'
+import { authConfigManager, AuthMode } from '../../lib/auth-config'
+import { collectUserAction } from '../../lib/data-collection'
 
 interface AuthContextType {
   user: User | null
@@ -141,170 +140,16 @@ function DemoAuthProvider({ children }: AuthProviderProps) {
   )
 }
 
-// Clerk AuthProvider for production mode (only used when wrapped by ClerkProvider)
-function ClerkAuthProvider({ children }: AuthProviderProps) {
-  const { user: clerkUser, isLoaded } = useUser()
-  const { signOut: clerkSignOut } = useClerkAuth()
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+// Removed ClerkAuthProvider - using demo mode only
 
-  // Role hierarchy for permission checking
-  const roleHierarchy: Record<UserRole, number> = {
-    'no_access': 0,
-    'view': 1,
-    'submit': 2,
-    'edit': 3,
-  }
-
-  useEffect(() => {
-    if (isLoaded) {
-      if (clerkUser) {
-        // Transform Clerk user to our User type
-        const transformedUser: User = {
-          id: clerkUser.id,
-          email: clerkUser.emailAddresses[0]?.emailAddress || '',
-          firstName: clerkUser.firstName || '',
-          lastName: clerkUser.lastName || '',
-          role: (clerkUser.publicMetadata?.role as UserRole) || 'submit',
-          createdAt: clerkUser.createdAt?.toISOString() || new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        }
-        setUser(transformedUser)
-
-        // Collect user action
-        collectUserAction('clerk_login', {
-          userId: transformedUser.id,
-          email: transformedUser.email,
-          role: transformedUser.role,
-        })
-      } else {
-        setUser(null)
-      }
-      setIsLoading(false)
-    }
-  }, [clerkUser, isLoaded])
-
-  const hasRole = (role: UserRole): boolean => {
-    if (!user) return false
-    return user.role === role
-  }
-
-  const hasPermission = (requiredPermission: UserRole): boolean => {
-    if (!user) return false
-    return roleHierarchy[user.role] >= roleHierarchy[requiredPermission]
-  }
-
-  const updateUserRole = async (role: UserRole): Promise<void> => {
-    if (!clerkUser) return
-
-    try {
-      // TODO: Fix Clerk user metadata update
-      // The publicMetadata property is not available in the current Clerk version
-      // await clerkUser.update({
-      //   publicMetadata: {
-      //     ...clerkUser.publicMetadata,
-      //     role,
-      //   },
-      // })
-
-      // Update local state
-      setUser(prev => prev ? { ...prev, role } : null)
-
-      // Collect user action
-      collectUserAction('role_updated', {
-        userId: user?.id,
-        newRole: role,
-        previousRole: user?.role,
-      })
-    } catch (error) {
-      console.error('Failed to update user role:', error)
-      throw error
-    }
-  }
-
-  const signOut = async (): Promise<void> => {
-    collectUserAction('clerk_logout', {
-      userId: user?.id,
-      email: user?.email,
-    })
-    await clerkSignOut()
-  }
-
-  const switchAuthMode = (mode: AuthMode): void => {
-    authConfigManager.switchMode(mode)
-    collectUserAction('auth_mode_switched', {
-      userId: user?.id,
-      newMode: mode,
-      previousMode: AuthMode.CLERK,
-    })
-  }
-
-  const refreshUser = async (): Promise<void> => {
-    if (!clerkUser) return
-
-    try {
-      await clerkUser.reload()
-      // User state will be updated via the useEffect
-    } catch (error) {
-      console.error('Failed to refresh user:', error)
-    }
-  }
-
-  const value: AuthContextType = {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
-    hasRole,
-    hasPermission,
-    updateUserRole,
-    signOut,
-    authMode: AuthMode.CLERK,
-    switchAuthMode,
-    refreshUser,
-  }
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
-
-// Main AuthProvider that chooses between demo and production modes
+// Simplified AuthProvider - always uses demo mode
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [authMode, setAuthMode] = useState<AuthMode>(authConfigManager.isDemoMode() ? AuthMode.DEMO : AuthMode.CLERK)
-
-  useEffect(() => {
-    // Listen for auth mode changes
-    const unsubscribe = authConfigManager.addListener((config) => {
-      setAuthMode(config.mode)
-    })
-
-    return unsubscribe
-  }, [])
-
   // Debug logging
-  const isClerkConfigured = authConfigManager.isClerkConfigured()
   if (typeof window !== 'undefined') {
-    console.log('🔐 AuthProvider Decision:', {
-      demoMode: config.app.demoMode,
-      authMode,
-      isClerkConfigured,
-      willUseDemoMode: config.app.demoMode || authMode === AuthMode.DEMO || !isClerkConfigured,
-    })
+    console.log('🎭 AuthProvider: Using demo mode only')
   }
 
-  // Always use demo mode if explicitly enabled or if Clerk is not properly configured
-  if (config.app.demoMode || authMode === AuthMode.DEMO || !isClerkConfigured) {
-    return <DemoAuthProvider>{children}</DemoAuthProvider>
-  }
-
-  // Only use Clerk if we're in production mode and Clerk is properly configured
-  if (authMode === AuthMode.CLERK && isClerkConfigured) {
-    return <ClerkAuthProvider>{children}</ClerkAuthProvider>
-  }
-
-  // Fallback to demo mode
+  // Always use demo mode
   return <DemoAuthProvider>{children}</DemoAuthProvider>
 }
 
