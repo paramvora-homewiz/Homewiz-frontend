@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { HelpTooltip } from '@/components/ui/help-tooltip'
-import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge } from '@/components/ui/enhanced-components'
-import { OperatorFormData } from '@/types'
+import { Card } from '../ui/card'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Badge } from '../ui/badge'
+import { LoadingSpinner } from '../ui/loading-spinner'
+import { HelpTooltip } from '../ui/help-tooltip'
+import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge } from '../ui/enhanced-components'
+import { OperatorFormData } from '../../types'
 import {
   User,
   Mail,
@@ -25,7 +25,7 @@ import {
   Save,
   X
 } from 'lucide-react'
-import '@/styles/design-system.css'
+import '../../styles/design-system.css'
 
 interface OperatorFormProps {
   initialData?: Partial<OperatorFormData>

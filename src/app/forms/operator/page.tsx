@@ -1,8 +1,8 @@
 'use client'
 
-import OperatorForm from '@/components/forms/OperatorForm'
-import { FormDataProvider } from '@/components/forms/FormDataProvider'
-import { OperatorFormData } from '@/types'
+import OperatorForm from '../../../components/forms/OperatorForm'
+import { FormDataProvider } from '../../../components/forms/FormDataProvider'
+import { OperatorFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 

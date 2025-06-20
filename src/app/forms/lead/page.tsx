@@ -1,8 +1,8 @@
 'use client'
 
-import LeadForm from '@/components/forms/LeadForm'
-import { FormDataProvider, useFormData } from '@/components/forms/FormDataProvider'
-import { LeadFormData } from '@/types'
+import LeadForm from '../../../components/forms/LeadForm'
+import { FormDataProvider, useFormData } from '../../../components/forms/FormDataProvider'
+import { LeadFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 

@@ -1,8 +1,8 @@
 'use client'
 
-import BuildingForm from '@/components/forms/BuildingForm'
-import { FormDataProvider, useFormData } from '@/components/forms/FormDataProvider'
-import { BuildingFormData } from '@/types'
+import BuildingForm from '../../../components/forms/BuildingForm'
+import { FormDataProvider, useFormData } from '../../../components/forms/FormDataProvider'
+import { BuildingFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
