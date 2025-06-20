@@ -259,7 +259,7 @@ export function useFormSmartDefaults(formType: 'operator' | 'building' | 'room' 
         return acc
       }, {} as Record<string, number>)
 
-      return Object.entries(counts).sort(([,a], [,b]) => b - a)[0]?.[0]
+      return Object.entries(counts).sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0]
     }
 
     switch (formType) {

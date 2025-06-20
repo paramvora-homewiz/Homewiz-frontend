@@ -41,6 +41,13 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
     ready_to_rent: true,
     status: 'AVAILABLE',
     active_tenants: 0,
+    maximum_people_in_room: 1, // Required field
+    private_room_rent: 0, // Required field
+    floor_number: 1, // Required field
+    bed_count: 1, // Required field
+    bathroom_type: 'private', // Required field
+    bed_size: 'twin', // Required field
+    bed_type: 'standard', // Required field
     mini_fridge: false,
     sink: false,
     bedding_provided: false,

@@ -33,15 +33,15 @@ const isOperatorRoute = createRouteMatcher([
   '/api/operator(.*)'
 ])
 
-export default clerkMiddleware((auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
   // Check if we're in demo mode
   if (appConfig.app.demoMode) {
     console.log('🎭 Demo mode enabled - bypassing authentication')
     return NextResponse.next()
   }
 
-  const { userId, sessionClaims } = auth()
-  const userRole = sessionClaims?.metadata?.role as string || 'submit'
+  const { userId, sessionClaims } = await auth()
+  const userRole = (sessionClaims?.metadata as any)?.role as string || 'submit'
 
   // Allow public routes
   if (isPublicRoute(req)) {
@@ -50,12 +50,16 @@ export default clerkMiddleware((auth, req) => {
 
   // Protect all other routes - require authentication
   if (isProtectedRoute(req)) {
-    auth().protect()
+    if (!userId) {
+      return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
   }
 
   // Admin routes - require admin role
   if (isAdminRoute(req)) {
-    auth().protect()
+    if (!userId) {
+      return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
 
     if (userRole !== 'admin' && userRole !== 'edit') {
       return NextResponse.redirect(new URL('/unauthorized', req.url))
@@ -64,7 +68,9 @@ export default clerkMiddleware((auth, req) => {
 
   // Operator routes - require operator or higher role
   if (isOperatorRoute(req)) {
-    auth().protect()
+    if (!userId) {
+      return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
 
     if (!['admin', 'edit', 'operator'].includes(userRole)) {
       return NextResponse.redirect(new URL('/unauthorized', req.url))

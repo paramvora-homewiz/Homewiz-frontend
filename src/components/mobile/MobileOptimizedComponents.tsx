@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence, PanInfo } from 'framer-motion'
 import { useMobileFormOptimization, useTouchGestures, useDeviceDetection, useTouchTargetOptimization } from '@/hooks/useMobileOptimization'
-import { ChevronLeft, ChevronRight, Menu, X, Check, Search, Filter } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Menu, X, Check, Search, Filter } from 'lucide-react'
 
 // Mobile-optimized input component
 interface MobileInputProps {
@@ -297,7 +297,40 @@ export function BottomSheet({ isOpen, onClose, title, children, height = 'auto' 
             className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-xl z-50 ${heightClasses[height]}`}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
-            exit={{ y: '100%' }
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(event, info) => {
+              if (info.offset.y > 100) {
+                onClose()
+              }
+            }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+            </div>
+
+            {title && (
+              <div className="flex items-center justify-between px-4 pb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+                <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            <div className="px-4 pb-4 overflow-y-auto">
+              {children}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
 
 // Mobile-optimized form wrapper
 interface MobileFormWrapperProps {
@@ -427,39 +460,6 @@ export function PullToRefresh({ onRefresh, children, threshold = 80 }: PullToRef
 
       {children}
     </motion.div>
-  )
-}}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.2}
-            onDragEnd={(event, info) => {
-              if (info.offset.y > 100) {
-                onClose()
-              }
-            }}
-          >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
-            </div>
-            
-            {title && (
-              <div className="flex items-center justify-between px-4 pb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-                <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-            
-            <div className="px-4 pb-4 overflow-y-auto">
-              {children}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
   )
 }
 

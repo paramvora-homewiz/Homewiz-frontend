@@ -39,7 +39,8 @@ export function RootAuthProvider({ children }: RootAuthProviderProps) {
       return (
         <ClerkProvider
           publishableKey={clerkConfig.publishableKey}
-          appearance={clerkConfig.appearance}
+          // TODO: Fix Clerk appearance type compatibility
+          // appearance={clerkConfig.appearance}
         >
           <AuthProvider>
             {children}

@@ -116,7 +116,11 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
   })
 
   const [workingHours, setWorkingHours] = useState(
-    initialData?.working_hours ? JSON.parse(initialData.working_hours) : DEFAULT_WORKING_HOURS
+    initialData?.working_hours
+      ? (typeof initialData.working_hours === 'string'
+          ? JSON.parse(initialData.working_hours)
+          : initialData.working_hours)
+      : DEFAULT_WORKING_HOURS
   )
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -222,7 +226,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
       ...formData,
       working_hours: JSON.stringify(workingHours),
       date_joined: formData.date_joined || new Date().toISOString().split('T')[0]
-    }
+    } as unknown as OperatorFormData
 
     await onSubmit(submitData)
   }
@@ -419,7 +423,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
                       <div>
                         <div className="font-semibold text-orange-900 flex items-center gap-2">
                           Emergency Contact
-                          <HelpTooltip content="Can be contacted for urgent building issues" />
+                          <HelpTooltip title="Emergency Contact" content="Can be contacted for urgent building issues" />
                         </div>
                         <div className="text-sm text-orange-700">Available for urgent issues</div>
                       </div>
@@ -547,7 +551,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
                     className="rounded"
                   />
                   <span className="text-sm font-medium">Enable Calendar Sync</span>
-                  <HelpTooltip content="Sync with external calendar systems" />
+                  <HelpTooltip title="Calendar Sync" content="Sync with external calendar systems" />
                 </label>
               </div>
 
@@ -556,7 +560,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
                   Permissions (JSON)
                 </label>
                 <textarea
-                  value={formData.permissions || ''}
+                  value={typeof formData.permissions === 'string' ? formData.permissions : JSON.stringify(formData.permissions || {}, null, 2)}
                   onChange={(e) => handleInputChange('permissions', e.target.value)}
                   placeholder='{"can_edit_buildings": true, "can_manage_tenants": true}'
                   className="w-full p-2 border border-gray-300 rounded-md text-sm font-mono"

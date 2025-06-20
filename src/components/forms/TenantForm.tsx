@@ -223,7 +223,7 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
 
   const handleInputChange = (field: keyof TenantFormData, value: any) => {
     // Auto-format phone number
-    if (field === 'tenant_phone' && typeof value === 'string') {
+    if (field === 'phone' && typeof value === 'string') {
       const digits = value.replace(/\D/g, '')
       if (digits.length >= 10) {
         value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
@@ -437,7 +437,6 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
           }))}
           placeholder="Select a room"
           searchable
-          disabled={!formData.building_id}
         />
 
         <EnhancedSelect

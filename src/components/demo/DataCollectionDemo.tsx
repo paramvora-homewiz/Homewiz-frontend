@@ -77,6 +77,7 @@ export default function DataCollectionDemo() {
       budget_max: 2500,
       preferred_move_in_date: '2024-06-01',
       preferred_lease_term: 12,
+      preferred_communication: 'EMAIL',
       booking_type: 'LEASE',
       amenity_wifi: true,
       amenity_laundry: true,

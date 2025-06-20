@@ -7,7 +7,7 @@
 
 import { z } from 'zod'
 import config from './config'
-import { collectError, collectUserAction, dataCollectionManager } from './data-collection'
+import { collectError, collectUserAction, dataCollectionManager, DataPriority } from './data-collection'
 
 // Monitoring Event Types
 export enum MonitoringEventType {
@@ -188,8 +188,8 @@ export class MonitoringManager {
     }
 
     dataCollectionManager.collectEvent({
-      type: MonitoringEventType.PERFORMANCE,
-      priority: 'low',
+      type: 'SYSTEM_EVENT' as any, // Using SYSTEM_EVENT for performance monitoring
+      priority: DataPriority.LOW,
       source: 'performance_monitor',
       data: performanceData,
     })
@@ -230,8 +230,8 @@ export class MonitoringManager {
    */
   trackMetric(name: string, value: number, tags?: Record<string, string>): void {
     dataCollectionManager.collectEvent({
-      type: MonitoringEventType.PERFORMANCE,
-      priority: 'medium',
+      type: 'SYSTEM_EVENT' as any, // Using SYSTEM_EVENT for custom metrics
+      priority: DataPriority.MEDIUM,
       source: 'custom_metrics',
       data: {
         metric: name,
@@ -263,8 +263,8 @@ export class MonitoringManager {
     }
 
     dataCollectionManager.collectEvent({
-      type: MonitoringEventType.ERROR,
-      priority: 'high',
+      type: 'ERROR_EVENT' as any, // Using ERROR_EVENT for error monitoring
+      priority: DataPriority.HIGH,
       source: 'error_monitor',
       data: errorInfo,
     })
@@ -298,8 +298,8 @@ export class MonitoringManager {
     this.securityAlerts.push(alert)
 
     dataCollectionManager.collectEvent({
-      type: MonitoringEventType.SECURITY,
-      priority: severity === 'critical' ? 'critical' : 'high',
+      type: 'SYSTEM_EVENT' as any, // Using SYSTEM_EVENT for security monitoring
+      priority: severity === 'critical' ? DataPriority.CRITICAL : DataPriority.HIGH,
       source: 'security_monitor',
       data: alert,
     })
@@ -417,9 +417,9 @@ export class MonitoringManager {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
     
     return {
-      pageLoadTime: navigation?.loadEventEnd - navigation?.navigationStart || 0,
+      pageLoadTime: navigation?.loadEventEnd - navigation?.fetchStart || 0,
       apiResponseTime: this.getAverageApiResponseTime(),
-      renderTime: navigation?.domContentLoadedEventEnd - navigation?.navigationStart || 0,
+      renderTime: navigation?.domContentLoadedEventEnd - navigation?.fetchStart || 0,
       memoryUsage: (performance as any).memory?.usedJSHeapSize || 0,
       networkLatency: navigation?.responseStart - navigation?.requestStart || 0,
       errorRate: this.calculateErrorRate(),
@@ -538,5 +538,4 @@ export const trackSecurityEvent = (
 }
 
 // Export types
-export { MonitoringEventType, SecurityEventType }
-export type { PerformanceMetrics, SecurityAlert }
+// MonitoringEventType, SecurityEventType, PerformanceMetrics, and SecurityAlert are already exported above

@@ -174,7 +174,6 @@ function FormsDashboardContent() {
             onCancel={handleFormCancel}
             isLoading={isLoading}
             buildings={formData.buildings}
-            operators={formData.operators}
           />
         )
       

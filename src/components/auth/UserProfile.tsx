@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { User, Shield, Settings, LogOut, Edit2, Save, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+// Note: Using regular HTML select instead of custom Select component
 import { useAuth } from './AuthProvider'
 import { useAuthSync } from '@/hooks/useAuthSync'
 import { UserRole } from '@/types'
@@ -142,23 +142,17 @@ export function UserProfile({ showRoleManagement = false, onClose }: UserProfile
               </div>
             ) : (
               <div className="space-y-3">
-                <Select value={selectedRole} onValueChange={(value: UserRole) => setSelectedRole(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableRoles().map((role) => (
-                      <SelectItem key={role} value={role}>
-                        <div>
-                          <div className="font-medium">{getRoleDisplayName(role)}</div>
-                          <div className="text-xs text-gray-500">
-                            {getRoleDescription(role)}
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {getAvailableRoles().map((role) => (
+                    <option key={role} value={role}>
+                      {getRoleDisplayName(role)} - {getRoleDescription(role)}
+                    </option>
+                  ))}
+                </select>
                 
                 <div className="flex gap-2">
                   <Button

@@ -18,7 +18,7 @@ export function useEmailValidation(email: string, debounceMs: number = 500) {
   })
 
   const checkEmailUniqueness = useCallback(async (emailToCheck: string) => {
-    if (!emailToCheck || !validateEmail(emailToCheck)) {
+    if (!emailToCheck || !validateEmail(emailToCheck).valid) {
       return
     }
 
@@ -31,7 +31,7 @@ export function useEmailValidation(email: string, debounceMs: number = 500) {
         setResult(prev => ({
           ...prev,
           isChecking: false,
-          isUnique: response.data,
+          isUnique: response.data ?? null,
           error: response.data ? null : 'This email is already registered'
         }))
       } else {
@@ -53,7 +53,7 @@ export function useEmailValidation(email: string, debounceMs: number = 500) {
   useEffect(() => {
     // Reset state when email changes
     setResult({
-      isValid: validateEmail(email),
+      isValid: validateEmail(email).valid,
       isChecking: false,
       error: null,
       isUnique: null
@@ -63,7 +63,7 @@ export function useEmailValidation(email: string, debounceMs: number = 500) {
       return
     }
 
-    if (!validateEmail(email)) {
+    if (!validateEmail(email).valid) {
       setResult(prev => ({
         ...prev,
         error: 'Please enter a valid email address'

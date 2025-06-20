@@ -21,8 +21,8 @@ export function useAutoSave<T>(
     storageKey
   } = options
 
-  const lastSavedData = useRef<T>()
-  const saveTimeoutRef = useRef<NodeJS.Timeout>()
+  const lastSavedData = useRef<T | undefined>(undefined)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Debounced save function
   const debouncedSave = useCallback(

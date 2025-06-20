@@ -37,7 +37,7 @@ export function useAuthSync(): UseAuthSyncReturn {
   /**
    * Get authentication headers for API requests
    */
-  const getAuthHeaders = useCallback(async () => {
+  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
     if (config.app.demoMode) {
       return {
         'Content-Type': 'application/json',
@@ -115,18 +115,14 @@ export function useAuthSync(): UseAuthSyncReturn {
     setState(prev => ({ ...prev, isSyncing: true, syncError: null }))
 
     try {
-      // Update in Clerk first
-      await clerkUser.update({
-        publicMetadata: {
-          ...clerkUser.publicMetadata,
-          role: role,
-        },
-      })
+      // Note: publicMetadata can only be updated from the Backend API, not frontend
+      // For now, we'll just sync with backend and rely on webhooks or backend sync
+      // to update Clerk metadata
 
-      // Then sync with backend
+      // Sync with backend
       if (!config.app.demoMode) {
         const headers = await getAuthHeaders()
-        
+
         const response = await fetch(`${config.api.baseUrl}/api/users/${clerkUser.id}/role`, {
           method: 'PUT',
           headers,
@@ -181,15 +177,12 @@ export function useAuthSync(): UseAuthSyncReturn {
       }
 
       const userData = await response.json()
-      
-      // Update Clerk metadata if needed
+
+      // Note: publicMetadata can only be updated from the Backend API, not frontend
+      // The backend should handle updating Clerk metadata via webhooks or Backend API
+      // For now, we'll just log the difference for debugging
       if (userData.role !== clerkUser.publicMetadata?.role) {
-        await clerkUser.update({
-          publicMetadata: {
-            ...clerkUser.publicMetadata,
-            role: userData.role,
-          },
-        })
+        console.log(`🔄 Role mismatch detected: Backend has ${userData.role}, Clerk has ${clerkUser.publicMetadata?.role}`)
       }
 
       setState(prev => ({

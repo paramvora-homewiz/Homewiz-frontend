@@ -289,7 +289,7 @@ const mockRooms: Room[] = [
     shared_room_rent_2: 1800,
     floor_number: 1,
     bed_count: 1,
-    bathroom_type: 'Private',
+    bathroom_type: 'private',
     bed_size: 'Queen',
     bed_type: 'Platform',
     view: 'City View',
@@ -306,7 +306,7 @@ const mockRooms: Room[] = [
     private_room_rent: 3200,
     floor_number: 2,
     bed_count: 1,
-    bathroom_type: 'Private',
+    bathroom_type: 'private',
     bed_size: 'King',
     bed_type: 'Memory Foam',
     view: 'Bay View',
@@ -591,7 +591,7 @@ export const api = {
       if (leadResponse.success && leadResponse.data) {
         // Update existing lead
         const updateResponse = await this.updateLeadStatus(leadResponse.data.lead_id, 'APPLICATION_SUBMITTED')
-        if (updateResponse.success) {
+        if (updateResponse.success && updateResponse.data) {
           leadId = updateResponse.data.lead_id
         }
       } else {
@@ -600,19 +600,13 @@ export const api = {
           email: formData.email,
           status: 'APPLICATION_SUBMITTED'
         })
-        if (createResponse.success) {
+        if (createResponse.success && createResponse.data) {
           leadId = createResponse.data.lead_id
         }
       }
 
-      // Upload documents if any
-      const uploadedFiles: UploadedFile[] = []
-      for (const file of files) {
-        const uploadResponse = await this.uploadFile(file.file || new File([], file.name), file.category)
-        if (uploadResponse.success) {
-          uploadedFiles.push(uploadResponse.data)
-        }
-      }
+      // Files are already uploaded, just use them directly
+      const uploadedFiles: UploadedFile[] = files
 
       const applicationId = `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 

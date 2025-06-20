@@ -49,13 +49,13 @@ export function useRealTimeCollaboration(options: UseRealTimeCollaborationOption
   })
 
   const activityTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({})
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout>()
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Simulate WebSocket connection (in real implementation, this would be actual WebSocket)
   const wsRef = useRef<{
     send: (data: any) => void
     close: () => void
-  }>()
+  } | null>(null)
 
   // Initialize collaboration connection
   useEffect(() => {

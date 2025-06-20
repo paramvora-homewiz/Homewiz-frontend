@@ -253,11 +253,16 @@ export class ApiResponseHandler {
    * Validate response data
    */
   static validateResponse<T>(
-    data: any, 
+    data: any,
     validator: (data: any) => { success: boolean; data?: T; errors?: string[] }
   ): { valid: boolean; data?: T; errors?: string[] } {
     try {
-      return validator(data)
+      const result = validator(data)
+      return {
+        valid: result.success,
+        data: result.data,
+        errors: result.errors
+      }
     } catch (error) {
       return {
         valid: false,
@@ -290,13 +295,13 @@ export class ApiResponseHandler {
     requestFn: () => Promise<T>,
     maxRetries: number = 3,
     baseDelay: number = 1000
-  ): Promise<EnhancedApiResponse<T>> {
+  ): Promise<EnhancedApiResponse<T | null>> {
     let lastError: any
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const result = await requestFn()
-        return this.handleSuccess(result, { retryCount: attempt })
+        return this.handleSuccess(result)
       } catch (error) {
         lastError = error
         
@@ -304,11 +309,11 @@ export class ApiResponseHandler {
         if (attempt === maxRetries) break
         
         const errorType = this.determineErrorType(
-          error.response?.status || 0, 
-          error.message || ''
+          (error as any).response?.status || 0,
+          (error as any).message || ''
         )
-        
-        if (!this.isRetryable(errorType, error.response?.status || 0)) {
+
+        if (!this.isRetryable(errorType, (error as any).response?.status || 0)) {
           break
         }
         

@@ -109,7 +109,7 @@ export function PropertySelectionStep({ form }: PropertySelectionStepProps) {
         </div>
 
         {errors.selected_building_id && (
-          <p className="text-red-500 text-sm mt-2">{errors.selected_building_id.message}</p>
+          <p className="text-red-500 text-sm mt-2">{String(errors.selected_building_id.message || 'Building selection is required')}</p>
         )}
       </Card>
 
@@ -147,7 +147,7 @@ export function PropertySelectionStep({ form }: PropertySelectionStepProps) {
           )}
 
           {errors.selected_room_id && (
-            <p className="text-red-500 text-sm mt-2">{errors.selected_room_id.message}</p>
+            <p className="text-red-500 text-sm mt-2">{String(errors.selected_room_id.message || 'Room selection is required')}</p>
           )}
         </Card>
       )}

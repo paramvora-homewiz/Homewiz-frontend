@@ -107,8 +107,8 @@ export function AdvancedFormWrapper<T extends Record<string, any>>({
   // Update field with validation and conditional logic
   const updateField = useCallback((field: string, value: any) => {
     setFormData(prev => {
-      const newData = { ...prev, [field]: value }
-      
+      const newData = { ...prev, [field]: value } as any
+
       // Apply conditional logic
       const fieldsToClear = conditionalLogicHook.getFieldsToClear()
       fieldsToClear.forEach(fieldToClear => {

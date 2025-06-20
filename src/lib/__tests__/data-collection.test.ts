@@ -121,6 +121,7 @@ describe('DataCollectionManager', () => {
         has_renters_insurance: true,
         pets: false,
         smoking: false,
+        preferred_communication: 'EMAIL',
       }
 
       const transformed = manager.transformFormData(mockFormData, 'user123')
@@ -191,6 +192,7 @@ describe('DataCollectionManager', () => {
         has_renters_insurance: false,
         pets: true,
         smoking: false,
+        preferred_communication: 'SMS',
       }
 
       const transformed = manager.transformFormData(minimalFormData)
@@ -330,6 +332,7 @@ describe('Utility Functions', () => {
       has_renters_insurance: true,
       pets: false,
       smoking: false,
+      preferred_communication: 'EMAIL',
     }
 
     const result = collectFormSubmission(mockFormData, 'user123')

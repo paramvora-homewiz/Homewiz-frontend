@@ -164,7 +164,7 @@ export function SmartInput({
         <Input
           ref={inputRef}
           label={label}
-          error={error || validationMessage}
+          error={error || validationMessage || undefined}
           icon={icon}
           value={value}
           onChange={handleInputChange}

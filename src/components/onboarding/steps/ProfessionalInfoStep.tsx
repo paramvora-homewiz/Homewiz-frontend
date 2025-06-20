@@ -28,7 +28,7 @@ export function ProfessionalInfoStep({ form }: ProfessionalInfoStepProps) {
               className={errors.occupation ? 'border-red-500' : ''}
             />
             {errors.occupation && (
-              <p className="text-red-500 text-sm mt-1">{errors.occupation.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.occupation.message || 'Occupation is required')}</p>
             )}
           </div>
 

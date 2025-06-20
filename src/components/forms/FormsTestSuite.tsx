@@ -31,7 +31,8 @@ export default function FormsTestSuite() {
     emergency_contact: false,
     calendar_sync_enabled: false,
     date_joined: '2024-01-15',
-    working_hours: '{"monday": {"start": "09:00", "end": "17:00", "enabled": true}}'
+    working_hours: {"monday": {"start": "09:00", "end": "17:00", "enabled": true}},
+    permissions: {"can_edit_buildings": true, "can_manage_tenants": true}
   }
 
   const invalidOperatorData: OperatorFormData = {
@@ -44,20 +45,26 @@ export default function FormsTestSuite() {
     notification_preferences: 'EMAIL',
     emergency_contact: false,
     calendar_sync_enabled: false,
-    permissions: 'invalid-json'
+    permissions: {} // Invalid empty permissions
   }
 
   const validBuildingData: BuildingFormData = {
     building_name: 'Sunset Apartments',
     full_address: '123 Main Street, Anytown, ST 12345',
-    operator_id: 1,
+    address: '123 Main Street',
+    operator_id: '1',
     available: true,
     street: '123 Main Street',
     city: 'Anytown',
     state: 'ST',
+    zip_code: '12345',
+    country: 'USA',
     zip: '12345',
     floors: 5,
     total_rooms: 50,
+    available_rooms: 45,
+    building_type: 'APARTMENT',
+    amenities: ['wifi', 'laundry', 'security'],
     total_bathrooms: 25,
     year_built: 2020,
     wifi_included: true,
@@ -75,11 +82,21 @@ export default function FormsTestSuite() {
 
   const invalidBuildingData: BuildingFormData = {
     building_name: '',
+    address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    country: 'USA',
+    operator_id: '',
+    total_rooms: -5, // Invalid
+    available_rooms: 0,
+    building_type: '',
+    amenities: [],
+    disability_access: false,
     available: true,
     year_built: 1700, // Too old
     last_renovation: 2025, // Future date
     floors: 0, // Invalid
-    total_rooms: -5, // Invalid
     wifi_included: false,
     laundry_onsite: false,
     secure_access: false,
@@ -89,7 +106,6 @@ export default function FormsTestSuite() {
     fitness_area: false,
     work_study_area: false,
     social_events: false,
-    disability_access: false,
     virtual_tour_url: 'not-a-url'
   }
 
@@ -104,9 +120,9 @@ export default function FormsTestSuite() {
     shared_room_rent_2: 500,
     floor_number: 1,
     bed_count: 1,
-    bathroom_type: 'PRIVATE',
-    bed_size: 'QUEEN',
-    bed_type: 'STANDARD',
+    bathroom_type: 'private',
+    bed_size: 'queen',
+    bed_type: 'standard',
     sq_footage: 120,
     mini_fridge: true,
     sink: false,
@@ -130,6 +146,9 @@ export default function FormsTestSuite() {
     private_room_rent: -100, // Invalid
     floor_number: 0, // Invalid
     bed_count: 0, // Invalid
+    bathroom_type: 'private',
+    bed_size: 'twin',
+    bed_type: 'standard',
     mini_fridge: false,
     sink: false,
     bedding_provided: false,

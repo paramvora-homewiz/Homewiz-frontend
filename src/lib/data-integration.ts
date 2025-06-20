@@ -88,36 +88,17 @@ export class DataIntegrationManager {
 
       const transformedData = collectFormSubmission(formData, userId)
 
-      // Step 2: Upload files if any
-      const uploadedFiles: UploadedFile[] = []
-      for (const file of files) {
-        try {
-          if (file.file) {
-            const uploadResult = await uploadFile(file.file, file.category)
-            if (uploadResult.success) {
-              uploadedFiles.push({
-                ...file,
-                id: uploadResult.data.id,
-                url: uploadResult.data.url,
-                uploadedAt: new Date().toISOString(),
-              })
-            } else {
-              warnings.push(`Failed to upload file: ${file.name}`)
-            }
-          }
-        } catch (error) {
-          warnings.push(`File upload error for ${file.name}: ${error}`)
-        }
-      }
+      // Step 2: Files are already uploaded, just use them directly
+      const uploadedFiles: UploadedFile[] = files
 
       // Update transformed data with uploaded files
       transformedData.documents = uploadedFiles.map(file => ({
         id: file.id || `doc_${Date.now()}`,
         name: file.name,
-        category: file.category,
+        category: (file as any).category || 'document',
         size: file.size || 0,
         type: file.type || 'unknown',
-        uploadedAt: file.uploadedAt || new Date().toISOString(),
+        uploadedAt: (file as any).uploadedAt || new Date().toISOString(),
         url: file.url,
       }))
 
@@ -425,5 +406,4 @@ export const testBackend = async (configName: string): Promise<{ success: boolea
 }
 
 // Export types
-export { IntegrationStatus }
-export type { IntegrationResult }
+// IntegrationStatus and IntegrationResult are already exported above

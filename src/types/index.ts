@@ -411,7 +411,7 @@ export interface Room {
   shared_room_rent_2?: number
   floor_number: number
   bed_count: number
-  bathroom_type: string
+  bathroom_type: BathroomType
   bed_size: string
   bed_type: string
   view?: string
@@ -421,7 +421,7 @@ export interface Room {
   additional_features?: string
 }
 
-export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED'
+// RoomStatus is already defined above
 
 export interface Building {
   building_id: string
@@ -439,7 +439,7 @@ export interface Building {
   year_built?: number
   last_renovation?: number
   building_rules?: string
-  amenities_details?: string
+  amenities_details?: Record<string, any>
   neighborhood_description?: string
   building_description?: string
   public_transit_info?: string
@@ -462,12 +462,7 @@ export interface UploadedFile {
   category: FileCategory
 }
 
-export type FileCategory = 
-  | 'profile_photo'
-  | 'id_document' 
-  | 'income_proof'
-  | 'reference_letter'
-  | 'other'
+// FileCategory is already defined above
 
 // Form Types
 export interface OnboardingFormData {
@@ -527,10 +522,6 @@ export interface OnboardingFormData {
   lead_score?: number
   last_contacted?: string
   next_follow_up?: string
-
-  // Insurance Information
-  has_renters_insurance: boolean
-  insurance_details?: string
 
   // Room Preferences
   room_type?: 'private' | 'shared' | 'either'

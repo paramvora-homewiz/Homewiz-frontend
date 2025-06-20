@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import { OnboardingFormData, User, Building, Room, Lead, Tenant, UploadedFile } from '@/types'
+import { OnboardingFormData, User, Building, Room, Lead, UploadedFile } from '@/types'
 import config from './config'
 
 // Data Collection Event Types
@@ -283,8 +283,8 @@ export class DataCollectionManager {
       property: {
         buildingId: formData.selected_building_id,
         roomId: formData.selected_room_id,
-        buildingName: formData.selected_building_name,
-        roomNumber: formData.selected_room_number,
+        buildingName: formData.selected_building_id,
+        roomNumber: formData.selected_room_id,
       },
       
       amenities: {
@@ -621,4 +621,4 @@ function calculateCompletionRate(formData: OnboardingFormData): number {
 }
 
 // Export types and schemas
-export type { DataEvent, BackendFormData }
+// DataEvent and BackendFormData are already exported above

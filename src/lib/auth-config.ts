@@ -340,4 +340,4 @@ export const setDemoMode = (enabled: boolean) => authConfigManager.setDemoMode(e
 authConfigManager.initialize()
 
 // Export types
-export type { AuthConfig }
+// AuthConfig is already exported above

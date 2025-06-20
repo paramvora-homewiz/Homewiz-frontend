@@ -116,15 +116,7 @@ export function validateOperatorForm(data: OperatorFormData): ValidationResult {
     if (futureDateError) warnings.date_joined = 'Date joined is in the future'
   }
 
-  if (data.permissions) {
-    const jsonError = validators.jsonString(data.permissions, 'Permissions')
-    if (jsonError) errors.permissions = jsonError
-  }
-
-  if (data.working_hours) {
-    const jsonError = validators.jsonString(data.working_hours, 'Working hours')
-    if (jsonError) errors.working_hours = jsonError
-  }
+  // permissions and working_hours are already objects, no need to validate as JSON strings
 
   if (data.calendar_external_id && !data.calendar_sync_enabled) {
     warnings.calendar_external_id = 'Calendar external ID provided but sync is not enabled'
@@ -200,16 +192,7 @@ export function validateBuildingForm(data: BuildingFormData): ValidationResult {
     if (urlError) errors.virtual_tour_url = urlError
   }
 
-  // JSON validations
-  if (data.amenities_details) {
-    const jsonError = validators.jsonString(data.amenities_details, 'Amenities details')
-    if (jsonError) errors.amenities_details = jsonError
-  }
-
-  if (data.building_images) {
-    const jsonError = validators.jsonString(data.building_images, 'Building images')
-    if (jsonError) errors.building_images = jsonError
-  }
+  // amenities_details and building_images are already objects/arrays, no need to validate as JSON strings
 
   return {
     isValid: Object.keys(errors).length === 0,
@@ -409,21 +392,7 @@ export function validateLeadForm(data: LeadFormData): ValidationResult {
     if (leaseTermError) errors.preferred_lease_term = leaseTermError
   }
 
-  // JSON validations
-  if (data.rooms_interested) {
-    const jsonError = validators.jsonString(data.rooms_interested, 'Rooms interested')
-    if (jsonError) errors.rooms_interested = jsonError
-  }
-
-  if (data.showing_dates) {
-    const jsonError = validators.jsonString(data.showing_dates, 'Showing dates')
-    if (jsonError) errors.showing_dates = jsonError
-  }
-
-  if (data.additional_preferences) {
-    const jsonError = validators.jsonString(data.additional_preferences, 'Additional preferences')
-    if (jsonError) errors.additional_preferences = jsonError
-  }
+  // rooms_interested, showing_dates, and additional_preferences are already objects/arrays, no need to validate as JSON strings
 
   // Lead score validation
   if (data.lead_score < 0 || data.lead_score > 100) {

@@ -198,13 +198,14 @@ function ClerkAuthProvider({ children }: AuthProviderProps) {
     if (!clerkUser) return
 
     try {
-      // Update Clerk user metadata
-      await clerkUser.update({
-        publicMetadata: {
-          ...clerkUser.publicMetadata,
-          role,
-        },
-      })
+      // TODO: Fix Clerk user metadata update
+      // The publicMetadata property is not available in the current Clerk version
+      // await clerkUser.update({
+      //   publicMetadata: {
+      //     ...clerkUser.publicMetadata,
+      //     role,
+      //   },
+      // })
 
       // Update local state
       setUser(prev => prev ? { ...prev, role } : null)

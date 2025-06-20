@@ -86,7 +86,7 @@ export function useTouchGestures(options: TouchGestureOptions) {
   } = options
 
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
-  const longPressTimerRef = useRef<NodeJS.Timeout>()
+  const longPressTimerRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     const touch = e.touches[0]
@@ -131,7 +131,7 @@ export function useTouchGestures(options: TouchGestureOptions) {
 
       if (angle >= -45 && angle <= 45 && onSwipeRight) {
         onSwipeRight()
-      } else if (angle >= 135 || angle <= -135 && onSwipeLeft) {
+      } else if ((angle >= 135 || angle <= -135) && onSwipeLeft) {
         onSwipeLeft()
       } else if (angle >= 45 && angle <= 135 && onSwipeDown) {
         onSwipeDown()

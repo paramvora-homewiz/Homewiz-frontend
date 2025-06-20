@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { UserRole } from '@/types'
 
 export async function getCurrentUser() {
-  const { userId, sessionClaims } = auth()
+  const { userId, sessionClaims } = await auth()
   
   if (!userId) {
     return null

@@ -418,7 +418,7 @@ export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, r
                 <QuickSelectButtons
                   label="Lead Source"
                   options={LEAD_SOURCES}
-                  value={formData.lead_source}
+                  value={formData.lead_source || ''}
                   onChange={(value) => handleInputChange('lead_source', value)}
                 />
               </div>
@@ -638,7 +638,7 @@ export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, r
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Additional Rooms of Interest
-                <HelpTooltip content="Select multiple rooms the lead has shown interest in" />
+                <HelpTooltip title="Room Selection" content="Select multiple rooms the lead has shown interest in" />
               </label>
               <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md p-3">
                 {rooms.map(room => (

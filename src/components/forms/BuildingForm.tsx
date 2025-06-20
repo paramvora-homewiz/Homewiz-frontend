@@ -110,8 +110,58 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   const { getSmartDefaults, saveToHistory } = useFormSmartDefaults('building')
   const smartDefaults = getSmartDefaults()
 
+  // Convert initial data and smart defaults to ensure proper types
+  const processInitialData = (data: any) => {
+    if (!data) return {}
+    return {
+      ...data,
+      // Ensure numeric fields are numbers
+      min_lease_term: typeof data.min_lease_term === 'string'
+        ? parseInt(data.min_lease_term) || undefined
+        : data.min_lease_term,
+      pref_min_lease_term: typeof data.pref_min_lease_term === 'string'
+        ? parseInt(data.pref_min_lease_term) || undefined
+        : data.pref_min_lease_term,
+      year_built: typeof data.year_built === 'string'
+        ? parseInt(data.year_built) || undefined
+        : data.year_built,
+      floors: typeof data.floors === 'string'
+        ? parseInt(data.floors) || undefined
+        : data.floors,
+      total_rooms: typeof data.total_rooms === 'string'
+        ? parseInt(data.total_rooms) || undefined
+        : data.total_rooms,
+      available_rooms: typeof data.available_rooms === 'string'
+        ? parseInt(data.available_rooms) || undefined
+        : data.available_rooms,
+      priority: typeof data.priority === 'string'
+        ? parseInt(data.priority) || undefined
+        : data.priority,
+      property_manager: typeof data.property_manager === 'string'
+        ? parseInt(data.property_manager) || undefined
+        : data.property_manager,
+    }
+  }
+
+  const processedInitialData = processInitialData(initialData)
+  const processedSmartDefaults = processInitialData(smartDefaults)
+
   const [formData, setFormData] = useState<BuildingFormData>({
+    // Required fields from Building interface
     building_name: '',
+    address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    country: 'USA', // Default country
+    operator_id: '',
+    total_rooms: 0,
+    available_rooms: 0,
+    building_type: '',
+    amenities: [],
+    disability_access: true, // Smart default: accessibility compliance
+
+    // Additional BuildingFormData fields
     available: true,
     wifi_included: true, // Smart default: most buildings have wifi
     laundry_onsite: true, // Smart default: common amenity
@@ -122,15 +172,19 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     fitness_area: false,
     work_study_area: true, // Smart default: popular with tenants
     social_events: false,
-    disability_access: true, // Smart default: accessibility compliance
-    ...smartDefaults, // Apply smart defaults from history
-    ...initialData // Override with any provided initial data
+
+    ...processedSmartDefaults, // Apply smart defaults from history
+    ...processedInitialData // Override with any provided initial data
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentStep, setCurrentStep] = useState(0)
   const [amenitiesDetails, setAmenitiesDetails] = useState(
-    initialData?.amenities_details ? JSON.parse(initialData.amenities_details) : {}
+    initialData?.amenities_details
+      ? (typeof initialData.amenities_details === 'string'
+          ? JSON.parse(initialData.amenities_details)
+          : initialData.amenities_details)
+      : {}
   )
 
   const steps = [
@@ -216,7 +270,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       ...formData,
       amenities_details: JSON.stringify(amenitiesDetails),
       building_id: formData.building_id || `bldg_${Date.now()}`
-    }
+    } as unknown as BuildingFormData
 
     // Save to history for smart defaults
     saveToHistory(submitData)

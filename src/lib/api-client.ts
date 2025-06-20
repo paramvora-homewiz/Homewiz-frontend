@@ -175,7 +175,7 @@ export class ApiClient {
       return response
     } catch (error) {
       const duration = Date.now() - startTime
-      const statusCode = error instanceof ApiError ? error.statusCode : 0
+      const statusCode = error instanceof ApiError ? (error.statusCode ?? 0) : 0
       collectApiCall(endpoint, method, statusCode, duration)
       collectError(error as Error, `api_request_${endpoint}`)
       throw error
@@ -420,6 +420,4 @@ export const getRooms = async (buildingId?: string): Promise<ApiResponse> => {
   })
 }
 
-// Export types
-export { ApiErrorType }
-export type { ApiResponse, RequestConfig }
+// Types are already exported above

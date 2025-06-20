@@ -28,7 +28,7 @@ export function PersonalInfoStep({ form }: PersonalInfoStepProps) {
               className={errors.firstName ? 'border-red-500' : ''}
             />
             {errors.firstName && (
-              <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.firstName.message || 'First name is required')}</p>
             )}
           </div>
 
@@ -42,7 +42,7 @@ export function PersonalInfoStep({ form }: PersonalInfoStepProps) {
               className={errors.lastName ? 'border-red-500' : ''}
             />
             {errors.lastName && (
-              <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.lastName.message || 'Last name is required')}</p>
             )}
           </div>
 
@@ -57,7 +57,7 @@ export function PersonalInfoStep({ form }: PersonalInfoStepProps) {
               className={errors.email ? 'border-red-500' : ''}
             />
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.email.message || 'Valid email is required')}</p>
             )}
           </div>
 
@@ -71,7 +71,7 @@ export function PersonalInfoStep({ form }: PersonalInfoStepProps) {
               className={errors.phone ? 'border-red-500' : ''}
             />
             {errors.phone && (
-              <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.phone.message || 'Phone number is required')}</p>
             )}
           </div>
 

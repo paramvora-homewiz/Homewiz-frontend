@@ -473,5 +473,6 @@ export const syncFileUpload = (file: File, category: string, metadata: any) => {
 }
 
 // Export the manager and types
-export { autoSyncManager, SyncStatus, SyncPriority }
+export { autoSyncManager }
+// SyncStatus and SyncPriority are already exported above
 export default autoSyncManager

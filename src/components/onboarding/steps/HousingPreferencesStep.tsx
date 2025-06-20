@@ -29,7 +29,7 @@ export function HousingPreferencesStep({ form }: HousingPreferencesStepProps) {
               className={errors.budget_min ? 'border-red-500' : ''}
             />
             {errors.budget_min && (
-              <p className="text-red-500 text-sm mt-1">{errors.budget_min.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.budget_min.message || 'Invalid budget')}</p>
             )}
           </div>
 
@@ -44,7 +44,7 @@ export function HousingPreferencesStep({ form }: HousingPreferencesStepProps) {
               className={errors.budget_max ? 'border-red-500' : ''}
             />
             {errors.budget_max && (
-              <p className="text-red-500 text-sm mt-1">{errors.budget_max.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.budget_max.message || 'Invalid budget')}</p>
             )}
           </div>
 
@@ -58,7 +58,7 @@ export function HousingPreferencesStep({ form }: HousingPreferencesStepProps) {
               className={errors.preferred_move_in_date ? 'border-red-500' : ''}
             />
             {errors.preferred_move_in_date && (
-              <p className="text-red-500 text-sm mt-1">{errors.preferred_move_in_date.message}</p>
+              <p className="text-red-500 text-sm mt-1">{String(errors.preferred_move_in_date.message || 'Invalid date')}</p>
             )}
           </div>
 

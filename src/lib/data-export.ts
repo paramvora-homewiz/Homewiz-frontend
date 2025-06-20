@@ -453,4 +453,4 @@ export const registerCustomBackend = (name: string, config: ExportConfig) => {
 }
 
 // Export types
-export type { ExportConfig }
+// ExportConfig is already exported above
