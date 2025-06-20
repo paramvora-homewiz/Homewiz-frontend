@@ -17,6 +17,20 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  // Force webpack to resolve modules correctly
+  webpack: (config: any) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, 'src'),
+    }
+    return config
+  },
+
+  // Experimental features for better module resolution
+  experimental: {
+    esmExternals: 'loose',
+  },
+
   // Optimize images
   images: {
     domains: ['localhost'],
