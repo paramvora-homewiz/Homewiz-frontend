@@ -12,8 +12,7 @@
     "test:ui": "vitest --ui",
     "type-check": "tsc --noEmit",
     "build:render": "npm ci && npm run build",
-    "start:render": "npm start",
-    "postinstall": "npm run type-check"
+    "start:render": "npm start"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.22.0",
