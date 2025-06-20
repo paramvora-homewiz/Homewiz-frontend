@@ -14,5 +14,5 @@ export { FormDataProvider, useFormData, withFormData, FormDataLoader, SmartSelec
 // Test Suite
 export { default as FormsTestSuite } from './FormsTestSuite'
 
-// Form validation utilities
-export * from '../../lib/form-validation'
+// Form validation utilities - commented out to avoid circular dependency during build
+// export * from '../../lib/form-validation'
