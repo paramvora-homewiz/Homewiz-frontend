@@ -93,6 +93,8 @@ export type FileCategory =
   | 'reference_letter'
   | 'lease_document'
   | 'insurance_document'
+  | 'building_image'
+  | 'building_video'
   | 'other'
 
 // File upload configuration
@@ -196,6 +198,8 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
   priority?: number
   property_manager?: number
   available: boolean
+  // Media files for upload
+  media_files?: MediaFile[]
 }
 
 // ============================================================================
@@ -460,6 +464,16 @@ export interface UploadedFile {
   url: string
   uploadedAt: string
   category: FileCategory
+}
+
+export interface MediaFile {
+  id: string
+  name: string
+  type: string
+  size: number
+  file: File
+  preview: string
+  category: 'building_image' | 'building_video'
 }
 
 // FileCategory is already defined above

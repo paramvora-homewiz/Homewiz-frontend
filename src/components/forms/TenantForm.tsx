@@ -411,8 +411,8 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
   )
 
   const renderPropertyAssignment = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="space-y-6 overflow-visible">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-visible">
         <EnhancedSelect
           label="Building"
           value={formData.building_id || ''}
@@ -737,7 +737,7 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <EnhancedCard variant="premium" className="p-8 premium-card">
+            <EnhancedCard variant="premium" className="p-8 premium-card overflow-visible">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg text-white">
                   {steps[currentStep].icon}
@@ -757,6 +757,7 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.2 }}
+                  className="overflow-visible"
                 >
                   {renderStepContent()}
                 </motion.div>
