@@ -113,7 +113,24 @@
 
   /* Premium interactive elements */
   .premium-card {
-    @apply bg-white/95 backdrop-blur-md border border-gray-200/60 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative overflow-hidden;
+    @apply bg-white/95 backdrop-blur-md border border-gray-200/60 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative;
+    overflow: visible !important;
+  }
+
+  /* Enhanced select dropdown visibility */
+  .enhanced-select-container {
+    overflow: visible !important;
+  }
+
+  /* Ensure form grids don't clip dropdowns */
+  .grid {
+    overflow: visible;
+  }
+
+  /* High z-index for dropdowns */
+  .dropdown-menu {
+    z-index: 9999 !important;
+    position: absolute !important;
   }
 
   .premium-button {

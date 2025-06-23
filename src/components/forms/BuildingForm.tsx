@@ -12,7 +12,9 @@ import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, Status
 import AddressAutocomplete, { AddressData } from '../ui/AddressAutocomplete'
 import CopyFromPrevious from '../ui/CopyFromPrevious'
 import { useFormSmartDefaults } from '../../hooks/useSmartDefaults'
-import { BuildingFormData } from '../../types'
+import { BuildingFormData, MediaFile } from '../../types'
+import { MediaUploadSection } from './MediaUploadSection'
+import { createFormDataWithFiles } from '../../utils/fileUpload'
 import {
   Building,
   MapPin,
@@ -186,6 +188,9 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           : initialData.amenities_details)
       : {}
   )
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(
+    initialData?.media_files || []
+  )
 
   const steps = [
     { id: 'basic', title: 'Basic Information', icon: <Building className="w-5 h-5" /> },
@@ -269,11 +274,18 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     const submitData = {
       ...formData,
       amenities_details: JSON.stringify(amenitiesDetails),
-      building_id: formData.building_id || `bldg_${Date.now()}`
+      building_id: formData.building_id || `bldg_${Date.now()}`,
+      media_files: mediaFiles
     } as unknown as BuildingFormData
 
-    // Save to history for smart defaults
-    saveToHistory(submitData)
+    // Save to history for smart defaults (excluding media files for storage efficiency)
+    const historyData = { ...submitData }
+    delete historyData.media_files
+    saveToHistory(historyData)
+
+    // Note: If you need to send files to backend, you can use:
+    // const formDataWithFiles = createFormDataWithFiles(submitData, mediaFiles)
+    // Then send formDataWithFiles instead of submitData to your API endpoint
 
     await onSubmit(submitData)
   }
@@ -932,35 +944,12 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
       case 'media':
         return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Virtual Tour URL
-              </label>
-              <Input
-                type="url"
-                value={formData.virtual_tour_url || ''}
-                onChange={(e) => handleInputChange('virtual_tour_url', e.target.value)}
-                placeholder="https://example.com/virtual-tour"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Building Images (JSON Array)
-              </label>
-              <textarea
-                value={formData.building_images || ''}
-                onChange={(e) => handleInputChange('building_images', e.target.value)}
-                placeholder='["https://example.com/image1.jpg", "https://example.com/image2.jpg"]'
-                className="w-full p-3 border border-gray-300 rounded-md font-mono text-sm"
-                rows={4}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                JSON array of image URLs for the building
-              </p>
-            </div>
-          </div>
+          <MediaUploadSection
+            virtualTourUrl={formData.virtual_tour_url}
+            uploadedFiles={mediaFiles}
+            onVirtualTourUrlChange={(url) => handleInputChange('virtual_tour_url', url)}
+            onFilesChange={setMediaFiles}
+          />
         )
 
       default:
