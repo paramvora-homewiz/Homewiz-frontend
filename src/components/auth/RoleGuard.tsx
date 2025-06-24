@@ -25,20 +25,20 @@ export function RoleGuard({
     setHasMounted(true)
   }, [])
 
-  // In demo mode, always allow access
-  if (config.app.demoMode) {
-    return <>{children}</>
-  }
-
   const { user, isLoading, hasPermission } = useAuth()
 
-  // Show loading state during SSR and initial client render
+  // Show loading state during SSR and initial client render to prevent hydration mismatch
   if (!hasMounted || isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
+  }
+
+  // In demo mode, always allow access (check after mounting to prevent hydration issues)
+  if (config.app.demoMode) {
+    return <>{children}</>
   }
 
   // User not authenticated
@@ -112,7 +112,17 @@ export function RoleBasedRender({
   children: ReactNode,
   fallback?: ReactNode
 }) {
+  const [hasMounted, setHasMounted] = useState(false)
   const { user, hasPermission } = useAuth()
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // Prevent hydration mismatch by showing consistent content until mounted
+  if (!hasMounted) {
+    return fallback ? <>{fallback}</> : null
+  }
 
   if (config.app.demoMode) {
     return <>{children}</>
