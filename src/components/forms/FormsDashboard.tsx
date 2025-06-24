@@ -13,6 +13,13 @@ import TenantForm from './TenantForm'
 import LeadForm from './LeadForm'
 import { FormDataProvider, useFormData } from './FormDataProvider'
 import { OperatorFormData, BuildingFormData, RoomFormData, TenantFormData, LeadFormData } from '@/types'
+import { apiService } from '../../services/apiService'
+import DatabaseLogsPanel from '../dashboard/DatabaseLogsPanel'
+import AdvancedAnalyticsDashboard from '../analytics/AdvancedAnalyticsDashboard'
+import AdvancedSearchPanel from '../search/AdvancedSearchPanel'
+import DataExportPanel from '../export/DataExportPanel'
+import NotificationPanel from '../notifications/NotificationPanel'
+import { notificationService } from '../../services/notificationService'
 import {
   Users,
   Building,
@@ -27,11 +34,13 @@ import {
   ArrowRight,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Download
 } from 'lucide-react'
 import '@/styles/design-system.css'
 
-type FormType = 'dashboard' | 'operator' | 'building' | 'room' | 'tenant' | 'lead'
+type FormType = 'dashboard' | 'operator' | 'building' | 'room' | 'tenant' | 'lead' | 'logs' | 'analytics' | 'search' | 'export'
 
 interface FormConfig {
   id: FormType
@@ -99,24 +108,25 @@ function FormsDashboardContent() {
   const handleFormSubmit = async (data: any, formType: FormType) => {
     setIsLoading(true)
     try {
-      // Here you would typically make an API call to save the data
-      console.log(`Submitting ${formType} form:`, data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Refresh related data after successful submission
+      console.log(`🚀 Submitting ${formType} form:`, data)
+
+      // Make real API call to save the data
+      let result
       switch (formType) {
         case 'operator':
+          result = await apiService.createOperator(data)
           await formData.refreshOperators()
           break
         case 'building':
+          result = await apiService.createBuilding(data)
           await formData.refreshBuildings()
           break
         case 'room':
+          result = await apiService.createRoom(data)
           await formData.refreshRooms()
           break
         case 'tenant':
+          result = await apiService.createTenant(data)
           // Refresh multiple data sources for tenant
           await Promise.all([
             formData.refreshRooms(),
@@ -124,18 +134,21 @@ function FormsDashboardContent() {
           ])
           break
         case 'lead':
+          result = await apiService.createLead(data)
           await formData.refreshRooms()
           break
       }
-      
+
+      console.log(`✅ ${formType} saved successfully:`, result)
+
       // Return to dashboard after successful submission
       setCurrentForm('dashboard')
-      
+
       // Show success message (you might want to use a toast notification here)
       alert(`${formType} saved successfully!`)
-      
+
     } catch (error) {
-      console.error(`Error submitting ${formType} form:`, error)
+      console.error(`❌ Error submitting ${formType} form:`, error)
       alert(`Error saving ${formType}. Please try again.`)
     } finally {
       setIsLoading(false)
@@ -144,6 +157,39 @@ function FormsDashboardContent() {
 
   const handleFormCancel = () => {
     setCurrentForm('dashboard')
+  }
+
+  const testNotifications = () => {
+    // Add some test notifications
+    notificationService.addNotification({
+      type: 'success',
+      title: 'New Lead Received',
+      message: 'A new lead from john.doe@example.com is interested in Room 101',
+      category: 'leads',
+      priority: 'medium',
+      actionUrl: '/leads',
+      actionLabel: 'View Lead'
+    })
+
+    notificationService.addNotification({
+      type: 'warning',
+      title: 'Room Maintenance Required',
+      message: 'Room 205 in Sunset Apartments requires immediate attention',
+      category: 'maintenance',
+      priority: 'high',
+      actionUrl: '/rooms',
+      actionLabel: 'View Room'
+    })
+
+    notificationService.addNotification({
+      type: 'info',
+      title: 'New Building Added',
+      message: 'Downtown Lofts has been successfully added to your portfolio',
+      category: 'buildings',
+      priority: 'low',
+      actionUrl: '/buildings',
+      actionLabel: 'View Building'
+    })
   }
 
   const renderCurrentForm = () => {
@@ -201,7 +247,63 @@ function FormsDashboardContent() {
             }))}
           />
         )
-      
+
+      case 'logs':
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+            <div className="max-w-7xl mx-auto p-6">
+              <div className="mb-6">
+                <Button onClick={handleFormCancel} variant="outline">
+                  ← Back to Dashboard
+                </Button>
+              </div>
+              <DatabaseLogsPanel />
+            </div>
+          </div>
+        )
+
+      case 'analytics':
+        return (
+          <div>
+            <div className="max-w-7xl mx-auto p-6">
+              <div className="mb-6">
+                <Button onClick={handleFormCancel} variant="outline">
+                  ← Back to Dashboard
+                </Button>
+              </div>
+            </div>
+            <AdvancedAnalyticsDashboard />
+          </div>
+        )
+
+      case 'search':
+        return (
+          <div>
+            <div className="max-w-7xl mx-auto p-6">
+              <div className="mb-6">
+                <Button onClick={handleFormCancel} variant="outline">
+                  ← Back to Dashboard
+                </Button>
+              </div>
+            </div>
+            <AdvancedSearchPanel />
+          </div>
+        )
+
+      case 'export':
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+            <div className="max-w-7xl mx-auto p-6">
+              <div className="mb-6">
+                <Button onClick={handleFormCancel} variant="outline">
+                  ← Back to Dashboard
+                </Button>
+              </div>
+              <DataExportPanel />
+            </div>
+          </div>
+        )
+
       default:
         return renderDashboard()
     }
@@ -213,6 +315,14 @@ function FormsDashboardContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
         <div className="max-w-7xl mx-auto p-6 space-y-8">
+          {/* Header with Notifications */}
+          <div className="flex items-center justify-between">
+            <Button onClick={testNotifications} variant="outline" size="sm">
+              🔔 Test Notifications
+            </Button>
+            <NotificationPanel />
+          </div>
+
           {/* Hero Section */}
           <motion.div
             className="text-center py-12"
@@ -427,7 +537,7 @@ function FormsDashboardContent() {
                 <h2 className="text-2xl font-bold text-gray-900">Quick Actions</h2>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-8 gap-4">
                 <motion.button
                   onClick={() => formData.refreshAll()}
                   disabled={formData.operatorsLoading || formData.buildingsLoading || formData.roomsLoading}
@@ -467,6 +577,46 @@ function FormsDashboardContent() {
                 >
                   <Home className="w-6 h-6 text-purple-600 mx-auto mb-2" />
                   <div className="text-sm font-semibold text-purple-700">Add Room</div>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => setCurrentForm('logs')}
+                  className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl border-2 border-indigo-200 hover:border-indigo-300 transition-all duration-200"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <BarChart3 className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+                  <div className="text-sm font-semibold text-indigo-700">View Logs</div>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => setCurrentForm('analytics')}
+                  className="p-4 bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl border-2 border-teal-200 hover:border-teal-300 transition-all duration-200"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
+                  <div className="text-sm font-semibold text-teal-700">Analytics</div>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => setCurrentForm('search')}
+                  className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-200"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Search className="w-6 h-6 text-gray-600 mx-auto mb-2" />
+                  <div className="text-sm font-semibold text-gray-700">Search</div>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => setCurrentForm('export')}
+                  className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border-2 border-green-200 hover:border-green-300 transition-all duration-200"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Download className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <div className="text-sm font-semibold text-green-700">Export</div>
                 </motion.button>
               </div>
             </EnhancedCard>

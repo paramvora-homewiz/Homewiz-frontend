@@ -38,21 +38,15 @@ import {
   ChevronRight
 } from 'lucide-react'
 import '@/styles/design-system.css'
-import { formIntegration } from '../../lib/supabase/form-integration'
-import { databaseService } from '../../lib/supabase/database'
-import { validator } from '../../lib/supabase/validation'
-import { errorHandler } from '../../lib/supabase/error-handler'
 
 interface TenantFormProps {
   initialData?: Partial<TenantFormData>
-  onSubmit?: (data: TenantFormData) => Promise<void>
+  onSubmit: (data: TenantFormData) => Promise<void>
   onCancel?: () => void
   isLoading?: boolean
   buildings?: Array<{ building_id: string; building_name: string }>
   rooms?: Array<{ room_id: string; room_number: string; building_id: string; private_room_rent?: number; shared_room_rent_2?: number }>
   operators?: Array<{ operator_id: number; name: string; operator_type: string }>
-  mode?: 'create' | 'edit'
-  tenantId?: string
 }
 
 const TENANT_STATUS_OPTIONS = [
@@ -121,17 +115,7 @@ const EMERGENCY_RELATIONSHIPS = [
   'Parent', 'Spouse', 'Partner', 'Sibling', 'Child', 'Friend', 'Colleague', 'Other Family'
 ]
 
-export default function TenantForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isLoading,
-  buildings = [],
-  rooms = [],
-  operators = [],
-  mode = 'create',
-  tenantId
-}: TenantFormProps) {
+export default function TenantForm({ initialData, onSubmit, onCancel, isLoading, buildings = [], rooms = [], operators = [] }: TenantFormProps) {
   const [formData, setFormData] = useState<TenantFormData>({
     tenant_name: '',
     tenant_email: '',
@@ -150,10 +134,6 @@ export default function TenantForm({
   const [availableRooms, setAvailableRooms] = useState<any[]>([])
   const [selectedRoom, setSelectedRoom] = useState<any>(null)
   const [currentStep, setCurrentStep] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [submitMessage, setSubmitMessage] = useState('')
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   const steps = [
     { id: 'personal', title: 'Personal Info', icon: <UserCheck className="w-5 h-5" /> },
@@ -162,49 +142,6 @@ export default function TenantForm({
     { id: 'lease', title: 'Lease Details', icon: <FileText className="w-5 h-5" /> },
     { id: 'payment', title: 'Payment & Preferences', icon: <CreditCard className="w-5 h-5" /> }
   ]
-
-  // Load data from Supabase on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load buildings if not provided
-        if (buildings.length === 0) {
-          const buildingsResult = await databaseService.buildings.list()
-          if (buildingsResult.success) {
-            // Update buildings state if needed
-          }
-        }
-
-        // Load rooms if not provided
-        if (rooms.length === 0) {
-          const roomsResult = await databaseService.rooms.list()
-          if (roomsResult.success) {
-            // Update rooms state if needed
-          }
-        }
-
-        // Load operators if not provided
-        if (operators.length === 0) {
-          const operatorsResult = await databaseService.operators.getActive()
-          if (operatorsResult.success) {
-            // Update operators state if needed
-          }
-        }
-
-        // Load existing tenant data if in edit mode
-        if (mode === 'edit' && tenantId) {
-          const tenantResult = await databaseService.tenants.getById(tenantId)
-          if (tenantResult.success && tenantResult.data) {
-            setFormData(prev => ({ ...prev, ...tenantResult.data }))
-          }
-        }
-      } catch (error) {
-        console.error('Error loading form data:', error)
-      }
-    }
-
-    loadData()
-  }, [mode, tenantId, buildings.length, rooms.length, operators.length])
 
   // Filter rooms based on selected building
   useEffect(() => {
@@ -320,91 +257,25 @@ export default function TenantForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
-    setSubmitStatus('idle')
-    setSubmitMessage('')
-    setValidationErrors({})
 
-    try {
-      // Transform form data to match database schema
-      const submitData = {
-        first_name: formData.tenant_name?.split(' ')[0] || '',
-        last_name: formData.tenant_name?.split(' ').slice(1).join(' ') || '',
-        email: formData.tenant_email,
-        phone: formData.phone || null,
-        tenant_nationality: formData.tenant_nationality || null,
-        emergency_contact_name: formData.emergency_contact_name || null,
-        emergency_contact_phone: formData.emergency_contact_phone || null,
-        emergency_contact_relationship: formData.emergency_contact_relation || null,
-        building_id: formData.building_id || null,
-        room_id: formData.room_id || null,
-        lease_start_date: formData.lease_start_date || null,
-        lease_end_date: formData.lease_end_date || null,
-        rent_amount: formData.rent_amount ? parseFloat(formData.rent_amount.toString()) : null,
-        deposit_amount: formData.deposit_amount ? parseFloat(formData.deposit_amount.toString()) : null,
-        payment_status: formData.payment_status || null,
-        rent_payment_method: formData.rent_payment_method || null,
-        account_status: formData.account_status || 'ACTIVE',
-        operator_id: formData.operator_id || null,
-        booking_type: formData.booking_type || null,
-        special_requests: formData.special_requests || null,
-        communication_preferences: formData.communication_preferences || 'EMAIL',
-        payment_reminders_enabled: formData.payment_reminders_enabled || true,
-        has_pets: formData.has_pets || false,
-        has_vehicles: formData.has_vehicles || false,
-        has_renters_insurance: formData.has_renters_insurance || false,
-        status: formData.status || 'ACTIVE'
-      }
+    // Validate all fields on submit
+    const allErrors = validateAllFields()
+    setErrors(allErrors)
 
-      let result
-      if (mode === 'edit' && tenantId) {
-        result = await formIntegration.tenant.updateTenant(tenantId, submitData)
-      } else {
-        result = await formIntegration.tenant.submitTenant(submitData)
-      }
+    // Mark all required fields as touched to show errors
+    const requiredFields = ['tenant_name', 'tenant_email']
+    setTouchedFields(prev => new Set([...prev, ...requiredFields]))
 
-      if (result.success) {
-        setSubmitStatus('success')
-        setSubmitMessage(result.message || 'Tenant saved successfully!')
-
-        // Call the optional onSubmit callback if provided
-        if (onSubmit) {
-          await onSubmit(formData)
-        }
-
-        // Reset form if creating new tenant
-        if (mode === 'create') {
-          setTimeout(() => {
-            setFormData({
-              tenant_name: '',
-              tenant_email: '',
-              status: 'ACTIVE',
-              payment_reminders_enabled: true,
-              communication_preferences: 'EMAIL',
-              account_status: 'ACTIVE',
-              has_pets: false,
-              has_vehicles: false,
-              has_renters_insurance: false
-            })
-            setCurrentStep(0)
-            setSubmitStatus('idle')
-          }, 2000)
-        }
-      } else {
-        setSubmitStatus('error')
-        setSubmitMessage(result.error || 'Failed to save tenant')
-
-        if (result.validationErrors) {
-          setValidationErrors(result.validationErrors)
-        }
-      }
-    } catch (error) {
-      console.error('Form submission error:', error)
-      setSubmitStatus('error')
-      setSubmitMessage('An unexpected error occurred. Please try again.')
-    } finally {
-      setIsSubmitting(false)
+    if (Object.keys(allErrors).length > 0) {
+      return
     }
+
+    const submitData = {
+      ...formData,
+      tenant_id: formData.tenant_id || `tenant_${Date.now()}`
+    }
+
+    await onSubmit(submitData)
   }
 
   const getStatusBadge = (status: string) => {
@@ -858,47 +729,6 @@ export default function TenantForm({
           />
         </motion.div>
 
-        {/* Submission Status Message */}
-        {submitMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={`mb-6 p-4 rounded-lg border-2 flex items-center gap-3 ${
-              submitStatus === 'success'
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : submitStatus === 'error'
-                ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-blue-50 border-blue-200 text-blue-800'
-            }`}
-          >
-            {submitStatus === 'success' && <CheckCircle className="w-5 h-5" />}
-            {submitStatus === 'error' && <XCircle className="w-5 h-5" />}
-            <span className="font-medium">{submitMessage}</span>
-          </motion.div>
-        )}
-
-        {/* Validation Errors Display */}
-        {Object.keys(validationErrors).length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <XCircle className="w-5 h-5 text-red-600" />
-              <span className="font-medium text-red-800">Please correct the following errors:</span>
-            </div>
-            <ul className="list-disc list-inside text-red-700 space-y-1">
-              {Object.entries(validationErrors).map(([field, error]) => (
-                <li key={field} className="text-sm">
-                  <span className="font-medium">{field.replace('_', ' ')}:</span> {error}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-
         <form onSubmit={handleSubmit}>
           <motion.div
             key={currentStep}
@@ -975,34 +805,24 @@ export default function TenantForm({
               {currentStep === steps.length - 1 ? (
                 <motion.button
                   type="submit"
-                  disabled={isSubmitting || isLoading || Object.keys(errors).length > 0}
+                  disabled={isLoading || Object.keys(errors).length > 0}
                   className={`px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 ${
-                    isSubmitting || isLoading || Object.keys(errors).length > 0
+                    isLoading || Object.keys(errors).length > 0
                       ? 'opacity-50 cursor-not-allowed'
                       : 'hover:from-orange-700 hover:to-red-700'
                   }`}
-                  whileHover={!(isSubmitting || isLoading || Object.keys(errors).length > 0) ? { scale: 1.02 } : {}}
-                  whileTap={!(isSubmitting || isLoading || Object.keys(errors).length > 0) ? { scale: 0.98 } : {}}
+                  whileHover={!(isLoading || Object.keys(errors).length > 0) ? { scale: 1.02 } : {}}
+                  whileTap={!(isLoading || Object.keys(errors).length > 0) ? { scale: 0.98 } : {}}
                 >
-                  {isSubmitting || isLoading ? (
+                  {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {mode === 'edit' ? 'Updating...' : 'Creating...'}
-                    </>
-                  ) : submitStatus === 'success' ? (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      {mode === 'edit' ? 'Updated!' : 'Created!'}
-                    </>
-                  ) : submitStatus === 'error' ? (
-                    <>
-                      <XCircle className="w-4 h-4" />
-                      Try Again
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Processing...
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      {mode === 'edit' ? 'Update Tenant' : 'Create Tenant'}
+                      {initialData?.tenant_id ? 'Update Tenant' : 'Create Tenant'}
                     </>
                   )}
                 </motion.button>

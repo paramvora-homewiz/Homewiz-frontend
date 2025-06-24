@@ -5,6 +5,7 @@ import { FormDataProvider, useFormData } from '@/components/forms/FormDataProvid
 import { RoomFormData } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import FormHeader from '@/components/ui/FormHeader'
 
 function RoomFormContent() {
   const router = useRouter()
@@ -48,8 +49,14 @@ function RoomFormContent() {
 
 export default function RoomFormPage() {
   return (
-    <FormDataProvider>
-      <RoomFormContent />
-    </FormDataProvider>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <FormHeader
+        title="Room Setup"
+        subtitle="Set up individual rooms with specifications, pricing, and availability"
+      />
+      <FormDataProvider>
+        <RoomFormContent />
+      </FormDataProvider>
+    </div>
   )
 }

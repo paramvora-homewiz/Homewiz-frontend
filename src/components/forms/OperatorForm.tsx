@@ -232,8 +232,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="max-w-5xl mx-auto p-6 space-y-8">
+    <div className="max-w-5xl mx-auto p-6 space-y-8">
         {/* Header Section */}
         <motion.div
           className="text-center py-8"
@@ -619,7 +618,6 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
             </motion.button>
           </motion.div>
         </form>
-      </div>
     </div>
   )
 }

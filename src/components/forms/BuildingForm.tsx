@@ -180,6 +180,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
   const [currentStep, setCurrentStep] = useState(0)
   const [amenitiesDetails, setAmenitiesDetails] = useState(
     initialData?.amenities_details
@@ -201,31 +202,71 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     { id: 'media', title: 'Images & Tours', icon: <Camera className="w-5 h-5" /> }
   ]
 
-  // Real-time validation
+  // Validation function
+  const validateField = (field: string, value: any): string | null => {
+    switch (field) {
+      case 'building_name':
+        return !value?.trim() ? 'Building name is required' : null
+      case 'year_built':
+        if (value && (value < 1800 || value > new Date().getFullYear())) {
+          return 'Please enter a valid year'
+        }
+        return null
+      case 'floors':
+        return value && value < 1 ? 'Building must have at least 1 floor' : null
+      case 'total_rooms':
+        return value && value < 1 ? 'Building must have at least 1 room' : null
+      default:
+        return null
+    }
+  }
+
+  // Validate all fields (used on form submission)
+  const validateAllFields = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {}
+
+    Object.keys(formData).forEach(field => {
+      const error = validateField(field, formData[field as keyof BuildingFormData])
+      if (error) {
+        newErrors[field] = error
+      }
+    })
+
+    return newErrors
+  }
+
+  // Real-time validation only for touched fields
   useEffect(() => {
     const newErrors: Record<string, string> = {}
-    
-    if (!formData.building_name.trim()) {
-      newErrors.building_name = 'Building name is required'
-    }
 
-    if (formData.year_built && (formData.year_built < 1800 || formData.year_built > new Date().getFullYear())) {
-      newErrors.year_built = 'Please enter a valid year'
-    }
-
-    if (formData.floors && formData.floors < 1) {
-      newErrors.floors = 'Building must have at least 1 floor'
-    }
-
-    if (formData.total_rooms && formData.total_rooms < 1) {
-      newErrors.total_rooms = 'Building must have at least 1 room'
-    }
+    touchedFields.forEach(field => {
+      const error = validateField(field, formData[field as keyof BuildingFormData])
+      if (error) {
+        newErrors[field] = error
+      }
+    })
 
     setErrors(newErrors)
-  }, [formData])
+  }, [formData, touchedFields])
+
+  // Prevent accidental browser navigation
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (currentStep > 0 || Object.keys(formData).some(key => formData[key as keyof BuildingFormData])) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [currentStep, formData])
 
   const handleInputChange = (field: keyof BuildingFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    // Mark field as touched when user interacts with it
+    setTouchedFields(prev => new Set([...prev, field]))
   }
 
   const handleAddressSelect = (addressData: AddressData) => {
@@ -267,7 +308,21 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (Object.keys(errors).length > 0) {
+    // Only allow submission on the final step
+    if (currentStep !== steps.length - 1) {
+      console.warn('Form submission attempted on non-final step. This should not happen.')
+      return
+    }
+
+    // Validate all fields on submit
+    const allErrors = validateAllFields()
+    setErrors(allErrors)
+
+    // Mark all required fields as touched to show errors
+    const requiredFields = ['building_name']
+    setTouchedFields(prev => new Set([...prev, ...requiredFields]))
+
+    if (Object.keys(allErrors).length > 0) {
       return
     }
 
@@ -944,12 +999,24 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
       case 'media':
         return (
-          <MediaUploadSection
-            virtualTourUrl={formData.virtual_tour_url}
-            uploadedFiles={mediaFiles}
-            onVirtualTourUrlChange={(url) => handleInputChange('virtual_tour_url', url)}
-            onFilesChange={setMediaFiles}
-          />
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2 text-blue-800">
+                <Camera className="w-5 h-5" />
+                <h3 className="font-semibold">Final Step: Upload Media Files</h3>
+              </div>
+              <p className="text-blue-700 text-sm mt-1">
+                Add photos and videos of your building. You can upload multiple files or add a virtual tour link.
+                Click "Create Building" when you're done to save everything to the database.
+              </p>
+            </div>
+            <MediaUploadSection
+              virtualTourUrl={formData.virtual_tour_url}
+              uploadedFiles={mediaFiles}
+              onVirtualTourUrlChange={(url) => handleInputChange('virtual_tour_url', url)}
+              onFilesChange={setMediaFiles}
+            />
+          </div>
         )
 
       default:
@@ -958,8 +1025,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="max-w-6xl mx-auto p-6 space-y-8">
+    <div className="max-w-6xl mx-auto p-6 space-y-8">
         {/* Header Section */}
         <motion.div
           className="text-center py-8"
@@ -1051,16 +1117,17 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               type="button"
               onClick={prevStep}
               disabled={currentStep === 0}
-              className={`px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
+              className={`px-6 py-3 border-2 border-blue-300 text-blue-700 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
                 currentStep === 0
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:border-gray-400 hover:bg-gray-50'
+                  ? 'opacity-50 cursor-not-allowed border-gray-300 text-gray-500'
+                  : 'hover:border-blue-400 hover:bg-blue-50 bg-blue-25'
               }`}
               whileHover={currentStep !== 0 ? { scale: 1.02 } : {}}
               whileTap={currentStep !== 0 ? { scale: 0.98 } : {}}
+              title={currentStep === 0 ? 'Already at first step' : 'Go to previous step'}
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous
+              Previous Step
             </motion.button>
 
             <div className="flex items-center gap-4">
@@ -1108,15 +1175,15 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  title={`Continue to ${steps[currentStep + 1]?.title || 'next step'}`}
                 >
-                  Next
+                  {currentStep === steps.length - 2 ? 'Continue to Media Upload' : 'Next Step'}
                   <ChevronRight className="w-4 h-4" />
                 </motion.button>
               )}
             </div>
           </motion.div>
         </form>
-      </div>
     </div>
   )
 }

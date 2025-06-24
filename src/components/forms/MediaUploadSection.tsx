@@ -102,7 +102,12 @@ export function MediaUploadSection({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onKeyDown={(e) => {
+      // Prevent any Enter key from submitting the form in this section
+      if (e.key === 'Enter') {
+        e.preventDefault()
+      }
+    }}>
       {/* Virtual Tour URL */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -112,6 +117,12 @@ export function MediaUploadSection({
           type="url"
           value={virtualTourUrl}
           onChange={(e) => onVirtualTourUrlChange(e.target.value)}
+          onKeyDown={(e) => {
+            // Prevent Enter key from submitting the form
+            if (e.key === 'Enter') {
+              e.preventDefault()
+            }
+          }}
           placeholder="https://example.com/virtual-tour"
           icon={<Eye className="w-4 h-4" />}
         />
