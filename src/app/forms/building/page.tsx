@@ -5,6 +5,8 @@ import { FormDataProvider, useFormData } from '../../../components/forms/FormDat
 import { BuildingFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { apiService } from '../../../services/apiService'
+import FormHeader from '../../../components/ui/FormHeader'
 
 function BuildingFormContent() {
   const router = useRouter()
@@ -14,19 +16,21 @@ function BuildingFormContent() {
   const handleSubmit = async (data: BuildingFormData) => {
     setIsLoading(true)
     try {
-      // Here you would make an API call to save the building
       console.log('Submitting building:', data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Show success message and redirect
-      alert('Building saved successfully!')
-      router.push('/forms')
-      
+
+      // Make actual API call to save the building
+      const response = await apiService.createBuilding(data)
+
+      if (response.success) {
+        alert('Building saved successfully!')
+        router.push('/forms')
+      } else {
+        throw new Error(response.message || 'Failed to save building')
+      }
+
     } catch (error) {
       console.error('Error saving building:', error)
-      alert('Error saving building. Please try again.')
+      alert(`Error saving building: ${error instanceof Error ? error.message : 'Please try again.'}`)
     } finally {
       setIsLoading(false)
     }
@@ -48,8 +52,14 @@ function BuildingFormContent() {
 
 export default function BuildingFormPage() {
   return (
-    <FormDataProvider>
-      <BuildingFormContent />
-    </FormDataProvider>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <FormHeader
+        title="Building Configuration"
+        subtitle="Add and configure building details, amenities, and policies"
+      />
+      <FormDataProvider>
+        <BuildingFormContent />
+      </FormDataProvider>
+    </div>
   )
 }

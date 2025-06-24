@@ -22,12 +22,11 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({
   children,
-  defaultTheme = 'light', // Changed from 'system' to 'light' to prevent hydration mismatch
+  defaultTheme = 'system',
   storageKey = 'homewiz-theme'
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(defaultTheme)
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light')
-  const [mounted, setMounted] = useState(false)
 
   // Get system preference
   const getSystemTheme = (): ResolvedTheme => {
@@ -45,27 +44,18 @@ export function ThemeProvider({
     return currentTheme
   }
 
-  // Handle mounting to prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   // Load theme from localStorage on mount
   useEffect(() => {
-    if (!mounted) return
-
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem(storageKey) as Theme
       if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
         setThemeState(savedTheme)
       }
     }
-  }, [storageKey, mounted])
+  }, [storageKey])
 
   // Update resolved theme when theme changes or system preference changes
   useEffect(() => {
-    if (!mounted) return
-
     const newResolvedTheme = resolveTheme(theme)
     setResolvedTheme(newResolvedTheme)
 
@@ -74,7 +64,7 @@ export function ThemeProvider({
       const root = window.document.documentElement
       root.classList.remove('light', 'dark')
       root.classList.add(newResolvedTheme)
-
+      
       // Update meta theme-color
       const metaThemeColor = document.querySelector('meta[name="theme-color"]')
       if (metaThemeColor) {
@@ -84,19 +74,19 @@ export function ThemeProvider({
         )
       }
     }
-  }, [theme, mounted])
+  }, [theme])
 
   // Listen for system theme changes
   useEffect(() => {
-    if (!mounted || typeof window === 'undefined') return
+    if (typeof window === 'undefined') return
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-
+    
     const handleChange = () => {
       if (theme === 'system') {
         const newResolvedTheme = getSystemTheme()
         setResolvedTheme(newResolvedTheme)
-
+        
         // Apply theme to document
         const root = window.document.documentElement
         root.classList.remove('light', 'dark')
@@ -106,7 +96,7 @@ export function ThemeProvider({
 
     mediaQuery.addEventListener('change', handleChange)
     return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [theme, mounted])
+  }, [theme])
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
@@ -130,20 +120,6 @@ export function ThemeProvider({
     resolvedTheme,
     setTheme,
     toggleTheme
-  }
-
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return (
-      <ThemeContext.Provider value={{
-        theme: 'light',
-        resolvedTheme: 'light',
-        setTheme: () => {},
-        toggleTheme: () => {}
-      }}>
-        {children}
-      </ThemeContext.Provider>
-    )
   }
 
   return (

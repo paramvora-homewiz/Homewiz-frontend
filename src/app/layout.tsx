@@ -5,8 +5,8 @@ import { ThemeProvider } from '../contexts/ThemeContext'
 import { RootAuthProvider } from '../components/auth/RootAuthProvider'
 import config from '../lib/config'
 import "./globals.css";
-// import "../styles/design-system.css";
-// import "../styles/professional-light-theme.css";
+import "../styles/design-system.css";
+import "../styles/professional-light-theme.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body className={inter.className}>
         <ThemeProvider defaultTheme="light">
           <RootAuthProvider>

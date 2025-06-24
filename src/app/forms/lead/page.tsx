@@ -5,6 +5,7 @@ import { FormDataProvider, useFormData } from '../../../components/forms/FormDat
 import { LeadFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import FormHeader from '../../../components/ui/FormHeader'
 
 function LeadFormContent() {
   const router = useRouter()
@@ -54,8 +55,14 @@ function LeadFormContent() {
 
 export default function LeadFormPage() {
   return (
-    <FormDataProvider>
-      <LeadFormContent />
-    </FormDataProvider>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <FormHeader
+        title="Lead Tracking"
+        subtitle="Track prospective tenants and their housing interests"
+      />
+      <FormDataProvider>
+        <LeadFormContent />
+      </FormDataProvider>
+    </div>
   )
 }

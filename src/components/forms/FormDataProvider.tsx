@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { apiService } from '../../services/apiService'
 
 // Types for form data
 interface Operator {
@@ -81,9 +82,8 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [roomsError, setRoomsError] = useState<string | null>(null)
 
-  // Mock data for demonstration (replace with real API calls when backend is ready)
-  // To switch to real API endpoints, uncomment the lines below and comment out the mock data:
-  // const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+  // Real API configuration
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
   const MOCK_OPERATORS: Operator[] = [
     {
       operator_id: 1,
@@ -190,25 +190,28 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     }
   ]
 
-  // Fetch operators (using mock data)
+  // Fetch operators from real API
   const fetchOperators = async (): Promise<Operator[]> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-    return MOCK_OPERATORS
+    console.log('🔄 Fetching operators from API...')
+    const data = await apiService.getOperators()
+    console.log('✅ Operators fetched:', data.length, 'operators')
+    return data
   }
 
-  // Fetch buildings (using mock data)
+  // Fetch buildings from real API
   const fetchBuildings = async (): Promise<Building[]> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 600))
-    return MOCK_BUILDINGS
+    console.log('🔄 Fetching buildings from API...')
+    const data = await apiService.getBuildings()
+    console.log('✅ Buildings fetched:', data.length, 'buildings')
+    return data
   }
 
-  // Fetch rooms (using mock data)
+  // Fetch rooms from real API
   const fetchRooms = async (): Promise<Room[]> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 700))
-    return MOCK_ROOMS
+    console.log('🔄 Fetching rooms from API...')
+    const data = await apiService.getRooms()
+    console.log('✅ Rooms fetched:', data.length, 'rooms')
+    return data
   }
 
   // Refresh operators
@@ -218,9 +221,10 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     try {
       const data = await fetchOperators()
       setOperators(data)
+      console.log('📊 Dashboard Update: Operators count updated to', data.length)
     } catch (error) {
       setOperatorsError(error instanceof Error ? error.message : 'Failed to fetch operators')
-      console.error('Error fetching operators:', error)
+      console.error('❌ Error fetching operators:', error)
     } finally {
       setOperatorsLoading(false)
     }
@@ -233,9 +237,10 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     try {
       const data = await fetchBuildings()
       setBuildings(data)
+      console.log('📊 Dashboard Update: Buildings count updated to', data.length)
     } catch (error) {
       setBuildingsError(error instanceof Error ? error.message : 'Failed to fetch buildings')
-      console.error('Error fetching buildings:', error)
+      console.error('❌ Error fetching buildings:', error)
     } finally {
       setBuildingsLoading(false)
     }
@@ -248,9 +253,11 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     try {
       const data = await fetchRooms()
       setRooms(data)
+      const availableRooms = data.filter(room => room.status === 'AVAILABLE' && room.ready_to_rent)
+      console.log('📊 Dashboard Update: Total rooms updated to', data.length, '| Available rooms:', availableRooms.length)
     } catch (error) {
       setRoomsError(error instanceof Error ? error.message : 'Failed to fetch rooms')
-      console.error('Error fetching rooms:', error)
+      console.error('❌ Error fetching rooms:', error)
     } finally {
       setRoomsLoading(false)
     }

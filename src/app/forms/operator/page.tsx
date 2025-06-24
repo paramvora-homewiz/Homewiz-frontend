@@ -5,6 +5,8 @@ import { FormDataProvider } from '../../../components/forms/FormDataProvider'
 import { OperatorFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { apiService } from '../../../services/apiService'
+import FormHeader from '../../../components/ui/FormHeader'
 
 export default function OperatorFormPage() {
   const router = useRouter()
@@ -13,19 +15,21 @@ export default function OperatorFormPage() {
   const handleSubmit = async (data: OperatorFormData) => {
     setIsLoading(true)
     try {
-      // Here you would make an API call to save the operator
       console.log('Submitting operator:', data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Show success message and redirect
-      alert('Operator saved successfully!')
-      router.push('/forms')
-      
+
+      // Make actual API call to save the operator
+      const response = await apiService.createOperator(data)
+
+      if (response.success) {
+        alert('Operator saved successfully!')
+        router.push('/forms')
+      } else {
+        throw new Error(response.message || 'Failed to save operator')
+      }
+
     } catch (error) {
       console.error('Error saving operator:', error)
-      alert('Error saving operator. Please try again.')
+      alert(`Error saving operator: ${error instanceof Error ? error.message : 'Please try again.'}`)
     } finally {
       setIsLoading(false)
     }
@@ -36,12 +40,18 @@ export default function OperatorFormPage() {
   }
 
   return (
-    <FormDataProvider>
-      <OperatorForm
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-        isLoading={isLoading}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <FormHeader
+        title="Operator Management"
+        subtitle="Manage property operators, staff, and their permissions"
       />
-    </FormDataProvider>
+      <FormDataProvider>
+        <OperatorForm
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+        />
+      </FormDataProvider>
+    </div>
   )
 }

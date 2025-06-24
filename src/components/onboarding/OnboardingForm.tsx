@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { OnboardingFormData } from '@/types'
 import { useSmartDefaults } from '@/hooks/useSmartDefaults'
+import { BasicInformationStep } from './steps/BasicInformationStep'
 import { PersonalInfoStep } from './steps/PersonalInfoStepNew'
 import { ProfessionalInfoStep } from './steps/ProfessionalInfoStep'
 import { HousingPreferencesStep } from './steps/HousingPreferencesStep'
@@ -22,6 +23,14 @@ const formSchema = z.object({
   // System Generated Fields
   tenant_id: z.string().optional(),
   lead_id: z.string().optional(),
+
+  // Basic Building Information
+  building_name: z.string().min(1, 'Building name is required'),
+  building_manager_id: z.number().optional(),
+  property_manager_id: z.number().optional(),
+  year_built: z.number().min(1900).max(new Date().getFullYear()).optional(),
+  building_available_for_rent: z.boolean().default(true),
+  building_description: z.string().optional(),
 
   // Personal Information
   firstName: z.string().min(1, 'First name is required').max(50, 'First name is too long'),
@@ -115,6 +124,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 const steps = [
+  { id: 'basic', title: 'Basic Info', description: 'Building and property details' },
   { id: 'personal', title: 'Personal Info', description: 'Tell us about yourself' },
   { id: 'professional', title: 'Professional', description: 'Your work and income' },
   { id: 'housing', title: 'Housing Preferences', description: 'What you\'re looking for' },
@@ -133,6 +143,11 @@ export function OnboardingForm() {
     // TODO: Fix Zod schema type compatibility
     // resolver: zodResolver(formSchema),
     defaultValues: {
+      // Basic Building Information
+      building_name: '',
+      building_available_for_rent: true,
+      building_description: '',
+
       // Personal Information
       firstName: '',
       lastName: '',
@@ -186,15 +201,17 @@ export function OnboardingForm() {
     const formData = form.getValues()
 
     switch (currentStep) {
-      case 0: // Personal Info
+      case 0: // Basic Info
+        return !!(formData.building_name)
+      case 1: // Personal Info
         return !!(formData.firstName && formData.lastName && formData.email && formData.phone)
-      case 1: // Professional Info
+      case 2: // Professional Info
         return !!(formData.occupation)
-      case 2: // Housing Preferences
+      case 3: // Housing Preferences
         return !!(formData.budget_min > 0 && formData.budget_max > 0 && formData.preferred_move_in_date && formData.preferred_lease_term)
-      case 3: // Property Selection
+      case 4: // Property Selection
         return !!(formData.selected_room_id && formData.selected_building_id)
-      case 4: // Documents
+      case 5: // Documents
         return true // Documents are optional
       default:
         return true
@@ -267,16 +284,18 @@ export function OnboardingForm() {
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <PersonalInfoStep form={form} />
+        return <BasicInformationStep form={form} />
       case 1:
-        return <ProfessionalInfoStep form={form} />
+        return <PersonalInfoStep form={form} />
       case 2:
-        return <HousingPreferencesStep form={form} />
+        return <ProfessionalInfoStep form={form} />
       case 3:
-        return <PropertySelectionStep form={form} />
+        return <HousingPreferencesStep form={form} />
       case 4:
-        return <DocumentUploadStep uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
+        return <PropertySelectionStep form={form} />
       case 5:
+        return <DocumentUploadStep uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
+      case 6:
         return <ReviewStep form={form} uploadedFiles={uploadedFiles} onEditStep={setCurrentStep} />
       default:
         return null
