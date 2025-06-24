@@ -17,6 +17,14 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8000'),
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
   
+  // Supabase Configuration
+  NEXT_PUBLIC_SUPABASE_URL: z.string().optional().refine(
+    (val) => !val || val === 'disabled_for_development' || z.string().url().safeParse(val).success,
+    { message: "Must be a valid URL or 'disabled_for_development'" }
+  ),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+
   // Clerk Authentication Configuration
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().optional(),
   CLERK_SECRET_KEY: z.string().optional(),
@@ -45,7 +53,10 @@ const envSchema = z.object({
   
   // Monitoring and Logging
   NEXT_PUBLIC_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().optional().refine(
+    (val) => !val || val === 'disabled_for_development' || z.string().url().safeParse(val).success,
+    { message: "Must be a valid URL or 'disabled_for_development'" }
+  ),
   
   // Rate Limiting
   NEXT_PUBLIC_RATE_LIMIT_REQUESTS: z.string().transform(Number).default('100'),
@@ -93,6 +104,13 @@ export const config = {
     baseUrl: env.NEXT_PUBLIC_API_URL,
     timeout: env.NEXT_PUBLIC_API_TIMEOUT,
   },
+
+  // Supabase Configuration
+  supabase: {
+    url: env.NEXT_PUBLIC_SUPABASE_URL === 'disabled_for_development' ? undefined : env.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY === 'disabled_for_development' ? undefined : env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    serviceRoleKey: env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY === 'disabled_for_development' ? undefined : env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
+  },
   
   // Authentication
   auth: {
@@ -132,7 +150,7 @@ export const config = {
   // Monitoring
   monitoring: {
     logLevel: env.NEXT_PUBLIC_LOG_LEVEL,
-    sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+    sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN === 'disabled_for_development' ? undefined : env.NEXT_PUBLIC_SENTRY_DSN,
   },
   
   // Rate Limiting
