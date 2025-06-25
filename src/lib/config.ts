@@ -14,7 +14,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
   
   // Backend API Configuration
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8000'),
+  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8000/api'),
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
   
   // Clerk Authentication Configuration
@@ -195,11 +195,11 @@ if (typeof window === 'undefined') {
   console.log(`Demo Mode: ${config.app.demoMode}`)
   console.log(`API URL: ${config.api.baseUrl}`)
   console.log(`Clerk Configured: ${validateClerkConfig()}`)
-  
+
   if (!validateApiConfig()) {
     console.warn('⚠️ Invalid API URL configuration')
   }
-  
+
   if (!config.app.demoMode && !validateClerkConfig()) {
     console.warn('⚠️ Clerk authentication not properly configured')
   }

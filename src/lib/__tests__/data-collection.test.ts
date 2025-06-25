@@ -23,7 +23,7 @@ vi.mock('../config', () => ({
       demoMode: false,
     },
     api: {
-      baseUrl: 'http://localhost:8000',
+      baseUrl: 'http://localhost:8000/api',
     },
   },
 }))

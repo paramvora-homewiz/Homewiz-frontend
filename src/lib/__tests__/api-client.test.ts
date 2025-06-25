@@ -9,7 +9,7 @@ import { ApiClient, ApiError, ApiErrorType } from '../api-client'
 vi.mock('../config', () => ({
   default: {
     api: {
-      baseUrl: 'http://localhost:8000',
+      baseUrl: 'http://localhost:8000/api',
       timeout: 5000,
     },
     app: {

@@ -385,7 +385,7 @@ export const apiClient = ApiClient.getInstance()
 
 // Utility functions for common API operations
 export const submitFormData = async (formData: BackendFormData): Promise<ApiResponse> => {
-  return apiClient.post('/api/applications', formData, {
+  return apiClient.post('/applications', formData, {
     validateResponse: true,
     retries: 3,
   })
@@ -398,7 +398,7 @@ export const uploadFile = async (file: File, category: string): Promise<ApiRespo
 
   return apiClient.request({
     method: 'POST',
-    endpoint: '/api/files/upload',
+    endpoint: '/files/upload',
     data: formData,
     headers: {}, // Let browser set Content-Type for FormData
     validateResponse: true,
@@ -406,14 +406,14 @@ export const uploadFile = async (file: File, category: string): Promise<ApiRespo
 }
 
 export const getBuildings = async (): Promise<ApiResponse> => {
-  return apiClient.get('/api/buildings', {
+  return apiClient.get('/buildings', {
     cache: true,
     cacheTtl: 600000, // 10 minutes
   })
 }
 
 export const getRooms = async (buildingId?: string): Promise<ApiResponse> => {
-  const endpoint = buildingId ? `/api/rooms?building_id=${buildingId}` : '/api/rooms'
+  const endpoint = buildingId ? `/rooms?building_id=${buildingId}` : '/rooms'
   return apiClient.get(endpoint, {
     cache: true,
     cacheTtl: 300000, // 5 minutes

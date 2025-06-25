@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -195,17 +195,17 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isFirstStep, isLastStep])
 
-  const handleInputChange = (field: keyof RoomFormData, value: any) => {
+  const handleInputChange = useCallback((field: keyof RoomFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-  }
+  }, [])
 
-  const handleCopyFromPrevious = (copiedData: any) => {
+  const handleCopyFromPrevious = useCallback((copiedData: any) => {
     setFormData(prev => ({
       ...prev,
       ...copiedData,
       room_id: prev.room_id // Keep current room_id
     }))
-  }
+  }, [])
 
   // Handle template selection
   const handleTemplateSelect = (template: FormTemplate) => {
@@ -315,14 +315,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
 
   // Step content components
   const BasicInformationStep = () => (
-    <motion.div
-      key="basic"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-6"
-    >
+    <div className="space-y-6">
       {/* Template Selector */}
       <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
         <div className="flex items-center gap-3 mb-3">
@@ -447,17 +440,11 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
           </label>
         </div>
       </Card>
-    </motion.div>
+    </div>
   )
 
   const SpecificationsStep = () => (
-    <motion.div
-      key="specifications"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -629,17 +616,11 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
           </div>
         </div>
       </Card>
-    </motion.div>
+    </div>
   )
 
   const AvailabilityStep = () => (
-    <motion.div
-      key="availability"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="space-y-6">
           <div>
@@ -788,17 +769,11 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
           </div>
         </div>
       </Card>
-    </motion.div>
+    </div>
   )
 
   const AmenitiesStep = () => (
-    <motion.div
-      key="amenities"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div>
           <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
@@ -817,17 +792,15 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
               { key: 'air_conditioning', label: 'Air Conditioning', icon: '❄️', description: 'Cooling system' },
               { key: 'cable_tv', label: 'Cable TV', icon: '📺', description: 'Television with cable' }
             ].map((amenity) => (
-              <motion.label
+              <label
                 key={amenity.key}
                 className={`
-                  flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200
+                  flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02]
                   ${formData[amenity.key as keyof RoomFormData]
                     ? 'border-blue-500 bg-blue-50 shadow-md'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }
                 `}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
               >
                 <input
                   type="checkbox"
@@ -842,22 +815,16 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
                   </div>
                   <p className="text-sm text-gray-600">{amenity.description}</p>
                 </div>
-              </motion.label>
+              </label>
             ))}
           </div>
         </div>
       </Card>
-    </motion.div>
+    </div>
   )
 
   const MaintenanceStep = () => (
-    <motion.div
-      key="maintenance"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="space-y-6">
           <div>
@@ -938,7 +905,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
           </div>
         </div>
       </Card>
-    </motion.div>
+    </div>
   )
 
   // Step indicator component
@@ -1080,11 +1047,61 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <AnimatePresence mode="wait">
-            {currentStep === 'basic' && <BasicInformationStep />}
-            {currentStep === 'specifications' && <SpecificationsStep />}
-            {currentStep === 'availability' && <AvailabilityStep />}
-            {currentStep === 'amenities' && <AmenitiesStep />}
-            {currentStep === 'maintenance' && <MaintenanceStep />}
+            {currentStep === 'basic' && (
+              <motion.div
+                key="basic"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <BasicInformationStep />
+              </motion.div>
+            )}
+            {currentStep === 'specifications' && (
+              <motion.div
+                key="specifications"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <SpecificationsStep />
+              </motion.div>
+            )}
+            {currentStep === 'availability' && (
+              <motion.div
+                key="availability"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AvailabilityStep />
+              </motion.div>
+            )}
+            {currentStep === 'amenities' && (
+              <motion.div
+                key="amenities"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AmenitiesStep />
+              </motion.div>
+            )}
+            {currentStep === 'maintenance' && (
+              <motion.div
+                key="maintenance"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MaintenanceStep />
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {/* Step Navigation */}
