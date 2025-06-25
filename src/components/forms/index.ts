@@ -8,6 +8,14 @@ export { default as LeadForm } from './LeadForm'
 // Dashboard and Navigation
 export { default as FormsDashboard } from './FormsDashboard'
 
+// Template Management Components
+export { default as TemplateSelector } from './TemplateSelector'
+export { default as TemplateSaveDialog } from './TemplateSaveDialog'
+
+// Enhanced Form Components
+export { default as EnhancedValidation, InlineValidation, ValidationSummary } from './EnhancedValidation'
+export { default as FormGuidance, HelpTooltip } from './FormGuidance'
+
 // Data Provider and Utilities
 export { FormDataProvider, useFormData, withFormData, FormDataLoader, SmartSelect } from './FormDataProvider'
 

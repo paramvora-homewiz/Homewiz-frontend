@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
 import { getForwardNavigationUrl } from '@/lib/form-workflow'
+import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
 
 function TenantFormContent() {
   const router = useRouter()
@@ -23,15 +24,21 @@ function TenantFormContent() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Show success message and redirect
-      alert('Tenant saved successfully! Proceeding to Lead Tracking.')
+      // Show enhanced success message
+      showFormSuccessMessage('tenant', 'saved')
+
       // Navigate to the next form in the workflow
       const nextUrl = getForwardNavigationUrl('tenant')
       router.push(nextUrl)
-      
+
     } catch (error) {
       console.error('Error saving tenant:', error)
-      alert('Error saving tenant. Please try again.')
+      handleFormSubmissionError(error, {
+        additionalInfo: {
+          formType: 'tenant',
+          operation: 'save'
+        }
+      })
     } finally {
       setIsLoading(false)
     }

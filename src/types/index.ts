@@ -240,9 +240,26 @@ export interface Room {
 
 export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'updated_at'> {
   room_id?: string
+  room_number: string
+  building_id: string
+  ready_to_rent: boolean
+  status: RoomStatus
+  booked_from?: string
+  booked_till?: string
+  active_tenants: number
+  maximum_people_in_room: number
+  private_room_rent: number
+  shared_room_rent_2?: number
   last_check?: string
-  last_check_by?: string
+  last_check_by?: number
   current_booking_types?: string
+  floor_number: number
+  bed_count: number
+  bathroom_type: BathroomType
+  bed_size: string
+  bed_type: string
+  view?: string
+  sq_footage?: number
   mini_fridge: boolean
   sink: boolean
   bedding_provided: boolean
@@ -252,13 +269,16 @@ export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'upd
   air_conditioning: boolean
   cable_tv: boolean
   room_storage?: string
-  noise_level?: NoiseLevel
-  sunlight?: SunlightLevel
-  // Removed 'furnished' as it's not in backend schema
+  noise_level?: string
+  sunlight?: string
+  furnished?: boolean
   furniture_details?: string
   last_renovation_date?: string
   public_notes?: string
   internal_notes?: string
+  virtual_tour_url?: string
+  available_from?: string
+  additional_features?: string
 }
 
 // Tenant Form Interface - Maps to tenants table
@@ -589,4 +609,56 @@ export interface Notification {
   title: string
   message: string
   duration?: number
+}
+
+// ============================================================================
+// FORM TEMPLATE TYPES
+// ============================================================================
+
+// Form Template Interface
+export interface FormTemplate {
+  id: string
+  name: string
+  formType: 'operator' | 'building' | 'room' | 'tenant' | 'lead'
+  data: any
+  createdAt: string
+  lastUsed?: string
+  useCount: number
+  isDefault?: boolean
+  tags?: string[]
+  description?: string
+}
+
+// Recent Submission Interface
+export interface RecentSubmission {
+  id: string
+  formType: 'operator' | 'building' | 'room' | 'tenant' | 'lead'
+  data: any
+  submittedAt: string
+  preview: string
+}
+
+// Template Manager State
+export interface TemplateManagerState {
+  templates: FormTemplate[]
+  recentSubmissions: RecentSubmission[]
+  loading: boolean
+  error: string | null
+}
+
+// Template Save Dialog Props
+export interface TemplateSaveDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  formType: 'operator' | 'building' | 'room' | 'tenant' | 'lead'
+  formData: any
+  onSave: (template: Omit<FormTemplate, 'id' | 'createdAt' | 'useCount'>) => void
+}
+
+// Template Selector Props
+export interface TemplateSelectorProps {
+  formType: 'operator' | 'building' | 'room' | 'tenant' | 'lead'
+  onTemplateSelect: (template: FormTemplate) => void
+  onRecentSelect: (submission: RecentSubmission) => void
+  className?: string
 }

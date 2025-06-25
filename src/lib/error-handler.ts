@@ -1,11 +1,30 @@
 /**
  * Error Handling Utilities for HomeWiz Frontend
- * 
+ *
  * This module provides comprehensive error handling, logging,
- * and user-friendly error message utilities.
+ * and user-friendly error message utilities with toast integration.
  */
 
 import config from './config'
+
+// Toast integration interface
+export interface ToastNotification {
+  type: 'success' | 'error' | 'warning' | 'info'
+  title: string
+  message?: string
+  duration?: number
+  action?: {
+    label: string
+    onClick: () => void
+  }
+}
+
+// Global toast handler - will be set by the app
+let globalToastHandler: ((toast: ToastNotification) => void) | null = null
+
+export const setGlobalToastHandler = (handler: (toast: ToastNotification) => void) => {
+  globalToastHandler = handler
+}
 
 // Error types and interfaces
 export enum ErrorType {
@@ -47,6 +66,13 @@ export interface UserFriendlyError {
   action?: string
   actionLabel?: string
   retryable: boolean
+  severity?: 'low' | 'medium' | 'high' | 'critical'
+  category?: string
+  suggestions?: string[]
+  recoveryActions?: {
+    label: string
+    action: () => void
+  }[]
 }
 
 export class ErrorHandler {
@@ -180,64 +206,108 @@ export class ErrorHandler {
   }
 
   /**
-   * Get user-friendly error message
+   * Get user-friendly error message with enhanced details
    */
   static getUserFriendlyError(error: ErrorDetails | Error | any): UserFriendlyError {
     const errorDetails = error instanceof Error ? this.handleError(error) : error
-
     const errorType = errorDetails.type || this.determineErrorType(error)
-    
+    const severity = this.mapSeverityToUserLevel(errorDetails.severity || this.determineSeverity(error))
+
     switch (errorType) {
       case ErrorType.VALIDATION:
         return {
           title: 'Validation Error',
-          message: 'Please check your input and try again.',
+          message: this.getSpecificValidationMessage(errorDetails) || 'Please check your input and try again.',
           retryable: true,
           action: 'retry',
-          actionLabel: 'Try Again'
+          actionLabel: 'Fix and Try Again',
+          severity: 'low',
+          category: 'validation',
+          suggestions: [
+            'Check required fields are filled',
+            'Verify email format is correct',
+            'Ensure phone numbers are valid',
+            'Check date formats'
+          ]
         }
 
       case ErrorType.AUTHENTICATION:
         return {
           title: 'Authentication Required',
-          message: 'Please sign in to continue.',
+          message: 'Your session has expired. Please sign in to continue.',
           retryable: true,
           action: 'signin',
-          actionLabel: 'Sign In'
+          actionLabel: 'Sign In',
+          severity: 'high',
+          category: 'auth',
+          suggestions: [
+            'Check your credentials',
+            'Clear browser cache if issues persist',
+            'Contact support if you forgot your password'
+          ]
         }
 
       case ErrorType.AUTHORIZATION:
         return {
           title: 'Access Denied',
           message: 'You don\'t have permission to perform this action.',
-          retryable: false
+          retryable: false,
+          severity: 'medium',
+          category: 'auth',
+          suggestions: [
+            'Contact your administrator for access',
+            'Verify you\'re signed in with the correct account'
+          ]
         }
 
       case ErrorType.NETWORK:
         return {
           title: 'Connection Error',
-          message: 'Please check your internet connection and try again.',
+          message: 'Unable to connect to the server. Please check your internet connection.',
           retryable: true,
           action: 'retry',
-          actionLabel: 'Retry'
+          actionLabel: 'Retry',
+          severity: 'medium',
+          category: 'network',
+          suggestions: [
+            'Check your internet connection',
+            'Try refreshing the page',
+            'Disable VPN if using one',
+            'Contact IT support if problem persists'
+          ]
         }
 
       case ErrorType.API:
         return {
           title: 'Server Error',
-          message: 'Something went wrong on our end. Please try again later.',
+          message: this.getSpecificApiMessage(errorDetails) || 'Something went wrong on our end. Please try again later.',
           retryable: true,
           action: 'retry',
-          actionLabel: 'Try Again'
+          actionLabel: 'Try Again',
+          severity: 'high',
+          category: 'server',
+          suggestions: [
+            'Wait a moment and try again',
+            'Check if the service is under maintenance',
+            'Contact support if the issue persists'
+          ]
         }
 
       case ErrorType.FILE_UPLOAD:
         return {
           title: 'Upload Failed',
-          message: 'Failed to upload file. Please check the file size and format.',
+          message: this.getSpecificFileUploadMessage(errorDetails) || 'Failed to upload file. Please check the file size and format.',
           retryable: true,
           action: 'retry',
-          actionLabel: 'Try Again'
+          actionLabel: 'Try Again',
+          severity: 'medium',
+          category: 'upload',
+          suggestions: [
+            'Check file size is under 10MB',
+            'Ensure file format is supported (JPG, PNG, PDF)',
+            'Try uploading a different file',
+            'Check your internet connection'
+          ]
         }
 
       case ErrorType.FORM_SUBMISSION:
@@ -246,7 +316,31 @@ export class ErrorHandler {
           message: 'Failed to submit form. Please check your input and try again.',
           retryable: true,
           action: 'retry',
-          actionLabel: 'Submit Again'
+          actionLabel: 'Submit Again',
+          severity: 'medium',
+          category: 'form',
+          suggestions: [
+            'Review all required fields',
+            'Check for validation errors',
+            'Save your work before retrying',
+            'Try refreshing the page if issues persist'
+          ]
+        }
+
+      case ErrorType.DATA_PROCESSING:
+        return {
+          title: 'Processing Error',
+          message: 'Failed to process your data. Please try again.',
+          retryable: true,
+          action: 'retry',
+          actionLabel: 'Try Again',
+          severity: 'medium',
+          category: 'processing',
+          suggestions: [
+            'Check your data format',
+            'Ensure all required information is provided',
+            'Try with a smaller dataset'
+          ]
         }
 
       default:
@@ -255,7 +349,14 @@ export class ErrorHandler {
           message: 'An unexpected error occurred. Please try again or contact support.',
           retryable: true,
           action: 'retry',
-          actionLabel: 'Try Again'
+          actionLabel: 'Try Again',
+          severity: 'high',
+          category: 'unknown',
+          suggestions: [
+            'Try refreshing the page',
+            'Clear your browser cache',
+            'Contact support with error details'
+          ]
         }
     }
   }
@@ -295,38 +396,297 @@ export class ErrorHandler {
     const userFriendlyError = this.getUserFriendlyError(error)
     return `${userFriendlyError.title}: ${userFriendlyError.message}`
   }
+
+  /**
+   * Show error as toast notification
+   */
+  static showErrorToast(error: ErrorDetails | Error | any, options: {
+    showSuggestions?: boolean
+    includeRetryAction?: boolean
+    customAction?: { label: string; onClick: () => void }
+  } = {}): void {
+    const userFriendlyError = this.getUserFriendlyError(error)
+
+    if (!globalToastHandler) {
+      console.warn('Toast handler not set. Falling back to console error.')
+      console.error(userFriendlyError.title, userFriendlyError.message)
+      return
+    }
+
+    let message = userFriendlyError.message
+    if (options.showSuggestions && userFriendlyError.suggestions?.length) {
+      message += '\n\nSuggestions:\n• ' + userFriendlyError.suggestions.slice(0, 2).join('\n• ')
+    }
+
+    globalToastHandler({
+      type: 'error',
+      title: userFriendlyError.title,
+      message,
+      duration: userFriendlyError.severity === 'critical' ? 10000 : 7000,
+      action: options.customAction || (options.includeRetryAction && userFriendlyError.retryable ? {
+        label: userFriendlyError.actionLabel || 'Retry',
+        onClick: () => console.log('Retry action triggered')
+      } : undefined)
+    })
+  }
+
+  /**
+   * Show success message as toast
+   */
+  static showSuccessToast(title: string, message?: string, options: {
+    duration?: number
+    action?: { label: string; onClick: () => void }
+  } = {}): void {
+    if (!globalToastHandler) {
+      console.log('✅', title, message)
+      return
+    }
+
+    globalToastHandler({
+      type: 'success',
+      title,
+      message,
+      duration: options.duration || 4000,
+      action: options.action
+    })
+  }
+
+  /**
+   * Show warning message as toast
+   */
+  static showWarningToast(title: string, message?: string, options: {
+    duration?: number
+    action?: { label: string; onClick: () => void }
+  } = {}): void {
+    if (!globalToastHandler) {
+      console.warn('⚠️', title, message)
+      return
+    }
+
+    globalToastHandler({
+      type: 'warning',
+      title,
+      message,
+      duration: options.duration || 6000,
+      action: options.action
+    })
+  }
+
+  /**
+   * Show info message as toast
+   */
+  static showInfoToast(title: string, message?: string, options: {
+    duration?: number
+    action?: { label: string; onClick: () => void }
+  } = {}): void {
+    if (!globalToastHandler) {
+      console.info('ℹ️', title, message)
+      return
+    }
+
+    globalToastHandler({
+      type: 'info',
+      title,
+      message,
+      duration: options.duration || 5000,
+      action: options.action
+    })
+  }
+
+  /**
+   * Map error severity to user-friendly level
+   */
+  private static mapSeverityToUserLevel(severity: ErrorSeverity): 'low' | 'medium' | 'high' | 'critical' {
+    switch (severity) {
+      case ErrorSeverity.LOW: return 'low'
+      case ErrorSeverity.MEDIUM: return 'medium'
+      case ErrorSeverity.HIGH: return 'high'
+      case ErrorSeverity.CRITICAL: return 'critical'
+      default: return 'medium'
+    }
+  }
+
+  /**
+   * Get specific validation error message
+   */
+  private static getSpecificValidationMessage(errorDetails: any): string | null {
+    if (errorDetails.details?.field) {
+      const field = errorDetails.details.field
+      if (field.includes('email')) return 'Please enter a valid email address.'
+      if (field.includes('phone')) return 'Please enter a valid phone number.'
+      if (field.includes('date')) return 'Please enter a valid date.'
+      if (field.includes('required')) return 'This field is required.'
+    }
+    return null
+  }
+
+  /**
+   * Get specific API error message
+   */
+  private static getSpecificApiMessage(errorDetails: any): string | null {
+    const status = errorDetails.code || errorDetails.details?.status
+    if (status === 429) return 'Too many requests. Please wait a moment before trying again.'
+    if (status === 503) return 'Service temporarily unavailable. Please try again later.'
+    if (status === 500) return 'Internal server error. Our team has been notified.'
+    return null
+  }
+
+  /**
+   * Get specific file upload error message
+   */
+  private static getSpecificFileUploadMessage(errorDetails: any): string | null {
+    const message = errorDetails.message?.toLowerCase() || ''
+    if (message.includes('size')) return 'File size too large. Please choose a file under 10MB.'
+    if (message.includes('format') || message.includes('type')) return 'File format not supported. Please use JPG, PNG, or PDF.'
+    if (message.includes('network')) return 'Upload failed due to connection issues. Please try again.'
+    return null
+  }
 }
 
-// Utility functions for common error scenarios
-export const handleApiError = (error: any, context?: any) => {
-  return ErrorHandler.handleError(error, {
+// Enhanced utility functions for common error scenarios
+export const handleApiError = (error: any, context?: any, showToast = true) => {
+  const errorDetails = ErrorHandler.handleError(error, {
     type: ErrorType.API,
     ...context
   })
+
+  if (showToast) {
+    ErrorHandler.showErrorToast(errorDetails, {
+      showSuggestions: true,
+      includeRetryAction: true
+    })
+  }
+
+  return errorDetails
 }
 
-export const handleValidationError = (error: any, context?: any) => {
-  return ErrorHandler.handleError(error, {
+export const handleValidationError = (error: any, context?: any, showToast = true) => {
+  const errorDetails = ErrorHandler.handleError(error, {
     type: ErrorType.VALIDATION,
     severity: ErrorSeverity.LOW,
     ...context
   })
+
+  if (showToast) {
+    ErrorHandler.showErrorToast(errorDetails, {
+      showSuggestions: true
+    })
+  }
+
+  return errorDetails
 }
 
-export const handleNetworkError = (error: any, context?: any) => {
-  return ErrorHandler.handleError(error, {
+export const handleNetworkError = (error: any, context?: any, showToast = true) => {
+  const errorDetails = ErrorHandler.handleError(error, {
     type: ErrorType.NETWORK,
     severity: ErrorSeverity.MEDIUM,
     ...context
   })
+
+  if (showToast) {
+    ErrorHandler.showErrorToast(errorDetails, {
+      showSuggestions: true,
+      includeRetryAction: true
+    })
+  }
+
+  return errorDetails
 }
 
-export const handleAuthError = (error: any, context?: any) => {
-  return ErrorHandler.handleError(error, {
+export const handleAuthError = (error: any, context?: any, showToast = true) => {
+  const errorDetails = ErrorHandler.handleError(error, {
     type: ErrorType.AUTHENTICATION,
     severity: ErrorSeverity.HIGH,
     ...context
   })
+
+  if (showToast) {
+    ErrorHandler.showErrorToast(errorDetails, {
+      showSuggestions: true
+    })
+  }
+
+  return errorDetails
+}
+
+export const handleFileUploadError = (error: any, context?: any, showToast = true) => {
+  const errorDetails = ErrorHandler.handleError(error, {
+    type: ErrorType.FILE_UPLOAD,
+    severity: ErrorSeverity.MEDIUM,
+    ...context
+  })
+
+  if (showToast) {
+    ErrorHandler.showErrorToast(errorDetails, {
+      showSuggestions: true,
+      includeRetryAction: true
+    })
+  }
+
+  return errorDetails
+}
+
+export const handleFormSubmissionError = (error: any, context?: any, showToast = true) => {
+  const errorDetails = ErrorHandler.handleError(error, {
+    type: ErrorType.FORM_SUBMISSION,
+    severity: ErrorSeverity.MEDIUM,
+    ...context
+  })
+
+  if (showToast) {
+    ErrorHandler.showErrorToast(errorDetails, {
+      showSuggestions: true,
+      includeRetryAction: true
+    })
+  }
+
+  return errorDetails
+}
+
+// Success message utilities
+export const showSuccessMessage = (title: string, message?: string, options?: {
+  duration?: number
+  action?: { label: string; onClick: () => void }
+}) => {
+  ErrorHandler.showSuccessToast(title, message, options)
+}
+
+export const showWarningMessage = (title: string, message?: string, options?: {
+  duration?: number
+  action?: { label: string; onClick: () => void }
+}) => {
+  ErrorHandler.showWarningToast(title, message, options)
+}
+
+export const showInfoMessage = (title: string, message?: string, options?: {
+  duration?: number
+  action?: { label: string; onClick: () => void }
+}) => {
+  ErrorHandler.showInfoToast(title, message, options)
+}
+
+// Form-specific success messages
+export const showFormSuccessMessage = (formType: string, action = 'saved') => {
+  const formNames: Record<string, string> = {
+    operator: 'Operator',
+    building: 'Building',
+    room: 'Room',
+    tenant: 'Tenant',
+    lead: 'Lead'
+  }
+
+  const formName = formNames[formType] || formType
+  showSuccessMessage(
+    `${formName} ${action} successfully!`,
+    `Your ${formName.toLowerCase()} information has been ${action} and is now available in the system.`,
+    {
+      duration: 5000,
+      action: {
+        label: 'View Details',
+        onClick: () => console.log(`Navigate to ${formType} details`)
+      }
+    }
+  )
 }
 
 // Export the main handler as default

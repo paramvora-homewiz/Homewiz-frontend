@@ -20,6 +20,7 @@ import AdvancedSearchPanel from '../search/AdvancedSearchPanel'
 import DataExportPanel from '../export/DataExportPanel'
 import NotificationPanel from '../notifications/NotificationPanel'
 import { notificationService } from '../../services/notificationService'
+import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
 import {
   Users,
   Building,
@@ -144,12 +145,19 @@ function FormsDashboardContent() {
       // Return to dashboard after successful submission
       setCurrentForm('dashboard')
 
-      // Show success message (you might want to use a toast notification here)
-      alert(`${formType} saved successfully!`)
+      // Show enhanced success message
+      showFormSuccessMessage(formType, 'saved')
 
     } catch (error) {
       console.error(`❌ Error submitting ${formType} form:`, error)
-      alert(`Error saving ${formType}. Please try again.`)
+
+      // Show enhanced error message with suggestions
+      handleFormSubmissionError(error, {
+        additionalInfo: {
+          formType,
+          operation: 'save'
+        }
+      })
     } finally {
       setIsLoading(false)
     }

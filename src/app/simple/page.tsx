@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useFormStepNavigation } from '@/hooks/useFormStepNavigation'
 import { Home, User, Mail, Phone, Briefcase, DollarSign, Upload, CheckCircle } from 'lucide-react'
+import { showSuccessMessage } from '@/lib/error-handler'
 
 function SimplePageContent() {
   const [formData, setFormData] = useState({
@@ -217,7 +218,7 @@ function SimplePageContent() {
               ) : (
                 <Button
                   variant="gradient"
-                  onClick={() => alert('🎉 Demo completed! The full version would submit to your backend.')}
+                  onClick={() => showSuccessMessage('Demo Completed!', '🎉 The full version would submit to your backend.', { duration: 4000 })}
                 >
                   Complete Demo
                 </Button>

@@ -11,6 +11,10 @@ interface Toast {
   title: string
   message?: string
   duration?: number
+  action?: {
+    label: string
+    onClick: () => void
+  }
 }
 
 interface ToastContextType {
@@ -97,6 +101,13 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     info: 'text-blue-500',
   }
 
+  const buttonColors = {
+    success: 'bg-green-100 hover:bg-green-200 text-green-700',
+    error: 'bg-red-100 hover:bg-red-200 text-red-700',
+    warning: 'bg-yellow-100 hover:bg-yellow-200 text-yellow-700',
+    info: 'bg-blue-100 hover:bg-blue-200 text-blue-700',
+  }
+
   const Icon = icons[toast.type]
 
   return (
@@ -106,27 +117,46 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
       exit={{ opacity: 0, x: 300, scale: 0.5, transition: { duration: 0.2 } }}
       transition={{ type: "spring", stiffness: 500, damping: 30 }}
       className={cn(
-        "relative flex items-start p-4 rounded-lg border shadow-lg backdrop-blur-sm",
+        "relative flex flex-col p-4 rounded-lg border shadow-lg backdrop-blur-sm",
         colors[toast.type]
       )}
     >
-      <div className="flex-shrink-0">
-        <Icon className={cn("h-5 w-5", iconColors[toast.type])} />
-      </div>
-      
-      <div className="ml-3 flex-1">
-        <h4 className="text-sm font-medium">{toast.title}</h4>
-        {toast.message && (
-          <p className="mt-1 text-sm opacity-90">{toast.message}</p>
-        )}
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <Icon className={cn("h-5 w-5", iconColors[toast.type])} />
+        </div>
+
+        <div className="ml-3 flex-1">
+          <h4 className="text-sm font-medium">{toast.title}</h4>
+          {toast.message && (
+            <p className="mt-1 text-sm opacity-90 whitespace-pre-line">{toast.message}</p>
+          )}
+        </div>
+
+        <button
+          onClick={onRemove}
+          className="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
-      <button
-        onClick={onRemove}
-        className="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-      >
-        <X className="h-4 w-4" />
-      </button>
+      {toast.action && (
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={() => {
+              toast.action?.onClick()
+              onRemove()
+            }}
+            className={cn(
+              "px-3 py-1 text-xs font-medium rounded transition-colors",
+              buttonColors[toast.type]
+            )}
+          >
+            {toast.action.label}
+          </button>
+        </div>
+      )}
     </motion.div>
   )
 }

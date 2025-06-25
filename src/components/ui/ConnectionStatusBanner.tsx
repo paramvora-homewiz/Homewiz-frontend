@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { AlertCircle, CheckCircle, RefreshCw, Terminal } from 'lucide-react'
 import { checkBackendConnection, getConnectionStatus, type ConnectionStatus } from '@/utils/connectionChecker'
+import { showInfoMessage } from '@/lib/error-handler'
 
 export function ConnectionStatusBanner() {
   const [status, setStatus] = useState<ConnectionStatus>(getConnectionStatus())
@@ -44,7 +45,11 @@ If you get a GEMINI_API_KEY error:
 3. Get your API key from: https://makersuite.google.com/app/apikey
     `
     
-    alert(instructions)
+    showInfoMessage(
+      'Backend Setup Instructions',
+      instructions.trim(),
+      { duration: 15000 }
+    )
   }
 
   // Don't show banner if backend is connected
