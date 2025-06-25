@@ -37,7 +37,9 @@ class ConnectionChecker {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
 
-      const response = await fetch(`${config.api.baseUrl}/`, {
+      // Check the root endpoint instead of the API endpoint
+      const baseUrl = config.api.baseUrl.replace('/api', '')
+      const response = await fetch(`${baseUrl}/`, {
         method: 'GET',
         mode: 'cors',
         credentials: 'omit',

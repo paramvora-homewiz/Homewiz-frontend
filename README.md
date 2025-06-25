@@ -56,7 +56,7 @@ The project is pre-configured for local development with demo mode enabled:
 # .env.local (already configured)
 NODE_ENV=development
 NEXT_PUBLIC_APP_ENV=development
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
 NEXT_PUBLIC_DEMO_MODE=true
 ```
 
