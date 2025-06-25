@@ -9,7 +9,14 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge, ProgressIndicator } from '@/components/ui/enhanced-components'
+import { useFormStepNavigation } from '@/hooks/useFormStepNavigation'
 import { TenantFormData } from '@/types'
+import { 
+  validateTenantFormData, 
+  transformTenantDataForBackend, 
+  BACKEND_ENUMS,
+  ValidationResult 
+} from '@/lib/backend-sync'
 import {
   UserCheck,
   Mail,
@@ -49,12 +56,33 @@ interface TenantFormProps {
   operators?: Array<{ operator_id: number; name: string; operator_type: string }>
 }
 
-const TENANT_STATUS_OPTIONS = [
-  { value: 'ACTIVE', label: 'Active', color: 'from-green-500 to-emerald-500', icon: <CheckCircle className="w-5 h-5" /> },
-  { value: 'INACTIVE', label: 'Inactive', color: 'from-gray-500 to-slate-500', icon: <Pause className="w-5 h-5" /> },
-  { value: 'PENDING', label: 'Pending', color: 'from-yellow-500 to-orange-500', icon: <Clock className="w-5 h-5" /> },
-  { value: 'TERMINATED', label: 'Terminated', color: 'from-red-500 to-pink-500', icon: <XCircle className="w-5 h-5" /> }
-]
+// Use backend-validated tenant status options
+const TENANT_STATUS_OPTIONS = BACKEND_ENUMS.TENANT_STATUS.map(status => ({
+  value: status,
+  label: status.charAt(0) + status.slice(1).toLowerCase(),
+  color: getStatusColor(status),
+  icon: getStatusIcon(status)
+}))
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'ACTIVE': return 'from-green-500 to-emerald-500'
+    case 'INACTIVE': return 'from-gray-500 to-slate-500'
+    case 'PENDING': return 'from-yellow-500 to-orange-500'
+    case 'TERMINATED': return 'from-red-500 to-pink-500'
+    default: return 'from-gray-500 to-slate-500'
+  }
+}
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'ACTIVE': return <CheckCircle className="w-5 h-5" />
+    case 'INACTIVE': return <Pause className="w-5 h-5" />
+    case 'PENDING': return <Clock className="w-5 h-5" />
+    case 'TERMINATED': return <XCircle className="w-5 h-5" />
+    default: return <Clock className="w-5 h-5" />
+  }
+}
 
 const ACCOUNT_STATUS_OPTIONS = [
   { value: 'ACTIVE', label: 'Active Account', icon: <CheckCircle className="w-4 h-4" /> },
@@ -68,32 +96,33 @@ const COMMUNICATION_PREFERENCES = [
   { value: 'BOTH', label: 'Email & SMS', icon: <Bell className="w-4 h-4" /> }
 ]
 
-const BOOKING_TYPES = [
-  {
-    value: 'LEASE',
-    label: 'Standard Lease',
-    description: 'Traditional rental agreement',
-    icon: <FileText className="w-5 h-5" />
-  },
-  {
-    value: 'SHORT_TERM',
-    label: 'Short Term',
-    description: 'Less than 6 months',
-    icon: <Calendar className="w-5 h-5" />
-  },
-  {
-    value: 'MONTH_TO_MONTH',
-    label: 'Month-to-Month',
-    description: 'Flexible monthly terms',
-    icon: <Calendar className="w-5 h-5" />
-  },
-  {
-    value: 'CORPORATE',
-    label: 'Corporate Housing',
-    description: 'Company-sponsored housing',
-    icon: <Building className="w-5 h-5" />
+// Use backend-validated booking types to ensure sync
+const BOOKING_TYPES = BACKEND_ENUMS.BOOKING_TYPES.map(type => ({
+  value: type,
+  label: type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+  description: getBookingTypeDescription(type),
+  icon: getBookingTypeIcon(type)
+}))
+
+function getBookingTypeDescription(type: string): string {
+  switch (type) {
+    case 'LEASE': return 'Traditional rental agreement'
+    case 'SHORT_TERM': return 'Less than 6 months'
+    case 'MONTH_TO_MONTH': return 'Flexible monthly terms'
+    case 'CORPORATE': return 'Company-sponsored housing'
+    default: return ''
   }
-]
+}
+
+function getBookingTypeIcon(type: string) {
+  switch (type) {
+    case 'LEASE': return <FileText className="w-5 h-5" />
+    case 'SHORT_TERM': return <Calendar className="w-5 h-5" />
+    case 'MONTH_TO_MONTH': return <Calendar className="w-5 h-5" />
+    case 'CORPORATE': return <Building className="w-5 h-5" />
+    default: return <FileText className="w-5 h-5" />
+  }
+}
 
 const PAYMENT_METHODS = [
   { value: 'BANK_TRANSFER', label: 'Bank Transfer', icon: <Building className="w-4 h-4" /> },
@@ -133,7 +162,6 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
   const [availableRooms, setAvailableRooms] = useState<any[]>([])
   const [selectedRoom, setSelectedRoom] = useState<any>(null)
-  const [currentStep, setCurrentStep] = useState(0)
 
   const steps = [
     { id: 'personal', title: 'Personal Info', icon: <UserCheck className="w-5 h-5" /> },
@@ -142,6 +170,11 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
     { id: 'lease', title: 'Lease Details', icon: <FileText className="w-5 h-5" /> },
     { id: 'payment', title: 'Payment & Preferences', icon: <CreditCard className="w-5 h-5" /> }
   ]
+
+  // Use form step navigation hook
+  const { currentStep, nextStep, prevStep, canGoNext, canGoPrev } = useFormStepNavigation({
+    totalSteps: steps.length
+  })
 
   // Filter rooms based on selected building
   useEffect(() => {
@@ -166,6 +199,15 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
 
   // Validation function (doesn't automatically set errors)
   const validateField = (fieldName: string, value: any): string | null => {
+    // Use comprehensive backend validation
+    const validationResult = validateTenantFormData(formData)
+    
+    // Return specific field error if exists
+    if (validationResult.errors[fieldName]) {
+      return validationResult.errors[fieldName]
+    }
+    
+    // Additional real-time validations for UX
     switch (fieldName) {
       case 'tenant_name':
         if (!value?.trim()) return 'Tenant name is required'
@@ -179,32 +221,42 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
         break
       case 'deposit_amount':
         if (value && value < 0) return 'Deposit amount must be positive'
+        if (!value && formData.lease_start_date) return 'Deposit amount is required'
+        break
+      case 'lease_start_date':
+        if (!value && formData.lease_end_date) return 'Lease start date is required'
         break
       case 'lease_end_date':
+        if (!value && formData.lease_start_date) return 'Lease end date is required'
         if (formData.lease_start_date && value) {
           const startDate = new Date(formData.lease_start_date)
           const endDate = new Date(value)
           if (endDate <= startDate) return 'End date must be after start date'
         }
         break
+      case 'operator_id':
+        if (!value) return 'Operator selection is required'
+        break
+      case 'room_id':
+        if (!value) return 'Room selection is required'
+        break
+      case 'building_id':
+        if (!value) return 'Building selection is required'
+        break
+      case 'booking_type':
+        if (!value) return 'Booking type is required'
+        if (!BACKEND_ENUMS.BOOKING_TYPES.includes(value)) return 'Invalid booking type'
+        break
+      case 'status':
+        if (value && !BACKEND_ENUMS.TENANT_STATUS.includes(value)) return 'Invalid tenant status'
+        break
     }
     return null
   }
 
-  // Validate all fields (used on submit)
-  const validateAllFields = (): Record<string, string> => {
-    const newErrors: Record<string, string> = {}
-
-    const fieldsToValidate = ['tenant_name', 'tenant_email', 'phone', 'deposit_amount', 'lease_end_date']
-
-    fieldsToValidate.forEach(field => {
-      const error = validateField(field, formData[field as keyof TenantFormData])
-      if (error) {
-        newErrors[field] = error
-      }
-    })
-
-    return newErrors
+  // Comprehensive validation using backend-sync utilities
+  const validateAllFields = (): ValidationResult => {
+    return validateTenantFormData(formData)
   }
 
   // Update errors only for touched fields
@@ -243,39 +295,51 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
     setTouchedFields(prev => new Set([...prev, field]))
   }
 
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
-    }
-  }
-
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate all fields on submit
-    const allErrors = validateAllFields()
-    setErrors(allErrors)
+    // Comprehensive validation using backend-sync utilities
+    const validationResult = validateAllFields()
+    
+    // Set form errors
+    setErrors(validationResult.errors)
 
-    // Mark all required fields as touched to show errors
-    const requiredFields = ['tenant_name', 'tenant_email']
-    setTouchedFields(prev => new Set([...prev, ...requiredFields]))
+    // Mark all fields as touched to show validation errors
+    const allFieldNames = Object.keys(formData)
+    setTouchedFields(new Set(allFieldNames))
 
-    if (Object.keys(allErrors).length > 0) {
+    // Show missing required fields error
+    if (validationResult.missingRequired.length > 0) {
+      const missingFieldNames = validationResult.missingRequired.join(', ')
+      alert(`Please complete all required fields: ${missingFieldNames}`)
       return
     }
 
-    const submitData = {
-      ...formData,
-      tenant_id: formData.tenant_id || `tenant_${Date.now()}`
+    // Show validation errors
+    if (!validationResult.isValid) {
+      const errorMessages = Object.values(validationResult.errors).join('\n')
+      alert(`Please fix the following errors:\n${errorMessages}`)
+      return
     }
 
-    await onSubmit(submitData)
+    try {
+      // Transform data to match backend expectations
+      const backendData = transformTenantDataForBackend(formData)
+      
+      // Ensure required IDs are generated if missing
+      if (!backendData.tenant_id) {
+        backendData.tenant_id = `TNT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+
+      console.log('Submitting transformed tenant data:', backendData)
+      
+      await onSubmit(backendData)
+      
+    } catch (error) {
+      console.error('Error submitting tenant data:', error)
+      alert('Error submitting form. Please check your data and try again.')
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -775,14 +839,14 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
             <motion.button
               type="button"
               onClick={prevStep}
-              disabled={currentStep === 0}
+              disabled={!canGoPrev}
               className={`px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
-                currentStep === 0
+                !canGoPrev
                   ? 'opacity-50 cursor-not-allowed'
                   : 'hover:border-gray-400 hover:bg-gray-50'
               }`}
-              whileHover={currentStep !== 0 ? { scale: 1.02 } : {}}
-              whileTap={currentStep !== 0 ? { scale: 0.98 } : {}}
+              whileHover={canGoPrev ? { scale: 1.02 } : {}}
+              whileTap={canGoPrev ? { scale: 0.98 } : {}}
             >
               <ChevronLeft className="w-4 h-4" />
               Previous
@@ -802,7 +866,7 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
                 </motion.button>
               )}
 
-              {currentStep === steps.length - 1 ? (
+              {!canGoNext ? (
                 <motion.button
                   type="submit"
                   disabled={isLoading || Object.keys(errors).length > 0}

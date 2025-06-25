@@ -91,8 +91,6 @@ export function useAuthSync(): UseAuthSyncReturn {
         lastSyncAt: new Date(),
         syncError: null,
       }))
-
-      console.log('✅ User data synced with backend')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       setState(prev => ({
@@ -140,8 +138,6 @@ export function useAuthSync(): UseAuthSyncReturn {
         lastSyncAt: new Date(),
         syncError: null,
       }))
-
-      console.log(`✅ User role updated to: ${role}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       setState(prev => ({
@@ -180,19 +176,12 @@ export function useAuthSync(): UseAuthSyncReturn {
 
       // Note: publicMetadata can only be updated from the Backend API, not frontend
       // The backend should handle updating Clerk metadata via webhooks or Backend API
-      // For now, we'll just log the difference for debugging
-      if (userData.role !== clerkUser.publicMetadata?.role) {
-        console.log(`🔄 Role mismatch detected: Backend has ${userData.role}, Clerk has ${clerkUser.publicMetadata?.role}`)
-      }
-
       setState(prev => ({
         ...prev,
         isLoading: false,
         lastSyncAt: new Date(),
         syncError: null,
       }))
-
-      console.log('✅ User data refreshed from backend')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       setState(prev => ({

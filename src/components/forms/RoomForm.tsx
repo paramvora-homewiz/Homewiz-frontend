@@ -8,7 +8,13 @@ import { Input } from '@/components/ui/input'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import CopyFromPrevious from '@/components/ui/CopyFromPrevious'
 import { RoomFormData } from '@/types'
-import { Home, Save, X } from 'lucide-react'
+import { 
+  validateRoomFormData, 
+  transformRoomDataForBackend, 
+  BACKEND_ENUMS,
+  ValidationResult 
+} from '@/lib/backend-sync'
+import { Home, Save, X, ChevronLeft, CheckCircle } from 'lucide-react'
 
 // Smart suggestions for room numbers
 const ROOM_NUMBER_PATTERNS = [
@@ -18,36 +24,39 @@ const ROOM_NUMBER_PATTERNS = [
   'Room 1', 'Room 2', 'Room 3', 'Room 4'
 ]
 
-// Common room status options
-const ROOM_STATUS_OPTIONS = [
-  { value: 'AVAILABLE', label: 'Available for Rent', color: 'green' },
-  { value: 'OCCUPIED', label: 'Currently Occupied', color: 'blue' },
-  { value: 'MAINTENANCE', label: 'Under Maintenance', color: 'yellow' },
-  { value: 'RESERVED', label: 'Reserved', color: 'purple' }
-]
+// Use backend-validated room status options
+const ROOM_STATUS_OPTIONS = BACKEND_ENUMS.ROOM_STATUS.map(status => ({
+  value: status,
+  label: status,
+  color: 'green'
+}))
 
 interface RoomFormProps {
   initialData?: Partial<RoomFormData>
   onSubmit: (data: RoomFormData) => Promise<void>
   onCancel?: () => void
+  onBack?: () => void
   isLoading?: boolean
   buildings?: Array<{ building_id: string; building_name: string }>
 }
 
-export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, buildings = [] }: RoomFormProps) {
+export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, buildings = [] }: RoomFormProps) {
   const [formData, setFormData] = useState<RoomFormData>({
     room_number: '',
     building_id: '',
     ready_to_rent: true,
-    status: 'AVAILABLE',
+    status: 'AVAILABLE', // Backend validated
     active_tenants: 0,
     maximum_people_in_room: 1, // Required field
     private_room_rent: 0, // Required field
+    shared_room_rent_2: undefined, // Backend field for shared room pricing
     floor_number: 1, // Required field
     bed_count: 1, // Required field
-    bathroom_type: 'private', // Required field
-    bed_size: 'twin', // Required field
-    bed_type: 'standard', // Required field
+    bathroom_type: 'Shared', // Backend default
+    bed_size: 'Twin', // Backend validated enum
+    bed_type: 'Single', // Backend validated enum
+    view: 'Street', // Backend validated enum
+    sq_footage: 200, // Backend field with default
     mini_fridge: false,
     sink: false,
     bedding_provided: false,
@@ -56,9 +65,14 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
     heating: false,
     air_conditioning: false,
     cable_tv: false,
-    furnished: false,
+    room_storage: 'Built-in Closet', // Backend field with default
+    last_check: undefined, // Backend field for maintenance tracking
+    last_check_by: undefined, // Backend field for operator tracking
+    current_booking_types: undefined, // Backend field for booking types
     ...initialData
   })
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleInputChange = (field: keyof RoomFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -75,12 +89,18 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const submitData = {
-      ...formData,
-      room_id: formData.room_id || `room_${Date.now()}`
+    // Validate using backend-sync
+    const validationResult = validateRoomFormData(formData)
+    
+    if (!validationResult.isValid) {
+      setErrors(validationResult.errors)
+      return
     }
 
-    await onSubmit(submitData)
+    // Transform data for backend
+    const transformedData = transformRoomDataForBackend(formData)
+
+    await onSubmit(transformedData)
   }
 
   return (
@@ -211,6 +231,140 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
                   min="0"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Floor Number
+                </label>
+                <Input
+                  type="number"
+                  value={formData.floor_number || ''}
+                  onChange={(e) => handleInputChange('floor_number', e.target.value ? parseInt(e.target.value) : 1)}
+                  placeholder="e.g., 1"
+                  min="1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bed Count
+                </label>
+                <Input
+                  type="number"
+                  value={formData.bed_count || ''}
+                  onChange={(e) => handleInputChange('bed_count', e.target.value ? parseInt(e.target.value) : 1)}
+                  placeholder="e.g., 1"
+                  min="1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Maximum People
+                </label>
+                <Input
+                  type="number"
+                  value={formData.maximum_people_in_room || ''}
+                  onChange={(e) => handleInputChange('maximum_people_in_room', e.target.value ? parseInt(e.target.value) : 1)}
+                  placeholder="e.g., 2"
+                  min="1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Square Footage
+                </label>
+                <Input
+                  type="number"
+                  value={formData.sq_footage || ''}
+                  onChange={(e) => handleInputChange('sq_footage', e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="e.g., 200"
+                  min="50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bathroom Type
+                </label>
+                <select
+                  value={formData.bathroom_type}
+                  onChange={(e) => handleInputChange('bathroom_type', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Shared">Shared</option>
+                  <option value="Private">Private</option>
+                  <option value="Semi-Private">Semi-Private</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bed Size
+                </label>
+                <select
+                  value={formData.bed_size}
+                  onChange={(e) => handleInputChange('bed_size', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Twin">Twin</option>
+                  <option value="Full">Full</option>
+                  <option value="Queen">Queen</option>
+                  <option value="King">King</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bed Type
+                </label>
+                <select
+                  value={formData.bed_type}
+                  onChange={(e) => handleInputChange('bed_type', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Single">Single</option>
+                  <option value="Bunk">Bunk</option>
+                  <option value="Loft">Loft</option>
+                  <option value="Murphy">Murphy</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  View
+                </label>
+                <select
+                  value={formData.view}
+                  onChange={(e) => handleInputChange('view', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Street">Street</option>
+                  <option value="Courtyard">Courtyard</option>
+                  <option value="Garden">Garden</option>
+                  <option value="City">City</option>
+                  <option value="Water">Water</option>
+                  <option value="Mountain">Mountain</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Room Storage
+                </label>
+                <select
+                  value={formData.room_storage}
+                  onChange={(e) => handleInputChange('room_storage', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Built-in Closet">Built-in Closet</option>
+                  <option value="Wardrobe">Wardrobe</option>
+                  <option value="Under-bed Storage">Under-bed Storage</option>
+                  <option value="Wall Shelves">Wall Shelves</option>
+                  <option value="None">None</option>
+                </select>
+              </div>
             </div>
 
             {/* Room Amenities */}
@@ -229,8 +383,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
                   { key: 'work_chair', label: 'Work Chair', icon: '💺' },
                   { key: 'heating', label: 'Heating', icon: '🔥' },
                   { key: 'air_conditioning', label: 'A/C', icon: '❄️' },
-                  { key: 'cable_tv', label: 'Cable TV', icon: '📺' },
-                  { key: 'furnished', label: 'Furnished', icon: '🏠' }
+                  { key: 'cable_tv', label: 'Cable TV', icon: '📺' }
                 ].map((amenity) => (
                   <label key={amenity.key} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                     <input
@@ -243,6 +396,38 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
                     <span className="text-sm font-medium">{amenity.label}</span>
                   </label>
                 ))}
+              </div>
+            </div>
+
+            {/* Maintenance Tracking */}
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Maintenance & Tracking
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Check Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={formData.last_check || ''}
+                    onChange={(e) => handleInputChange('last_check', e.target.value || undefined)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Current Booking Types
+                  </label>
+                  <Input
+                    value={formData.current_booking_types || ''}
+                    onChange={(e) => handleInputChange('current_booking_types', e.target.value || undefined)}
+                    placeholder="e.g., Short-term, Long-term"
+                  />
+                </div>
               </div>
             </div>
 
@@ -260,8 +445,17 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
           </Card>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-6 border-t">
-            {onCancel && (
+          <div className="flex items-center justify-between pt-6 border-t">
+            {/* Previous Button */}
+            {onBack && (
+              <Button type="button" variant="outline" onClick={onBack}>
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+            )}
+
+            <div className="flex items-center gap-3">
+              {onCancel && (
               <Button type="button" variant="outline" onClick={onCancel}>
                 <X className="w-4 h-4 mr-2" />
                 Cancel
@@ -272,6 +466,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, isLoading, b
               <Save className="w-4 h-4 mr-2" />
               {initialData?.room_id ? 'Update Room' : 'Create Room'}
             </Button>
+            </div>
           </div>
         </form>
       </div>

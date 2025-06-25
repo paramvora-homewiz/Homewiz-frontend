@@ -6,6 +6,7 @@ import { RoomFormData } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
+import { getForwardNavigationUrl, getBackNavigationUrl } from '@/lib/form-workflow'
 
 function RoomFormContent() {
   const router = useRouter()
@@ -22,8 +23,10 @@ function RoomFormContent() {
       await new Promise(resolve => setTimeout(resolve, 1000))
 
       // Show success message and redirect
-      alert('Room saved successfully!')
-      router.push('/forms')
+      alert('Room saved successfully! Proceeding to Tenant Management.')
+      // Navigate to the next form in the workflow
+      const nextUrl = getForwardNavigationUrl('room')
+      router.push(nextUrl)
 
     } catch (error) {
       console.error('Error saving room:', error)
@@ -37,10 +40,16 @@ function RoomFormContent() {
     router.push('/forms')
   }
 
+  const handleBack = () => {
+    const backUrl = getBackNavigationUrl('room')
+    router.push(backUrl)
+  }
+
   return (
     <RoomForm
       onSubmit={handleSubmit}
       onCancel={handleCancel}
+      onBack={handleBack}
       isLoading={isLoading}
       buildings={buildings}
     />
@@ -53,6 +62,7 @@ export default function RoomFormPage() {
       <FormHeader
         title="Room Setup"
         subtitle="Set up individual rooms with specifications, pricing, and availability"
+        currentForm="room"
       />
       <FormDataProvider>
         <RoomFormContent />

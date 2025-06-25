@@ -144,11 +144,6 @@ function DemoAuthProvider({ children }: AuthProviderProps) {
 
 // Simplified AuthProvider - always uses demo mode
 export function AuthProvider({ children }: AuthProviderProps) {
-  // Debug logging
-  if (typeof window !== 'undefined') {
-    console.log('🎭 AuthProvider: Using demo mode only')
-  }
-
   // Always use demo mode
   return <DemoAuthProvider>{children}</DemoAuthProvider>
 }

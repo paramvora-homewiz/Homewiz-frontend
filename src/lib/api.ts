@@ -6,7 +6,7 @@
  */
 
 import { useAuth } from '@clerk/nextjs'
-import { Lead, Room, Building, OnboardingFormData, ApiResponse, UploadedFile, User, UserRole } from '@/types'
+import { Lead, Room, Building, ApplicationFormData, ApiResponse, UploadedFile, User, UserRole } from '@/types'
 import { transformToTenantData, transformToLeadData, validateEmail } from './form-utils'
 import config from './config'
 
@@ -514,7 +514,7 @@ export const api = {
   },
 
   // Tenants
-  async createTenant(formData: OnboardingFormData): Promise<ApiResponse<any>> {
+  async createTenant(formData: ApplicationFormData): Promise<ApiResponse<any>> {
     try {
       const tenantData = transformToTenantData(formData)
       const response = await apiClient.post<any>('/api/tenants/', tenantData)
@@ -567,7 +567,7 @@ export const api = {
   },
 
   // Application Submission
-  async submitApplication(formData: OnboardingFormData, files: UploadedFile[]): Promise<ApiResponse<{ applicationId: string, tenantId?: string, leadId?: string }>> {
+  async submitApplication(formData: ApplicationFormData, files: UploadedFile[]): Promise<ApiResponse<{ applicationId: string, tenantId?: string, leadId?: string }>> {
     try {
       let tenantId: string | undefined
       let leadId: string | undefined

@@ -2,10 +2,12 @@
 
 import TenantForm from '@/components/forms/TenantForm'
 import { FormDataProvider, useFormData } from '@/components/forms/FormDataProvider'
+import { FormStepWrapper } from '@/components/ui/FormStepWrapper'
 import { TenantFormData } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
+import { getForwardNavigationUrl } from '@/lib/form-workflow'
 
 function TenantFormContent() {
   const router = useRouter()
@@ -22,8 +24,10 @@ function TenantFormContent() {
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       // Show success message and redirect
-      alert('Tenant saved successfully!')
-      router.push('/forms')
+      alert('Tenant saved successfully! Proceeding to Lead Tracking.')
+      // Navigate to the next form in the workflow
+      const nextUrl = getForwardNavigationUrl('tenant')
+      router.push(nextUrl)
       
     } catch (error) {
       console.error('Error saving tenant:', error)
@@ -55,9 +59,12 @@ export default function TenantFormPage() {
       <FormHeader
         title="Tenant Management"
         subtitle="Manage tenant information, leases, and preferences"
+        currentForm="tenant"
       />
       <FormDataProvider>
-        <TenantFormContent />
+        <FormStepWrapper>
+          <TenantFormContent />
+        </FormStepWrapper>
       </FormDataProvider>
     </div>
   )

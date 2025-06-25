@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { apiService } from '../../../services/apiService'
 import FormHeader from '../../../components/ui/FormHeader'
+import { getForwardNavigationUrl, getBackNavigationUrl } from '../../../lib/form-workflow'
 
 export default function OperatorFormPage() {
   const router = useRouter()
@@ -21,8 +22,10 @@ export default function OperatorFormPage() {
       const response = await apiService.createOperator(data)
 
       if (response.success) {
-        alert('Operator saved successfully!')
-        router.push('/forms')
+        alert('Operator saved successfully! Proceeding to Building Configuration.')
+        // Navigate to the next form in the workflow
+        const nextUrl = getForwardNavigationUrl('operator')
+        router.push(nextUrl)
       } else {
         throw new Error(response.message || 'Failed to save operator')
       }
@@ -39,16 +42,24 @@ export default function OperatorFormPage() {
     router.push('/forms')
   }
 
+  const handleBack = () => {
+    const backUrl = getBackNavigationUrl('operator')
+    router.push(backUrl)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <FormHeader
         title="Operator Management"
         subtitle="Manage property operators, staff, and their permissions"
+        currentForm="operator"
+        showWorkflowProgress={true}
       />
       <FormDataProvider>
         <OperatorForm
           onSubmit={handleSubmit}
           onCancel={handleCancel}
+          onBack={handleBack}
           isLoading={isLoading}
         />
       </FormDataProvider>

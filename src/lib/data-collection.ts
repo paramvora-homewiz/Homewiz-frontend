@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import { OnboardingFormData, User, Building, Room, Lead, UploadedFile } from '@/types'
+import { ApplicationFormData, User, Building, Room, Lead, UploadedFile } from '@/types'
 import config from './config'
 
 // Data Collection Event Types
@@ -240,9 +240,9 @@ export class DataCollectionManager {
   }
 
   /**
-   * Transform onboarding form data to backend-ready JSON
+   * Transform application form data to backend-ready JSON
    */
-  transformFormData(formData: OnboardingFormData, userId?: string): BackendFormData {
+  transformFormData(formData: ApplicationFormData, userId?: string): BackendFormData {
     const applicationId = `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     const backendData: BackendFormData = {
@@ -341,10 +341,10 @@ export class DataCollectionManager {
       this.collectEvent({
         type: DataEventType.FORM_SUBMISSION,
         priority: DataPriority.HIGH,
-        source: 'onboarding_form',
+        source: 'application_form',
         data: {
           applicationId,
-          formType: 'onboarding',
+          formType: 'application',
           dataSize: JSON.stringify(backendData).length,
           fieldsCompleted: this.countCompletedFields(formData),
         }
@@ -357,7 +357,7 @@ export class DataCollectionManager {
     }
   }
 
-  private countCompletedFields(formData: OnboardingFormData): number {
+  private countCompletedFields(formData: ApplicationFormData): number {
     let count = 0
     Object.values(formData).forEach(value => {
       if (value !== undefined && value !== null && value !== '') {
@@ -546,7 +546,7 @@ export class DataCollectionManager {
 export const dataCollectionManager = DataCollectionManager.getInstance()
 
 // Utility functions for easy data collection
-export const collectFormSubmission = (formData: OnboardingFormData, userId?: string) => {
+export const collectFormSubmission = (formData: ApplicationFormData, userId?: string) => {
   const transformedData = dataCollectionManager.transformFormData(formData, userId)
 
   dataCollectionManager.collectEvent({
@@ -555,7 +555,7 @@ export const collectFormSubmission = (formData: OnboardingFormData, userId?: str
     source: 'form_submission_utility',
     data: {
       applicationId: transformedData.applicationId,
-      formType: 'onboarding',
+      formType: 'application',
       userEmail: transformedData.user.email,
       completionRate: calculateCompletionRate(formData),
     }
@@ -606,14 +606,14 @@ export const collectError = (error: Error, context: string, userId?: string) => 
   })
 }
 
-function calculateCompletionRate(formData: OnboardingFormData): number {
+function calculateCompletionRate(formData: ApplicationFormData): number {
   const requiredFields = [
     'firstName', 'lastName', 'email', 'phone', 'occupation',
     'budget_min', 'budget_max', 'preferred_move_in_date', 'preferred_lease_term'
   ]
 
   const completedRequired = requiredFields.filter(field => {
-    const value = formData[field as keyof OnboardingFormData]
+    const value = formData[field as keyof ApplicationFormData]
     return value !== undefined && value !== null && value !== ''
   }).length
 

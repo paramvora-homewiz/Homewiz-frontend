@@ -52,7 +52,7 @@ export default function FormsTestSuite() {
     building_name: 'Sunset Apartments',
     full_address: '123 Main Street, Anytown, ST 12345',
     address: '123 Main Street',
-    operator_id: '1',
+    operator_id: 1,
     available: true,
     street: '123 Main Street',
     city: 'Anytown',
@@ -87,7 +87,7 @@ export default function FormsTestSuite() {
     state: '',
     zip_code: '',
     country: 'USA',
-    operator_id: '',
+    operator_id: 1,
     total_rooms: -5, // Invalid
     available_rooms: 0,
     building_type: '',
@@ -120,7 +120,7 @@ export default function FormsTestSuite() {
     shared_room_rent_2: 500,
     floor_number: 1,
     bed_count: 1,
-    bathroom_type: 'private',
+    bathroom_type: 'Private',
     bed_size: 'queen',
     bed_type: 'standard',
     sq_footage: 120,
@@ -146,7 +146,7 @@ export default function FormsTestSuite() {
     private_room_rent: -100, // Invalid
     floor_number: 0, // Invalid
     bed_count: 0, // Invalid
-    bathroom_type: 'private',
+    bathroom_type: 'Private',
     bed_size: 'twin',
     bed_type: 'standard',
     mini_fridge: false,

@@ -63,7 +63,7 @@ export function useRealTimeCollaboration(options: UseRealTimeCollaborationOption
     const mockWs = {
       send: (data: any) => {
         // In real implementation, send to WebSocket server
-        console.log('Sending collaboration data:', data)
+        // Data would be sent to collaboration service
       },
       close: () => {
         // Cleanup connection

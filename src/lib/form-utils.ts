@@ -1,24 +1,49 @@
+/**
+ * Form Utilities for HomeWiz Frontend
+ *
+ * This module provides utility functions for form data processing,
+ * validation, transformation, and ID generation used across the application.
+ */
+
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
-import { OnboardingFormData, Lead, TenantFormData } from '@/types'
+import { ApplicationFormData, Lead, TenantFormData } from '@/types'
 import ErrorHandler, { ErrorType } from './error-handler'
 
 /**
- * Generate a unique tenant ID
+ * Generate a unique tenant ID with TNT prefix
+ *
+ * @returns Unique tenant ID in format TNT_XXXXXXXXXXXX
+ *
+ * @example
+ * generateTenantId() // "TNT_A1B2C3D4E5F6"
  */
 export function generateTenantId(): string {
   return `TNT_${uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase()}`
 }
 
 /**
- * Generate a unique lead ID
+ * Generate a unique lead ID with LEAD prefix
+ *
+ * @returns Unique lead ID in format LEAD_XXXXXXXXXXXX
+ *
+ * @example
+ * generateLeadId() // "LEAD_A1B2C3D4E5F6"
  */
 export function generateLeadId(): string {
   return `LEAD_${uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase()}`
 }
 
 /**
- * Calculate lease end date based on start date and lease term
+ * Calculate lease end date based on start date and lease term in months
+ *
+ * @param startDate - Lease start date in ISO format (YYYY-MM-DD)
+ * @param leaseTerm - Lease term in months
+ * @returns Lease end date in YYYY-MM-DD format
+ *
+ * @example
+ * calculateLeaseEndDate('2024-01-15', 12) // "2025-01-15"
+ * calculateLeaseEndDate('2024-06-01', 6) // "2024-12-01"
  */
 export function calculateLeaseEndDate(startDate: string, leaseTerm: number): string {
   const start = new Date(startDate)
@@ -28,9 +53,17 @@ export function calculateLeaseEndDate(startDate: string, leaseTerm: number): str
 }
 
 /**
- * Transform frontend form data to backend tenant creation format
+ * Transform frontend application form data to backend tenant creation format
+ * Handles data mapping, ID generation, and date calculations
+ *
+ * @param formData - Application form data from frontend
+ * @returns Transformed data object for backend API
+ *
+ * @example
+ * const tenantData = transformToTenantData(applicationForm)
+ * // Returns formatted object with tenant_id, lease dates, preferences, etc.
  */
-export function transformToTenantData(formData: OnboardingFormData): any {
+export function transformToTenantData(formData: ApplicationFormData): any {
   // Generate tenant ID if not provided
   const tenantId = formData.tenant_id || generateTenantId()
   
@@ -83,7 +116,7 @@ export function transformToTenantData(formData: OnboardingFormData): any {
 /**
  * Transform frontend form data to backend lead creation format
  */
-export function transformToLeadData(formData: OnboardingFormData): any {
+export function transformToLeadData(formData: ApplicationFormData): any {
   // Generate lead ID if not provided
   const leadId = formData.lead_id || generateLeadId()
 
@@ -135,7 +168,7 @@ export function transformToLeadData(formData: OnboardingFormData): any {
 /**
  * Validate required fields for tenant creation
  */
-export function validateTenantRequiredFields(formData: OnboardingFormData): string[] {
+export function validateTenantRequiredFields(formData: ApplicationFormData): string[] {
   const errors: string[] = []
 
   if (!formData.firstName?.trim()) errors.push('First name is required')
@@ -252,7 +285,7 @@ export function validateCurrency(amount: number | string): { valid: boolean; err
 /**
  * Comprehensive form validation
  */
-export function validateFormData(formData: OnboardingFormData): { valid: boolean; errors: Record<string, string> } {
+export function validateFormData(formData: ApplicationFormData): { valid: boolean; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
 
   // Validate personal information
@@ -366,7 +399,7 @@ export function calculateSuggestedDeposit(monthlyRent: number): number {
 /**
  * Check if form data is complete for submission
  */
-export function isFormReadyForSubmission(formData: OnboardingFormData): boolean {
+export function isFormReadyForSubmission(formData: ApplicationFormData): boolean {
   const requiredFieldErrors = validateTenantRequiredFields(formData)
   return requiredFieldErrors.length === 0
 }

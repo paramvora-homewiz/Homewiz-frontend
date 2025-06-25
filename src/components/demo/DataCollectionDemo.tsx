@@ -19,7 +19,7 @@ import {
 import { dataIntegrationManager, submitForm } from '@/lib/data-integration'
 import { authConfigManager, AuthMode, setDemoMode } from '@/lib/auth-config'
 import { monitoringManager, trackMetric } from '@/lib/monitoring'
-import { OnboardingFormData } from '@/types'
+import { ApplicationFormData } from '@/types'
 import { Download, Database, Shield, BarChart3, Settings, Play, RefreshCw } from 'lucide-react'
 
 export default function DataCollectionDemo() {
@@ -67,7 +67,7 @@ export default function DataCollectionDemo() {
   const handleSubmitSampleForm = async () => {
     setIsLoading(true)
     
-    const sampleFormData: OnboardingFormData = {
+    const sampleFormData: ApplicationFormData = {
       firstName: 'Demo',
       lastName: 'User',
       email: 'demo@homewiz.com',

@@ -83,7 +83,7 @@ export function LandingPage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-lg md:text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed px-4"
             >
-              Skip the paperwork hassle. Our intelligent onboarding system gets you approved faster
+              Skip the paperwork hassle. Our intelligent application system gets you approved faster
               with minimal typing and maximum convenience.
             </motion.p>
             

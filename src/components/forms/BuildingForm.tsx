@@ -2,19 +2,26 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card } from '../ui/card'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Badge } from '../ui/badge'
-import { LoadingSpinner } from '../ui/loading-spinner'
-import { HelpTooltip } from '../ui/help-tooltip'
-import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge, ProgressIndicator } from '../ui/enhanced-components'
-import AddressAutocomplete, { AddressData } from '../ui/AddressAutocomplete'
-import CopyFromPrevious from '../ui/CopyFromPrevious'
-import { useFormSmartDefaults } from '../../hooks/useSmartDefaults'
-import { BuildingFormData, MediaFile } from '../../types'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
+import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge, ProgressIndicator } from '@/components/ui/enhanced-components'
+import AddressAutocomplete, { AddressData } from '@/components/ui/AddressAutocomplete'
+import CopyFromPrevious from '@/components/ui/CopyFromPrevious'
+import { useFormSmartDefaults } from '@/hooks/useSmartDefaults'
+import { useFormStepNavigation } from '@/hooks/useFormStepNavigation'
+import { BuildingFormData, MediaFile } from '@/types'
+import { 
+  validateBuildingFormData, 
+  transformBuildingDataForBackend, 
+  BACKEND_ENUMS,
+  ValidationResult 
+} from '@/lib/backend-sync'
 import { MediaUploadSection } from './MediaUploadSection'
-import { createFormDataWithFiles } from '../../utils/fileUpload'
+import { createFormDataWithFiles } from '@/utils/fileUpload'
 import {
   Building,
   MapPin,
@@ -35,11 +42,11 @@ import {
   Users,
   Accessibility
 } from 'lucide-react'
-import '../../styles/design-system.css'
+import '@/styles/design-system.css'
 
 interface BuildingFormProps {
   initialData?: Partial<BuildingFormData>
-  onSubmit: (data: BuildingFormData) => Promise<void>
+  onSubmit: (data: any) => Promise<void>  // Accept any data type for backend compatibility
   onCancel?: () => void
   isLoading?: boolean
   operators?: Array<{ operator_id: number; name: string; operator_type: string }>
@@ -156,7 +163,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     state: '',
     zip_code: '',
     country: 'USA', // Default country
-    operator_id: '',
+    operator_id: undefined, // Initialize as undefined instead of empty string
     total_rooms: 0,
     available_rooms: 0,
     building_type: '',
@@ -181,7 +188,6 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
-  const [currentStep, setCurrentStep] = useState(0)
   const [amenitiesDetails, setAmenitiesDetails] = useState(
     initialData?.amenities_details
       ? (typeof initialData.amenities_details === 'string'
@@ -202,8 +208,22 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     { id: 'media', title: 'Images & Tours', icon: <Camera className="w-5 h-5" /> }
   ]
 
-  // Validation function
+  // Use form step navigation hook
+  const { currentStep, nextStep, prevStep, canGoNext, canGoPrev } = useFormStepNavigation({
+    totalSteps: steps.length
+  })
+
+  // Comprehensive validation using backend-sync utilities
   const validateField = (field: string, value: any): string | null => {
+    // Use comprehensive backend validation
+    const validationResult = validateBuildingFormData(formData)
+    
+    // Return specific field error if exists
+    if (validationResult.errors[field]) {
+      return validationResult.errors[field]
+    }
+    
+    // Additional real-time validations for UX
     switch (field) {
       case 'building_name':
         return !value?.trim() ? 'Building name is required' : null
@@ -216,23 +236,17 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         return value && value < 1 ? 'Building must have at least 1 floor' : null
       case 'total_rooms':
         return value && value < 1 ? 'Building must have at least 1 room' : null
+      case 'operator_id':
+        if (!value) return 'Operator selection is required'
+        return null
       default:
         return null
     }
   }
 
-  // Validate all fields (used on form submission)
-  const validateAllFields = (): Record<string, string> => {
-    const newErrors: Record<string, string> = {}
-
-    Object.keys(formData).forEach(field => {
-      const error = validateField(field, formData[field as keyof BuildingFormData])
-      if (error) {
-        newErrors[field] = error
-      }
-    })
-
-    return newErrors
+  // Use comprehensive backend validation
+  const validateAllFields = (): ValidationResult => {
+    return validateBuildingFormData(formData)
   }
 
   // Real-time validation only for touched fields
@@ -267,6 +281,13 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     setFormData(prev => ({ ...prev, [field]: value }))
     // Mark field as touched when user interacts with it
     setTouchedFields(prev => new Set([...prev, field]))
+  }
+
+  // Prevent Enter key from submitting form when not on final step
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && currentStep !== steps.length - 1) {
+      e.preventDefault()
+    }
   }
 
   const handleAddressSelect = (addressData: AddressData) => {
@@ -307,55 +328,134 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
 
     // Only allow submission on the final step
     if (currentStep !== steps.length - 1) {
-      console.warn('Form submission attempted on non-final step. This should not happen.')
+      console.warn(`Form submission blocked - not on final step. Current step: ${currentStep + 1}, Final step: ${steps.length}`)
       return
     }
 
-    // Validate all fields on submit
-    const allErrors = validateAllFields()
-    setErrors(allErrors)
+    // Comprehensive validation using backend-sync utilities
+    const validationResult = validateAllFields()
+    
+    // Set form errors
+    setErrors(validationResult.errors)
 
-    // Mark all required fields as touched to show errors
-    const requiredFields = ['building_name']
-    setTouchedFields(prev => new Set([...prev, ...requiredFields]))
+    // Mark all fields as touched to show validation errors
+    const allFieldNames = Object.keys(formData)
+    setTouchedFields(new Set(allFieldNames))
 
-    if (Object.keys(allErrors).length > 0) {
+    // Show missing required fields error
+    if (validationResult.missingRequired.length > 0) {
+      const missingFieldNames = validationResult.missingRequired.join(', ')
+      alert(`Please complete all required fields: ${missingFieldNames}`)
       return
     }
 
-    const submitData = {
-      ...formData,
-      amenities_details: JSON.stringify(amenitiesDetails),
-      building_id: formData.building_id || `bldg_${Date.now()}`,
-      media_files: mediaFiles
-    } as unknown as BuildingFormData
+    // Show validation errors
+    if (!validationResult.isValid) {
+      const errorMessages = Object.values(validationResult.errors).join('\n')
+      alert(`Please fix the following errors:\n${errorMessages}`)
+      return
+    }
 
-    // Save to history for smart defaults (excluding media files for storage efficiency)
-    const historyData = { ...submitData }
-    delete historyData.media_files
-    saveToHistory(historyData)
+    try {
+      // Transform data to match backend expectations
+      const backendData = transformBuildingDataForBackend({
+        ...formData,
+        amenities_details: JSON.stringify(amenitiesDetails),
+        media_files: mediaFiles
+      })
+      
+      console.log('Submitting transformed building data:', backendData)
 
-    // Note: If you need to send files to backend, you can use:
-    // const formDataWithFiles = createFormDataWithFiles(submitData, mediaFiles)
-    // Then send formDataWithFiles instead of submitData to your API endpoint
+      // Save to history for smart defaults (excluding media files for storage efficiency)
+      const historyData = { ...backendData }
+      // Note: media_files is not included in backendData from transformBuildingDataForBackend
+      saveToHistory(historyData)
 
-    await onSubmit(submitData)
-  }
+      // NEW BACKEND: Two-step process (create building, then upload images)
+      
+      console.log('🏢 Step 1: Creating building without images...')
+      // First, create building (JSON only, no images)
+      const buildingResponse = await onSubmit(backendData)
+      
+      // Extract building_id from response
+      const buildingId = buildingResponse?.building_id || backendData.building_id
+      console.log(`✅ Building created with ID: ${buildingId}`)
+      
+      // Step 2: Upload images to Supabase and update building if any
+      if (mediaFiles && mediaFiles.length > 0) {
+        console.log(`📸 Step 2: Uploading ${mediaFiles.length} images to Supabase...`)
 
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
+        try {
+          // Import upload functions
+          const { uploadBuildingImages, uploadBuildingVideo } = await import('@/lib/supabase/storage')
+
+          const uploadedImageUrls: string[] = []
+
+          // Upload images
+          const imageFiles = mediaFiles.filter(file => file.type.startsWith('image/'))
+          if (imageFiles.length > 0) {
+            console.log(`📸 Uploading ${imageFiles.length} images...`)
+            const imageResults = await uploadBuildingImages(buildingId, imageFiles.map(f => f.file))
+
+            // Collect successful uploads
+            imageResults.forEach((result, index) => {
+              if (result.success && result.url) {
+                uploadedImageUrls.push(result.url)
+                console.log(`✅ Image ${index + 1} uploaded: ${result.url}`)
+              } else {
+                console.error(`❌ Image ${index + 1} upload failed:`, result.error)
+              }
+            })
+          }
+
+          // Upload videos (if any)
+          const videoFiles = mediaFiles.filter(file => file.type.startsWith('video/'))
+          for (const videoFile of videoFiles) {
+            console.log(`🎥 Uploading video: ${videoFile.name}`)
+            const videoResult = await uploadBuildingVideo(buildingId, videoFile.file)
+
+            if (videoResult.success && videoResult.url) {
+              uploadedImageUrls.push(videoResult.url) // Videos go in the same URL array
+              console.log(`✅ Video uploaded: ${videoResult.url}`)
+            } else {
+              console.error(`❌ Video upload failed:`, videoResult.error)
+            }
+          }
+
+          // Update building with uploaded image URLs
+          if (uploadedImageUrls.length > 0) {
+            console.log(`🔗 Step 3: Updating building with ${uploadedImageUrls.length} Supabase URLs...`)
+
+            // Import the API service to update building with image URLs
+            const { apiService } = await import('@/services/apiService')
+
+            // Update building with Supabase image URLs
+            const updateResponse = await apiService.updateBuildingImages(buildingId, uploadedImageUrls)
+
+            console.log('✅ Building updated with Supabase image URLs:', updateResponse)
+            console.log(`📸 Total images linked: ${uploadedImageUrls.length}`)
+          } else {
+            console.log('⚠️ No images were successfully uploaded to Supabase - building created without images')
+          }
+
+        } catch (imageError) {
+          console.error('❌ Failed to upload images to Supabase (building was created successfully):', imageError)
+          alert(`Building created successfully, but failed to upload images: ${imageError instanceof Error ? imageError.message : 'Unknown error'}`)
+        }
+      } else {
+        console.log('📄 No images to upload - building creation complete')
+      }
+      
+    } catch (error) {
+      console.error('Error submitting building data:', error)
+      alert('Error submitting form. Please check your data and try again.')
     }
   }
 
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
 
   const renderStepContent = () => {
     switch (steps[currentStep].id) {
@@ -371,6 +471,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <Input
                     value={formData.building_name}
                     onChange={(e) => handleInputChange('building_name', e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="Enter building name or select from suggestions"
                     className={errors.building_name ? 'border-red-500' : ''}
                     list="building-names"
@@ -403,7 +504,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   Building Manager
                 </label>
                 <select
-                  value={formData.operator_id || ''}
+                  value={formData.operator_id?.toString() || ''}
                   onChange={(e) => handleInputChange('operator_id', e.target.value ? parseInt(e.target.value) : undefined)}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
@@ -442,6 +543,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   type="number"
                   value={formData.year_built || ''}
                   onChange={(e) => handleInputChange('year_built', e.target.value ? parseInt(e.target.value) : undefined)}
+                  onKeyDown={handleKeyDown}
                   placeholder="e.g., 2020"
                   min="1800"
                   max={new Date().getFullYear()}
@@ -458,6 +560,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   type="number"
                   value={formData.last_renovation || ''}
                   onChange={(e) => handleInputChange('last_renovation', e.target.value ? parseInt(e.target.value) : undefined)}
+                  onKeyDown={handleKeyDown}
                   placeholder="e.g., 2023"
                   min="1800"
                   max={new Date().getFullYear()}
@@ -502,6 +605,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               <textarea
                 value={formData.building_description || ''}
                 onChange={(e) => handleInputChange('building_description', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Describe the building, its character, and what makes it special..."
                 className="w-full p-3 border border-gray-300 rounded-md"
                 rows={4}
@@ -536,6 +640,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <Input
                   value={formData.street || ''}
                   onChange={(e) => handleInputChange('street', e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="123 Main Street"
                 />
               </div>
@@ -548,6 +653,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <Input
                     value={formData.area || ''}
                     onChange={(e) => handleInputChange('area', e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="Select or type neighborhood"
                     list="neighborhoods"
                   />
@@ -578,6 +684,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <Input
                   value={formData.city || ''}
                   onChange={(e) => handleInputChange('city', e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="City name"
                 />
               </div>
@@ -589,6 +696,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <Input
                   value={formData.state || ''}
                   onChange={(e) => handleInputChange('state', e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="State or province"
                 />
               </div>
@@ -600,6 +708,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <Input
                   value={formData.zip || ''}
                   onChange={(e) => handleInputChange('zip', e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="12345"
                 />
               </div>
@@ -628,6 +737,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               <textarea
                 value={formData.neighborhood_description || ''}
                 onChange={(e) => handleInputChange('neighborhood_description', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Describe the neighborhood, local attractions, safety, etc..."
                 className="w-full p-3 border border-gray-300 rounded-md"
                 rows={3}
@@ -664,6 +774,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <textarea
                   value={formData.nearby_conveniences_walk || ''}
                   onChange={(e) => handleInputChange('nearby_conveniences_walk', e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="Click buttons above or type manually..."
                   className="w-full p-2 border border-gray-300 rounded-md"
                   rows={3}
@@ -699,6 +810,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <textarea
                   value={formData.nearby_transportation || ''}
                   onChange={(e) => handleInputChange('nearby_transportation', e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="Click buttons above or type manually..."
                   className="w-full p-2 border border-gray-300 rounded-md"
                   rows={3}
@@ -713,6 +825,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               <textarea
                 value={formData.public_transit_info || ''}
                 onChange={(e) => handleInputChange('public_transit_info', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Detailed public transportation information..."
                 className="w-full p-3 border border-gray-300 rounded-md"
                 rows={3}
@@ -733,6 +846,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   type="number"
                   value={formData.floors || ''}
                   onChange={(e) => handleInputChange('floors', e.target.value ? parseInt(e.target.value) : undefined)}
+                  onKeyDown={handleKeyDown}
                   placeholder="e.g., 5"
                   min="1"
                   className={errors.floors ? 'border-red-500' : ''}
@@ -748,6 +862,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   type="number"
                   value={formData.total_rooms || ''}
                   onChange={(e) => handleInputChange('total_rooms', e.target.value ? parseInt(e.target.value) : undefined)}
+                  onKeyDown={handleKeyDown}
                   placeholder="e.g., 20"
                   min="1"
                   className={errors.total_rooms ? 'border-red-500' : ''}
@@ -763,6 +878,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   type="number"
                   value={formData.total_bathrooms || ''}
                   onChange={(e) => handleInputChange('total_bathrooms', e.target.value ? parseInt(e.target.value) : undefined)}
+                  onKeyDown={handleKeyDown}
                   placeholder="e.g., 10"
                   min="1"
                 />
@@ -776,6 +892,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   type="number"
                   value={formData.bathrooms_on_each_floor || ''}
                   onChange={(e) => handleInputChange('bathrooms_on_each_floor', e.target.value ? parseInt(e.target.value) : undefined)}
+                  onKeyDown={handleKeyDown}
                   placeholder="e.g., 2"
                   min="1"
                 />
@@ -846,6 +963,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               <textarea
                 value={formData.common_area || ''}
                 onChange={(e) => handleInputChange('common_area', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Describe common areas like lounges, study rooms, etc..."
                 className="w-full p-3 border border-gray-300 rounded-md"
                 rows={3}
@@ -939,6 +1057,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                     <textarea
                       value={formData.disability_features || ''}
                       onChange={(e) => handleInputChange('disability_features', e.target.value)}
+                      onKeyDown={handleKeyDown}
                       placeholder="Describe accessibility features (ramps, elevators, wide doorways, accessible bathrooms, etc.)..."
                       className="w-full p-3 border border-blue-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       rows={3}
@@ -958,6 +1077,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               <textarea
                 value={formData.security_features || ''}
                 onChange={(e) => handleInputChange('security_features', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Security cameras, keycard access, security guard, etc..."
                 className="w-full p-3 border border-gray-300 rounded-md"
                 rows={3}
@@ -971,6 +1091,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               <textarea
                 value={formData.parking_info || ''}
                 onChange={(e) => handleInputChange('parking_info', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Available parking spaces, costs, restrictions..."
                 className="w-full p-3 border border-gray-300 rounded-md"
                 rows={3}
@@ -989,6 +1110,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               <textarea
                 value={formData.building_rules || ''}
                 onChange={(e) => handleInputChange('building_rules', e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Quiet hours, guest policies, smoking rules, etc..."
                 className="w-full p-3 border border-gray-300 rounded-md"
                 rows={6}
@@ -1000,6 +1122,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       case 'media':
         return (
           <div className="space-y-6">
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-2 text-blue-800">
                 <Camera className="w-5 h-5" />
@@ -1015,6 +1138,8 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               uploadedFiles={mediaFiles}
               onVirtualTourUrlChange={(url) => handleInputChange('virtual_tour_url', url)}
               onFilesChange={setMediaFiles}
+              buildingId={formData.building_id}
+              uploadImmediately={!!formData.building_id} // Only upload immediately if building already exists (editing mode)
             />
           </div>
         )
@@ -1065,13 +1190,23 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           />
         </motion.div>
 
+
+
         {/* Copy from Previous */}
         <CopyFromPrevious
           formType="building"
           onCopyData={handleCopyFromPrevious}
         />
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && currentStep !== steps.length - 1) {
+              e.preventDefault()
+              e.stopPropagation()
+            }
+          }}
+        >
           <motion.div
             key={currentStep}
             initial={{ opacity: 0, x: 20 }}
@@ -1115,16 +1250,20 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           >
             <motion.button
               type="button"
-              onClick={prevStep}
-              disabled={currentStep === 0}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                prevStep()
+              }}
+              disabled={!canGoPrev}
               className={`px-6 py-3 border-2 border-blue-300 text-blue-700 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
-                currentStep === 0
+                !canGoPrev
                   ? 'opacity-50 cursor-not-allowed border-gray-300 text-gray-500'
                   : 'hover:border-blue-400 hover:bg-blue-50 bg-blue-25'
               }`}
-              whileHover={currentStep !== 0 ? { scale: 1.02 } : {}}
-              whileTap={currentStep !== 0 ? { scale: 0.98 } : {}}
-              title={currentStep === 0 ? 'Already at first step' : 'Go to previous step'}
+              whileHover={canGoPrev ? { scale: 1.02 } : {}}
+              whileTap={canGoPrev ? { scale: 0.98 } : {}}
+              title={!canGoPrev ? 'Already at first step' : 'Go to previous step'}
             >
               <ChevronLeft className="w-4 h-4" />
               Previous Step
@@ -1144,7 +1283,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 </motion.button>
               )}
 
-              {currentStep === steps.length - 1 ? (
+              {!canGoNext ? (
                 <motion.button
                   type="submit"
                   disabled={isLoading || Object.keys(errors).length > 0}
@@ -1171,7 +1310,11 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               ) : (
                 <motion.button
                   type="button"
-                  onClick={nextStep}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    nextStep()
+                  }}
                   className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-blue-700 transition-all duration-200 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

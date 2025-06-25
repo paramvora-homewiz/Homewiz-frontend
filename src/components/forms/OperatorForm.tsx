@@ -10,6 +10,12 @@ import { LoadingSpinner } from '../ui/loading-spinner'
 import { HelpTooltip } from '../ui/help-tooltip'
 import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge } from '../ui/enhanced-components'
 import { OperatorFormData } from '../../types'
+import { 
+  validateOperatorFormData, 
+  transformOperatorDataForBackend,
+  BACKEND_ENUMS,
+  ValidationResult 
+} from '../../lib/backend-sync'
 import {
   User,
   Mail,
@@ -23,7 +29,8 @@ import {
   AlertCircle,
   CheckCircle,
   Save,
-  X
+  X,
+  ChevronLeft
 } from 'lucide-react'
 import '../../styles/design-system.css'
 
@@ -31,35 +38,44 @@ interface OperatorFormProps {
   initialData?: Partial<OperatorFormData>
   onSubmit: (data: OperatorFormData) => Promise<void>
   onCancel?: () => void
+  onBack?: () => void
   isLoading?: boolean
 }
 
-const OPERATOR_TYPES = [
-  {
-    value: 'LEASING_AGENT',
-    label: 'Leasing Agent',
-    description: 'Handles tenant applications and showings',
-    icon: <UserCheck className="w-5 h-5" />
-  },
-  {
-    value: 'MAINTENANCE',
-    label: 'Maintenance',
-    description: 'Manages property maintenance and repairs',
-    icon: <Settings className="w-5 h-5" />
-  },
-  {
-    value: 'BUILDING_MANAGER',
-    label: 'Building Manager',
-    description: 'Oversees building operations',
-    icon: <Shield className="w-5 h-5" />
-  },
-  {
-    value: 'ADMIN',
-    label: 'Administrator',
-    description: 'Full system access and management',
-    icon: <Shield className="w-5 h-5" />
+// Use backend-validated operator types
+const OPERATOR_TYPES = BACKEND_ENUMS.OPERATOR_TYPES.map(type => {
+  const typeDetails = {
+    'LEASING_AGENT': {
+      label: 'Leasing Agent',
+      description: 'Handles tenant applications and showings',
+      icon: <UserCheck className="w-5 h-5" />
+    },
+    'MAINTENANCE': {
+      label: 'Maintenance',
+      description: 'Manages property maintenance and repairs',
+      icon: <Settings className="w-5 h-5" />
+    },
+    'BUILDING_MANAGER': {
+      label: 'Building Manager',
+      description: 'Oversees building operations',
+      icon: <Shield className="w-5 h-5" />
+    },
+    'ADMIN': {
+      label: 'Administrator',
+      description: 'Full system access and management',
+      icon: <Shield className="w-5 h-5" />
+    }
+  }[type] || {
+    label: type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()),
+    description: `${type} role`,
+    icon: <User className="w-5 h-5" />
   }
-]
+
+  return {
+    value: type,
+    ...typeDetails
+  }
+})
 
 const NOTIFICATION_PREFERENCES = [
   { value: 'EMAIL', label: 'Email Only', icon: <Mail className="w-4 h-4" /> },
@@ -101,7 +117,7 @@ const DEFAULT_WORKING_HOURS = {
   sunday: { start: '10:00', end: '14:00', enabled: false }
 }
 
-export default function OperatorForm({ initialData, onSubmit, onCancel, isLoading }: OperatorFormProps) {
+export default function OperatorForm({ initialData, onSubmit, onCancel, onBack, isLoading }: OperatorFormProps) {
   const [formData, setFormData] = useState<OperatorFormData>({
     name: '',
     email: '',
@@ -129,6 +145,15 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
 
   // Validation function (doesn't automatically set errors)
   const validateField = (fieldName: string, value: any): string | null => {
+    // Use comprehensive backend validation
+    const validationResult = validateOperatorFormData(formData)
+    
+    // Return specific field error if exists
+    if (validationResult.errors[fieldName]) {
+      return validationResult.errors[fieldName]
+    }
+    
+    // Additional real-time validations for UX
     switch (fieldName) {
       case 'name':
         if (!value?.trim()) return 'Name is required'
@@ -140,24 +165,17 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
       case 'phone':
         if (value && !/^\+?[\d\s\-\(\)]+$/.test(value)) return 'Please enter a valid phone number'
         break
+      case 'operator_type':
+        if (!value) return 'Operator type is required'
+        if (!BACKEND_ENUMS.OPERATOR_TYPES.includes(value)) return 'Invalid operator type'
+        break
     }
     return null
   }
 
-  // Validate all fields (used on submit)
-  const validateAllFields = (): Record<string, string> => {
-    const newErrors: Record<string, string> = {}
-
-    const fieldsToValidate = ['name', 'email', 'phone']
-
-    fieldsToValidate.forEach(field => {
-      const error = validateField(field, formData[field as keyof OperatorFormData])
-      if (error) {
-        newErrors[field] = error
-      }
-    })
-
-    return newErrors
+  // Use comprehensive backend validation
+  const validateAllFields = (): ValidationResult => {
+    return validateOperatorFormData(formData)
   }
 
   // Update errors only for touched fields
@@ -211,24 +229,25 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
     e.preventDefault()
 
     // Validate all fields on submit
-    const allErrors = validateAllFields()
-    setErrors(allErrors)
+    const validationResult = validateAllFields()
+    setErrors(validationResult.errors)
 
     // Mark all required fields as touched to show errors
     const requiredFields = ['name', 'email']
     setTouchedFields(prev => new Set([...prev, ...requiredFields]))
 
-    if (Object.keys(allErrors).length > 0) {
+    if (!validationResult.isValid) {
       return
     }
 
-    const submitData = {
+    // Transform data for backend
+    const transformedData = transformOperatorDataForBackend({
       ...formData,
       working_hours: JSON.stringify(workingHours),
       date_joined: formData.date_joined || new Date().toISOString().split('T')[0]
-    } as unknown as OperatorFormData
+    })
 
-    await onSubmit(submitData)
+    await onSubmit(transformedData as OperatorFormData)
   }
 
   return (
@@ -578,9 +597,25 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
-            className="flex items-center justify-end gap-4 pt-8"
+            className="flex items-center justify-between pt-8"
           >
-            {onCancel && (
+            {/* Previous Button */}
+            {onBack && (
+              <motion.button
+                type="button"
+                onClick={onBack}
+                className="px-6 py-3 border-2 border-blue-300 text-blue-700 rounded-lg font-semibold hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                title="Go to previous form"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </motion.button>
+            )}
+
+            <div className="flex items-center gap-4">
+              {onCancel && (
               <motion.button
                 type="button"
                 onClick={onCancel}
@@ -616,6 +651,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, isLoadin
                 </>
               )}
             </motion.button>
+            </div>
           </motion.div>
         </form>
     </div>
