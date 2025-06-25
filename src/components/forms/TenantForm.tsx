@@ -312,14 +312,26 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
     // Show missing required fields error
     if (validationResult.missingRequired.length > 0) {
       const missingFieldNames = validationResult.missingRequired.join(', ')
-      alert(`Please complete all required fields: ${missingFieldNames}`)
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Required Fields Missing',
+          `Please complete all required fields: ${missingFieldNames}`,
+          { duration: 6000 }
+        )
+      })
       return
     }
 
     // Show validation errors
     if (!validationResult.isValid) {
       const errorMessages = Object.values(validationResult.errors).join('\n')
-      alert(`Please fix the following errors:\n${errorMessages}`)
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Validation Errors',
+          `Please fix the following errors:\n${errorMessages}`,
+          { duration: 8000 }
+        )
+      })
       return
     }
 
@@ -338,7 +350,15 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
       
     } catch (error) {
       console.error('Error submitting tenant data:', error)
-      alert('Error submitting form. Please check your data and try again.')
+      import('@/lib/error-handler').then(({ handleFormSubmissionError }) => {
+        handleFormSubmissionError(error, {
+          additionalInfo: {
+            formType: 'tenant',
+            operation: 'submit',
+            formData: Object.keys(formData)
+          }
+        })
+      })
     }
   }
 

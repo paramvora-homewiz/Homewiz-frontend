@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getBackNavigationUrl } from '../../../lib/form-workflow'
+import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
 
 function LeadFormContent() {
   const router = useRouter()
@@ -22,13 +23,18 @@ function LeadFormContent() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Show success message and redirect
-      alert('Lead saved successfully! Workflow completed.')
+      // Show enhanced success message
+      showFormSuccessMessage('lead', 'saved')
       router.push('/forms')
-      
+
     } catch (error) {
       console.error('Error saving lead:', error)
-      alert('Error saving lead. Please try again.')
+      handleFormSubmissionError(error, {
+        additionalInfo: {
+          formType: 'lead',
+          operation: 'save'
+        }
+      })
     } finally {
       setIsLoading(false)
     }

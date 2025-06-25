@@ -4,7 +4,13 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { MediaFile } from '@/types'
-import { uploadBuildingImages, uploadBuildingVideo, isSupabaseAvailable } from '@/lib/supabase/storage'
+import {
+  uploadBuildingImages,
+  uploadBuildingVideo,
+  isSupabaseAvailable,
+  validateMultipleFiles,
+  FILE_TYPE_DESCRIPTIONS
+} from '@/lib/supabase/storage'
 import { getSupabaseStatus } from '@/lib/supabase/client'
 
 interface MediaUploadSectionProps {
@@ -14,6 +20,7 @@ interface MediaUploadSectionProps {
   onFilesChange: (files: MediaFile[]) => void
   buildingId?: string // Required for Supabase uploads
   uploadImmediately?: boolean // Whether to upload to Supabase immediately or wait for form submission
+  onValidationErrors?: (errors: Array<{ file: File; error: string }>) => void // Callback for validation errors
 }
 
 export function MediaUploadSection({
@@ -22,10 +29,12 @@ export function MediaUploadSection({
   onVirtualTourUrlChange,
   onFilesChange,
   buildingId,
-  uploadImmediately = false
+  uploadImmediately = false,
+  onValidationErrors
 }: MediaUploadSectionProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
+  const [fileValidationErrors, setFileValidationErrors] = useState<Array<{ file: File; error: string }>>([])
   const supabaseAvailable = isSupabaseAvailable()
   const supabaseStatus = getSupabaseStatus()
 
@@ -59,24 +68,36 @@ export function MediaUploadSection({
 
     setIsUploading(true)
     setUploadErrors([])
+    setFileValidationErrors([])
 
     try {
+      const fileArray = Array.from(files)
+
+      // Validate all files first using the comprehensive validation
+      const validation = validateMultipleFiles(fileArray, 'BUILDING_IMAGES')
+
+      // Set validation errors for immediate user feedback
+      setFileValidationErrors(validation.invalidFiles)
+
+      // Notify parent component about validation errors
+      if (onValidationErrors) {
+        onValidationErrors(validation.invalidFiles)
+      }
+
+      // If there are validation errors, show them and don't proceed
+      if (!validation.isValid) {
+        const errorMessages = validation.invalidFiles.map(({ file, error }) =>
+          `${file.name}: ${error}`
+        )
+        setUploadErrors(errorMessages)
+        setIsUploading(false)
+        return
+      }
+
       const newFiles: MediaFile[] = []
       const errors: string[] = []
 
-      for (const file of Array.from(files)) {
-        // Validate file type
-        if (!isImageFile(file) && !isVideoFile(file)) {
-          errors.push(`File ${file.name} is not a supported image or video format`)
-          continue
-        }
-
-        // Validate file size (max 50MB for videos, 10MB for images)
-        const maxSize = isVideoFile(file) ? 50 * 1024 * 1024 : 10 * 1024 * 1024
-        if (file.size > maxSize) {
-          errors.push(`File ${file.name} is too large. Max size: ${isVideoFile(file) ? '50MB' : '10MB'}`)
-          continue
-        }
+      for (const file of validation.validFiles) {
 
         const preview = await createFilePreview(file)
         const category = isImageFile(file) ? 'building_image' : 'building_video'
@@ -205,6 +226,26 @@ export function MediaUploadSection({
         )}
       </div>
 
+      {/* File Validation Errors */}
+      {fileValidationErrors.length > 0 && (
+        <Card className="p-4 bg-red-50 border-red-200">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-red-800 mb-2">Invalid File Types</h3>
+              <ul className="text-sm text-red-700 space-y-1 mb-3">
+                {fileValidationErrors.map(({ file, error }, index) => (
+                  <li key={index}>• <strong>{file.name}</strong>: {error}</li>
+                ))}
+              </ul>
+              <div className="text-sm text-red-600 bg-red-100 p-2 rounded">
+                <strong>Supported formats:</strong> {FILE_TYPE_DESCRIPTIONS.IMAGES}, {FILE_TYPE_DESCRIPTIONS.VIDEOS}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Upload Errors */}
       {uploadErrors.length > 0 && (
         <Card className="p-4 bg-red-50 border-red-200">
@@ -277,8 +318,8 @@ export function MediaUploadSection({
             />
           </div>
           <p className="text-xs text-gray-500">
-            Images: JPG, PNG, GIF up to 10MB each<br />
-            Videos: MP4, MOV, AVI up to 50MB each
+            Images: {FILE_TYPE_DESCRIPTIONS.IMAGES} up to 10MB each<br />
+            Videos: {FILE_TYPE_DESCRIPTIONS.VIDEOS} up to 50MB each
           </p>
           {isUploading && (
             <div className="mt-4">

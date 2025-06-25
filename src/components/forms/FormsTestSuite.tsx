@@ -114,6 +114,8 @@ export default function FormsTestSuite() {
     building_id: 'bldg_123',
     ready_to_rent: true,
     status: 'AVAILABLE',
+    booked_from: '2024-01-15',
+    booked_till: '2024-12-31',
     active_tenants: 0,
     maximum_people_in_room: 2,
     private_room_rent: 800,
@@ -121,8 +123,9 @@ export default function FormsTestSuite() {
     floor_number: 1,
     bed_count: 1,
     bathroom_type: 'Private',
-    bed_size: 'queen',
-    bed_type: 'standard',
+    bed_size: 'Queen',
+    bed_type: 'Single',
+    view: 'Garden',
     sq_footage: 120,
     mini_fridge: true,
     sink: false,
@@ -132,8 +135,20 @@ export default function FormsTestSuite() {
     heating: true,
     air_conditioning: true,
     cable_tv: false,
+    room_storage: 'Built-in Closet',
+    noise_level: 'Quiet',
+    sunlight: 'Bright',
     furnished: true,
-    available_from: '2024-02-01'
+    furniture_details: 'Desk, chair, bed, dresser',
+    last_renovation_date: '2023-06-01',
+    public_notes: 'Beautiful room with garden view',
+    internal_notes: 'Recently renovated',
+    virtual_tour_url: 'https://example.com/tour',
+    available_from: '2024-02-01',
+    additional_features: 'Balcony access',
+    last_check: '2024-01-01',
+    last_check_by: 123,
+    current_booking_types: 'short-term'
   }
 
   const invalidRoomData: RoomFormData = {

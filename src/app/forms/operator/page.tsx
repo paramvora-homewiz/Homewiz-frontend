@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { apiService } from '../../../services/apiService'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getForwardNavigationUrl, getBackNavigationUrl } from '../../../lib/form-workflow'
+import { showFormSuccessMessage, handleFormSubmissionError } from '../../../lib/error-handler'
 
 export default function OperatorFormPage() {
   const router = useRouter()
@@ -21,18 +22,32 @@ export default function OperatorFormPage() {
       // Make actual API call to save the operator
       const response = await apiService.createOperator(data)
 
-      if (response.success) {
-        alert('Operator saved successfully! Proceeding to Building Configuration.')
+      // Handle different response formats
+      const isSuccess = response?.success !== undefined ? response.success : true
+
+      if (isSuccess) {
+        // Show enhanced success message
+        showFormSuccessMessage('operator', 'saved')
+
         // Navigate to the next form in the workflow
         const nextUrl = getForwardNavigationUrl('operator')
-        router.push(nextUrl)
+        console.log('Navigating to next form:', nextUrl)
+
+        // Clear any existing URL parameters and navigate to clean URL
+        const cleanUrl = nextUrl.split('?')[0]
+        router.replace(cleanUrl)
       } else {
-        throw new Error(response.message || 'Failed to save operator')
+        throw new Error(response?.message || 'Failed to save operator')
       }
 
     } catch (error) {
       console.error('Error saving operator:', error)
-      alert(`Error saving operator: ${error instanceof Error ? error.message : 'Please try again.'}`)
+      handleFormSubmissionError(error, {
+        additionalInfo: {
+          formType: 'operator',
+          operation: 'save'
+        }
+      })
     } finally {
       setIsLoading(false)
     }

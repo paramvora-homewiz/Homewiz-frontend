@@ -188,6 +188,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
+  const [fileValidationErrors, setFileValidationErrors] = useState<Array<{ file: File; error: string }>>([])
   const [amenitiesDetails, setAmenitiesDetails] = useState(
     initialData?.amenities_details
       ? (typeof initialData.amenities_details === 'string'
@@ -209,7 +210,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   ]
 
   // Use form step navigation hook
-  const { currentStep, nextStep, prevStep, canGoNext, canGoPrev } = useFormStepNavigation({
+  const { currentStep, nextStep, prevStep, goToStep, canGoNext, canGoPrev } = useFormStepNavigation({
     totalSteps: steps.length
   })
 
@@ -349,14 +350,41 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     // Show missing required fields error
     if (validationResult.missingRequired.length > 0) {
       const missingFieldNames = validationResult.missingRequired.join(', ')
-      alert(`Please complete all required fields: ${missingFieldNames}`)
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Required Fields Missing',
+          `Please complete all required fields: ${missingFieldNames}`,
+          { duration: 6000 }
+        )
+      })
       return
     }
 
     // Show validation errors
     if (!validationResult.isValid) {
       const errorMessages = Object.values(validationResult.errors).join('\n')
-      alert(`Please fix the following errors:\n${errorMessages}`)
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Validation Errors',
+          `Please fix the following errors:\n${errorMessages}`,
+          { duration: 8000 }
+        )
+      })
+      return
+    }
+
+    // Check for file validation errors
+    if (fileValidationErrors.length > 0) {
+      const fileErrorMessages = fileValidationErrors.map(({ file, error }) =>
+        `${file.name}: ${error}`
+      ).join('\n')
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Invalid File Types',
+          `Please fix the following file issues:\n${fileErrorMessages}`,
+          { duration: 8000 }
+        )
+      })
       return
     }
 
@@ -444,15 +472,46 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
         } catch (imageError) {
           console.error('❌ Failed to upload images to Supabase (building was created successfully):', imageError)
-          alert(`Building created successfully, but failed to upload images: ${imageError instanceof Error ? imageError.message : 'Unknown error'}`)
+          import('@/lib/error-handler').then(({ handleFileUploadError }) => {
+            handleFileUploadError(imageError, {
+              additionalInfo: {
+                context: 'building_images',
+                buildingCreated: true
+              }
+            })
+          })
         }
       } else {
         console.log('📄 No images to upload - building creation complete')
       }
+
+      // Show success message and reset form
+      console.log('✅ Building submission completed successfully')
+      import('@/lib/error-handler').then(({ showSuccessMessage }) => {
+        showSuccessMessage(
+          'Building Created Successfully!',
+          `Building "${formData.building_name}" has been saved with all details and images.`,
+          { duration: 5000 }
+        )
+      })
+
+      // Reset form step to 0 to prevent URL step parameter persistence
+      // Use the navigation hook's goToStep function to properly reset
+      setTimeout(() => {
+        goToStep(0) // This will remove the step parameter from URL
+      }, 1000) // Small delay to let success message show
       
     } catch (error) {
       console.error('Error submitting building data:', error)
-      alert('Error submitting form. Please check your data and try again.')
+      import('@/lib/error-handler').then(({ handleFormSubmissionError }) => {
+        handleFormSubmissionError(error, {
+          additionalInfo: {
+            formType: 'building',
+            operation: 'submit',
+            hasImages: mediaFiles.length > 0
+          }
+        })
+      })
     }
   }
 
@@ -1138,6 +1197,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               uploadedFiles={mediaFiles}
               onVirtualTourUrlChange={(url) => handleInputChange('virtual_tour_url', url)}
               onFilesChange={setMediaFiles}
+              onValidationErrors={setFileValidationErrors}
               buildingId={formData.building_id}
               uploadImmediately={!!formData.building_id} // Only upload immediately if building already exists (editing mode)
             />
@@ -1284,29 +1344,41 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               )}
 
               {!canGoNext ? (
-                <motion.button
-                  type="submit"
-                  disabled={isLoading || Object.keys(errors).length > 0}
-                  className={`px-8 py-3 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 ${
-                    isLoading || Object.keys(errors).length > 0
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:from-emerald-700 hover:to-blue-700'
-                  }`}
-                  whileHover={!(isLoading || Object.keys(errors).length > 0) ? { scale: 1.02 } : {}}
-                  whileTap={!(isLoading || Object.keys(errors).length > 0) ? { scale: 0.98 } : {}}
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      {initialData?.building_id ? 'Update Building' : 'Create Building'}
-                    </>
+                <>
+                  <motion.button
+                    type="submit"
+                    disabled={isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0}
+                    className={`px-8 py-3 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 ${
+                      isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:from-emerald-700 hover:to-blue-700'
+                    }`}
+                    whileHover={!(isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0) ? { scale: 1.02 } : {}}
+                    whileTap={!(isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0) ? { scale: 0.98 } : {}}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        {initialData?.building_id ? 'Update Building' : 'Create Building'}
+                      </>
+                    )}
+                  </motion.button>
+
+                  {/* Show helpful message when submit is disabled due to validation errors */}
+                  {(Object.keys(errors).length > 0 || fileValidationErrors.length > 0) && (
+                    <p className="text-sm text-red-600 mt-2 text-center">
+                      {fileValidationErrors.length > 0
+                        ? `Please fix ${fileValidationErrors.length} file validation error${fileValidationErrors.length > 1 ? 's' : ''} above`
+                        : `Please fix ${Object.keys(errors).length} form validation error${Object.keys(errors).length > 1 ? 's' : ''} above`
+                      }
+                    </p>
                   )}
-                </motion.button>
+                </>
               ) : (
                 <motion.button
                   type="button"

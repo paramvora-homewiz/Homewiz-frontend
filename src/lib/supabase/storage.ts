@@ -34,9 +34,16 @@ export interface FileUploadResult {
 
 // Supported file types for different categories
 export const SUPPORTED_FILE_TYPES = {
-  IMAGES: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
+  IMAGES: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif'],
   VIDEOS: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
   DOCUMENTS: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+} as const
+
+// Human-readable file type descriptions for user feedback
+export const FILE_TYPE_DESCRIPTIONS = {
+  IMAGES: 'JPEG, PNG, WebP, GIF, AVIF',
+  VIDEOS: 'MP4, WebM, QuickTime, AVI',
+  DOCUMENTS: 'PDF, Word documents'
 } as const
 
 /**
@@ -266,6 +273,42 @@ function isValidFileType(file: File, bucket: keyof typeof STORAGE_BUCKETS): bool
   }
 }
 
+/**
+ * Validate file type and return detailed error information
+ */
+export function validateFileType(file: File, bucket: keyof typeof STORAGE_BUCKETS): {
+  isValid: boolean
+  error?: string
+  supportedTypes?: string
+} {
+  const isValid = isValidFileType(file, bucket)
+
+  if (isValid) {
+    return { isValid: true }
+  }
+
+  let supportedTypes: string
+  switch (bucket) {
+    case 'BUILDING_IMAGES':
+      supportedTypes = `${FILE_TYPE_DESCRIPTIONS.IMAGES}, ${FILE_TYPE_DESCRIPTIONS.VIDEOS}`
+      break
+    case 'DOCUMENTS':
+      supportedTypes = FILE_TYPE_DESCRIPTIONS.DOCUMENTS
+      break
+    case 'AVATARS':
+      supportedTypes = FILE_TYPE_DESCRIPTIONS.IMAGES
+      break
+    default:
+      supportedTypes = 'Unknown'
+  }
+
+  return {
+    isValid: false,
+    error: `File type "${file.type}" is not supported. Supported formats: ${supportedTypes}`,
+    supportedTypes
+  }
+}
+
 function getMaxFileSize(bucket: keyof typeof STORAGE_BUCKETS): number {
   switch (bucket) {
     case 'BUILDING_IMAGES':
@@ -298,6 +341,41 @@ function sanitizeFileName(fileName: string): string {
 }
 
 /**
+ * Validate multiple files before upload
+ */
+export function validateMultipleFiles(
+  files: File[],
+  bucket: keyof typeof STORAGE_BUCKETS
+): {
+  isValid: boolean
+  errors: Array<{ file: File; error: string }>
+  validFiles: File[]
+  invalidFiles: Array<{ file: File; error: string }>
+} {
+  const errors: Array<{ file: File; error: string }> = []
+  const validFiles: File[] = []
+  const invalidFiles: Array<{ file: File; error: string }> = []
+
+  files.forEach(file => {
+    const validation = validateFileType(file, bucket)
+    if (validation.isValid) {
+      validFiles.push(file)
+    } else {
+      const error = { file, error: validation.error || 'Invalid file type' }
+      errors.push(error)
+      invalidFiles.push(error)
+    }
+  })
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    validFiles,
+    invalidFiles
+  }
+}
+
+/**
  * Building-specific upload utilities
  */
 
@@ -305,6 +383,30 @@ export async function uploadBuildingImages(
   buildingId: string,
   files: File[]
 ): Promise<FileUploadResult[]> {
+  // Validate files before upload
+  const validation = validateMultipleFiles(files, 'BUILDING_IMAGES')
+
+  if (!validation.isValid) {
+    // Return error results for invalid files
+    const results: FileUploadResult[] = []
+
+    // Add error results for invalid files
+    validation.invalidFiles.forEach(({ file, error }) => {
+      results.push({
+        success: false,
+        error: error
+      })
+    })
+
+    // Upload valid files if any
+    if (validation.validFiles.length > 0) {
+      const validResults = await uploadMultipleFiles(validation.validFiles, 'BUILDING_IMAGES', `buildings/${buildingId}`)
+      results.push(...validResults)
+    }
+
+    return results
+  }
+
   return uploadMultipleFiles(files, 'BUILDING_IMAGES', `buildings/${buildingId}`)
 }
 

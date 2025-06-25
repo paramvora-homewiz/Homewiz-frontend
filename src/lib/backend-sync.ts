@@ -22,7 +22,31 @@ export const BACKEND_ENUMS = {
 export const REQUIRED_FIELDS = {
   OPERATOR: ['name', 'email'] as const,
   BUILDING: ['building_id', 'building_name'] as const,
-  ROOM: ['room_id', 'room_number'] as const,
+  ROOM: [
+    'room_id',
+    'room_number',
+    'building_id',
+    'ready_to_rent',
+    'status',
+    'active_tenants',
+    'maximum_people_in_room',
+    'private_room_rent',
+    'floor_number',
+    'bed_count',
+    'bathroom_type',
+    'bed_size',
+    'bed_type',
+    'sq_footage',
+    'mini_fridge',
+    'sink',
+    'bedding_provided',
+    'work_desk',
+    'work_chair',
+    'heating',
+    'air_conditioning',
+    'cable_tv',
+    'furnished'
+  ] as const,
   TENANT: [
     'tenant_name',
     'room_id', 
@@ -197,7 +221,8 @@ export function transformBackendDataForFrontend(backendData: any) {
 
 // Validate enum values against backend
 export function validateEnum(value: string, enumType: keyof typeof BACKEND_ENUMS): boolean {
-  return BACKEND_ENUMS[enumType].includes(value as any)
+  const enumValues = BACKEND_ENUMS[enumType] as readonly string[]
+  return enumValues.includes(value)
 }
 
 // Validate required fields are present
@@ -464,8 +489,11 @@ export function transformRoomDataForBackend(frontendData: any) {
     // Status and availability
     ready_to_rent: frontendData.ready_to_rent ?? true,
     status: frontendData.status || 'AVAILABLE',
+    booked_from: frontendData.booked_from || null,
+    booked_till: frontendData.booked_till || null,
     active_tenants: frontendData.active_tenants || 0,
     maximum_people_in_room: frontendData.maximum_people_in_room || 1,
+    available_from: frontendData.available_from || null,
 
     // Pricing
     private_room_rent: frontendData.private_room_rent || 0,
@@ -481,10 +509,23 @@ export function transformRoomDataForBackend(frontendData: any) {
     sq_footage: frontendData.sq_footage || null,
     room_storage: frontendData.room_storage || 'Built-in Closet',
 
+    // Environment and features
+    noise_level: frontendData.noise_level || null,
+    sunlight: frontendData.sunlight || null,
+    furnished: frontendData.furnished ?? false,
+    furniture_details: frontendData.furniture_details || null,
+    additional_features: frontendData.additional_features || null,
+    virtual_tour_url: frontendData.virtual_tour_url || null,
+
     // Maintenance tracking
     last_check: frontendData.last_check || null,
     last_check_by: frontendData.last_check_by || null,
+    last_renovation_date: frontendData.last_renovation_date || null,
     current_booking_types: frontendData.current_booking_types || null,
+
+    // Notes
+    public_notes: frontendData.public_notes || null,
+    internal_notes: frontendData.internal_notes || null,
 
     // Amenities (boolean fields)
     mini_fridge: frontendData.mini_fridge ?? false,
