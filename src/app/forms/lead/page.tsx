@@ -6,6 +6,7 @@ import { LeadFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import FormHeader from '../../../components/ui/FormHeader'
+import { getBackNavigationUrl } from '../../../lib/form-workflow'
 
 function LeadFormContent() {
   const router = useRouter()
@@ -22,7 +23,7 @@ function LeadFormContent() {
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       // Show success message and redirect
-      alert('Lead saved successfully!')
+      alert('Lead saved successfully! Workflow completed.')
       router.push('/forms')
       
     } catch (error) {
@@ -37,6 +38,11 @@ function LeadFormContent() {
     router.push('/forms')
   }
 
+  const handleBack = () => {
+    const backUrl = getBackNavigationUrl('lead')
+    router.push(backUrl)
+  }
+
   // Enhance rooms with building names
   const enhancedRooms = rooms.map(room => ({
     ...room,
@@ -47,6 +53,7 @@ function LeadFormContent() {
     <LeadForm
       onSubmit={handleSubmit}
       onCancel={handleCancel}
+      onBack={handleBack}
       isLoading={isLoading}
       rooms={enhancedRooms}
     />
@@ -59,6 +66,7 @@ export default function LeadFormPage() {
       <FormHeader
         title="Lead Tracking"
         subtitle="Track prospective tenants and their housing interests"
+        currentForm="lead"
       />
       <FormDataProvider>
         <LeadFormContent />

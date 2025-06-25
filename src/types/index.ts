@@ -113,7 +113,7 @@ export type OperatorType = 'LEASING_AGENT' | 'MAINTENANCE' | 'BUILDING_MANAGER' 
 export type NotificationPreference = 'EMAIL' | 'SMS' | 'BOTH' | 'NONE'
 
 export interface Operator {
-  operator_id: string
+  operator_id: number  // Changed from string to number to match backend
   name: string
   email: string
   phone?: string
@@ -131,7 +131,7 @@ export interface Operator {
 }
 
 export interface OperatorFormData extends Omit<Operator, 'operator_id' | 'date_joined'> {
-  operator_id?: string
+  operator_id?: number  // Changed from string to number to match backend
   date_joined?: string
 }
 
@@ -147,7 +147,7 @@ export interface Building {
   state: string
   zip_code: string
   country: string
-  operator_id: string
+  operator_id?: number  // Changed from string to optional number to match backend
   total_rooms: number
   available_rooms: number
   building_type: string
@@ -209,7 +209,7 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
 export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED'
 export type NoiseLevel = 'QUIET' | 'MODERATE' | 'LIVELY'
 export type SunlightLevel = 'BRIGHT' | 'MODERATE' | 'LOW'
-export type BathroomType = 'private' | 'shared' | 'ensuite'
+export type BathroomType = 'Private' | 'Shared' | 'En-Suite'
 
 export interface Room {
   room_id: string
@@ -254,7 +254,7 @@ export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'upd
   room_storage?: string
   noise_level?: NoiseLevel
   sunlight?: SunlightLevel
-  furnished: boolean
+  // Removed 'furnished' as it's not in backend schema
   furniture_details?: string
   last_renovation_date?: string
   public_notes?: string
@@ -427,33 +427,7 @@ export interface Room {
 
 // RoomStatus is already defined above
 
-export interface Building {
-  building_id: string
-  building_name: string
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  country: string
-  operator_id: string
-  total_rooms: number
-  available_rooms: number
-  building_type: string
-  amenities: string[]
-  year_built?: number
-  last_renovation?: number
-  building_rules?: string
-  amenities_details?: Record<string, any>
-  neighborhood_description?: string
-  building_description?: string
-  public_transit_info?: string
-  parking_info?: string
-  security_features?: string
-  disability_access: boolean
-  disability_features?: string
-  building_images?: string[]
-  virtual_tour_url?: string
-}
+// Duplicate Building interface removed - using the one defined above
 
 // File Upload Types
 export interface UploadedFile {
@@ -474,12 +448,13 @@ export interface MediaFile {
   file: File
   preview: string
   category: 'building_image' | 'building_video'
+  url?: string // Supabase storage URL if uploaded
 }
 
 // FileCategory is already defined above
 
 // Form Types
-export interface OnboardingFormData {
+export interface ApplicationFormData {
   // System Generated Fields
   tenant_id?: string
   lead_id?: string

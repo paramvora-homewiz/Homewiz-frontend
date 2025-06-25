@@ -5,7 +5,7 @@
  * combining collection, validation, transformation, and export capabilities.
  */
 
-import { OnboardingFormData, UploadedFile } from '@/types'
+import { ApplicationFormData, UploadedFile } from '@/types'
 import { 
   dataCollectionManager, 
   collectFormSubmission, 
@@ -67,7 +67,7 @@ export class DataIntegrationManager {
    * Collects, validates, transforms, and submits data to backend
    */
   async submitFormComplete(
-    formData: OnboardingFormData,
+    formData: ApplicationFormData,
     files: UploadedFile[] = [],
     userId?: string,
     exportConfigs: string[] = ['rest']
@@ -81,7 +81,7 @@ export class DataIntegrationManager {
       // Step 1: Collect and transform form data
       collectUserAction('form_submission_started', {
         userId,
-        formType: 'onboarding',
+        formType: 'application',
         fieldsCount: Object.keys(formData).length,
         filesCount: files.length,
       })
@@ -382,7 +382,7 @@ export const dataIntegrationManager = DataIntegrationManager.getInstance()
 
 // Utility functions for easy integration
 export const submitForm = async (
-  formData: OnboardingFormData,
+  formData: ApplicationFormData,
   files: UploadedFile[] = [],
   userId?: string,
   backends: string[] = ['rest']

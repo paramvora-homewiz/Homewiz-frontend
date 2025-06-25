@@ -66,7 +66,14 @@ export function ThemeProvider({
       root.classList.add(newResolvedTheme)
       
       // Update meta theme-color
-      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      let metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      if (!metaThemeColor) {
+        // Create the meta tag if it doesn't exist
+        metaThemeColor = document.createElement('meta')
+        metaThemeColor.setAttribute('name', 'theme-color')
+        document.head.appendChild(metaThemeColor)
+      }
+
       if (metaThemeColor) {
         metaThemeColor.setAttribute(
           'content',
@@ -91,6 +98,22 @@ export function ThemeProvider({
         const root = window.document.documentElement
         root.classList.remove('light', 'dark')
         root.classList.add(newResolvedTheme)
+
+        // Update meta theme-color
+        let metaThemeColor = document.querySelector('meta[name="theme-color"]')
+        if (!metaThemeColor) {
+          // Create the meta tag if it doesn't exist
+          metaThemeColor = document.createElement('meta')
+          metaThemeColor.setAttribute('name', 'theme-color')
+          document.head.appendChild(metaThemeColor)
+        }
+
+        if (metaThemeColor) {
+          metaThemeColor.setAttribute(
+            'content',
+            newResolvedTheme === 'dark' ? '#1f2937' : '#ffffff'
+          )
+        }
       }
     }
 

@@ -12,7 +12,7 @@ import {
   collectApiCall,
   collectError
 } from '../data-collection'
-import { OnboardingFormData } from '@/types'
+import { ApplicationFormData } from '@/types'
 
 // Mock config
 vi.mock('../config', () => ({
@@ -98,7 +98,7 @@ describe('DataCollectionManager', () => {
 
   describe('Form Data Transformation', () => {
     it('should transform form data correctly', () => {
-      const mockFormData: OnboardingFormData = {
+      const mockFormData: ApplicationFormData = {
         firstName: 'John',
         lastName: 'Doe',
         email: 'john@example.com',
@@ -169,7 +169,7 @@ describe('DataCollectionManager', () => {
     })
 
     it('should handle missing optional fields', () => {
-      const minimalFormData: OnboardingFormData = {
+      const minimalFormData: ApplicationFormData = {
         firstName: 'Jane',
         lastName: 'Smith',
         email: 'jane@example.com',
@@ -309,7 +309,7 @@ describe('Utility Functions', () => {
   })
 
   it('should collect form submission', () => {
-    const mockFormData: OnboardingFormData = {
+    const mockFormData: ApplicationFormData = {
       firstName: 'Test',
       lastName: 'User',
       email: 'test@example.com',

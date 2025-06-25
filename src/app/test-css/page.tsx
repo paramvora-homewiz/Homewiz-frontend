@@ -74,10 +74,10 @@ export default function TestCSSPage() {
             If you can see styled elements above, Tailwind CSS is working correctly.
           </p>
           <a 
-            href="/onboarding" 
+            href="/forms" 
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
           >
-            Go to Onboarding
+            Go to Forms
           </a>
         </div>
       </div>

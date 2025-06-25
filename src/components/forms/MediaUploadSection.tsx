@@ -1,24 +1,33 @@
 import React, { useState, useCallback } from 'react'
-import { Upload, X, Image, Video, FileText, Eye, Trash2 } from 'lucide-react'
+import { Upload, X, Image, Video, FileText, Eye, Trash2, Cloud, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { MediaFile } from '@/types'
+import { uploadBuildingImages, uploadBuildingVideo, isSupabaseAvailable } from '@/lib/supabase/storage'
+import { getSupabaseStatus } from '@/lib/supabase/client'
 
 interface MediaUploadSectionProps {
   virtualTourUrl?: string
   uploadedFiles: MediaFile[]
   onVirtualTourUrlChange: (url: string) => void
   onFilesChange: (files: MediaFile[]) => void
+  buildingId?: string // Required for Supabase uploads
+  uploadImmediately?: boolean // Whether to upload to Supabase immediately or wait for form submission
 }
 
 export function MediaUploadSection({
   virtualTourUrl = '',
   uploadedFiles,
   onVirtualTourUrlChange,
-  onFilesChange
+  onFilesChange,
+  buildingId,
+  uploadImmediately = false
 }: MediaUploadSectionProps) {
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadErrors, setUploadErrors] = useState<string[]>([])
+  const supabaseAvailable = isSupabaseAvailable()
+  const supabaseStatus = getSupabaseStatus()
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes'
@@ -49,26 +58,75 @@ export function MediaUploadSection({
     if (!files) return
 
     setIsUploading(true)
+    setUploadErrors([])
 
     try {
       const newFiles: MediaFile[] = []
+      const errors: string[] = []
 
       for (const file of Array.from(files)) {
         // Validate file type
         if (!isImageFile(file) && !isVideoFile(file)) {
-          alert(`File ${file.name} is not a supported image or video format`)
+          errors.push(`File ${file.name} is not a supported image or video format`)
           continue
         }
 
         // Validate file size (max 50MB for videos, 10MB for images)
         const maxSize = isVideoFile(file) ? 50 * 1024 * 1024 : 10 * 1024 * 1024
         if (file.size > maxSize) {
-          alert(`File ${file.name} is too large. Max size: ${isVideoFile(file) ? '50MB' : '10MB'}`)
+          errors.push(`File ${file.name} is too large. Max size: ${isVideoFile(file) ? '50MB' : '10MB'}`)
           continue
         }
 
         const preview = await createFilePreview(file)
         const category = isImageFile(file) ? 'building_image' : 'building_video'
+
+        let supabaseUrl: string | undefined
+
+        // Upload to Supabase if configured and enabled
+        if (uploadImmediately && supabaseAvailable && buildingId) {
+          try {
+            console.log(`🔄 Uploading ${file.name} to Supabase...`)
+            console.log(`📋 Supabase available: ${supabaseAvailable}, Building ID: ${buildingId}`)
+
+            let uploadResult: any
+
+            if (isImageFile(file)) {
+              const results = await uploadBuildingImages(buildingId, [file])
+              console.log(`📸 Upload results for ${file.name}:`, results)
+
+              if (results && results.length > 0) {
+                uploadResult = results[0]
+              } else {
+                throw new Error('No upload result returned from uploadBuildingImages')
+              }
+            } else {
+              uploadResult = await uploadBuildingVideo(buildingId, file)
+              console.log(`🎥 Upload result for ${file.name}:`, uploadResult)
+            }
+
+            if (uploadResult && uploadResult.success && uploadResult.url) {
+              supabaseUrl = uploadResult.url
+              console.log(`✅ Successfully uploaded ${file.name} to Supabase: ${supabaseUrl}`)
+            } else {
+              const errorMsg = uploadResult?.error || 'Unknown upload error'
+              errors.push(`Failed to upload ${file.name} to Supabase: ${errorMsg}`)
+              console.error(`❌ Supabase upload failed for ${file.name}:`, errorMsg)
+              console.error(`❌ Full upload result:`, uploadResult)
+              // Continue with local file handling even if Supabase upload fails
+            }
+          } catch (error: any) {
+            errors.push(`Upload error for ${file.name}: ${error.message}`)
+            console.error(`❌ Supabase upload error for ${file.name}:`, error)
+            // Continue with local file handling even if Supabase upload fails
+          }
+        } else {
+          console.log(`⚠️ Skipping Supabase upload for ${file.name}:`, {
+            uploadImmediately,
+            supabaseAvailable,
+            buildingId
+          })
+        }
 
         const mediaFile: MediaFile = {
           id: Date.now() + Math.random().toString(),
@@ -76,25 +134,33 @@ export function MediaUploadSection({
           type: file.type,
           size: file.size,
           file,
-          preview,
-          category
+          preview: supabaseUrl || preview, // Use Supabase URL if available, otherwise local preview
+          category,
+          url: supabaseUrl // Store the Supabase URL if uploaded
         }
 
         newFiles.push(mediaFile)
       }
 
       // Add new files to existing files
-      onFilesChange([...uploadedFiles, ...newFiles])
+      const updatedFiles = [...uploadedFiles, ...newFiles]
+      console.log(`📁 Added ${newFiles.length} files. Total files: ${updatedFiles.length}`)
+      onFilesChange(updatedFiles)
+
+      // Set errors if any occurred
+      if (errors.length > 0) {
+        setUploadErrors(errors)
+      }
 
     } catch (error) {
       console.error('Error processing files:', error)
-      alert('Error processing files. Please try again.')
+      setUploadErrors(['Error processing files. Please try again.'])
     } finally {
       setIsUploading(false)
       // Reset the input
       event.target.value = ''
     }
-  }, [uploadedFiles, onFilesChange])
+  }, [uploadedFiles, onFilesChange, uploadImmediately, supabaseAvailable, buildingId])
 
   const removeFile = (fileId: string) => {
     const updatedFiles = uploadedFiles.filter(f => f.id !== fileId)
@@ -108,6 +174,54 @@ export function MediaUploadSection({
         e.preventDefault()
       }
     }}>
+      {/* Supabase Status Indicator */}
+      <div className="p-4 rounded-lg border">
+        {uploadImmediately && supabaseAvailable && buildingId ? (
+          <div className="flex items-center gap-2 text-green-700">
+            <Cloud className="w-4 h-4" />
+            <span className="font-medium">Cloud Storage Ready</span>
+            <span className="text-sm text-gray-600">- Files will be uploaded to Supabase immediately</span>
+          </div>
+        ) : supabaseAvailable ? (
+          <div className="flex items-center gap-2 text-blue-700">
+            <Cloud className="w-4 h-4" />
+            <span className="font-medium">Cloud Storage Ready</span>
+            <span className="text-sm text-gray-600">- Files will be uploaded when you create the building</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-amber-700">
+            <AlertCircle className="w-4 h-4" />
+            <span className="font-medium">
+              {supabaseStatus.isDummyCredentials
+                ? 'Cloud Storage Disabled (Demo Mode)'
+                : 'Cloud Storage Unavailable'}
+            </span>
+            <span className="text-sm text-gray-600">
+              {supabaseStatus.isDummyCredentials
+                ? '- Using dummy credentials. Files stored locally for form submission.'
+                : '- Check Supabase configuration. Files will be stored locally.'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Upload Errors */}
+      {uploadErrors.length > 0 && (
+        <Card className="p-4 bg-red-50 border-red-200">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-red-800 mb-2">Upload Issues</h3>
+              <ul className="text-sm text-red-700 space-y-1">
+                {uploadErrors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Virtual Tour URL */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -220,7 +334,10 @@ export function MediaUploadSection({
                     ) : (
                       <Video className="w-4 h-4" />
                     )}
-                    <span className="text-sm truncate">{file.name}</span>
+                    <span className="text-sm truncate flex-1">{file.name}</span>
+                    {file.url && (
+                      <Cloud className="w-3 h-3 text-green-400" />
+                    )}
                   </div>
                   <p className="text-xs text-gray-300">{formatFileSize(file.size)}</p>
                 </div>
@@ -237,12 +354,26 @@ export function MediaUploadSection({
             <FileText className="w-4 h-4" />
             <span className="font-medium">
               {uploadedFiles.filter(f => f.category === 'building_image').length} photos and{' '}
-              {uploadedFiles.filter(f => f.category === 'building_video').length} videos ready for upload
+              {uploadedFiles.filter(f => f.category === 'building_video').length} videos
             </span>
           </div>
-          <p className="text-sm text-blue-600 mt-1">
-            Files will be saved to the database when you submit the form
-          </p>
+          <div className="text-sm text-blue-600 mt-1 space-y-1">
+            {uploadImmediately && supabaseAvailable ? (
+              <>
+                <p className="flex items-center gap-2">
+                  <Cloud className="w-3 h-3" />
+                  {uploadedFiles.filter(f => f.url).length} of {uploadedFiles.length} files uploaded to cloud storage
+                </p>
+                {uploadedFiles.filter(f => !f.url).length > 0 && (
+                  <p className="text-amber-600">
+                    {uploadedFiles.filter(f => !f.url).length} files stored locally (upload failed)
+                  </p>
+                )}
+              </>
+            ) : (
+              <p>Files will be saved to the database when you submit the form</p>
+            )}
+          </div>
         </Card>
       )}
     </div>

@@ -16,11 +16,15 @@ import { Database } from './types'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Check if Supabase is disabled for development
+// Check if Supabase is disabled for development or using dummy credentials
+// Allow localhost URLs for local development
 const isSupabaseDisabled = !supabaseUrl ||
   supabaseUrl === 'disabled_for_development' ||
+  supabaseUrl.includes('dummy.supabase.co') ||
   !supabaseAnonKey ||
-  supabaseAnonKey === 'disabled_for_development'
+  supabaseAnonKey === 'disabled_for_development' ||
+  supabaseAnonKey === 'dummy_key' ||
+  supabaseAnonKey.startsWith('dummy')
 
 // Validate required environment variables only if not disabled
 if (!isSupabaseDisabled) {
@@ -39,7 +43,9 @@ if (!isSupabaseDisabled) {
     throw new Error('Invalid NEXT_PUBLIC_SUPABASE_URL format')
   }
 } else {
-  console.log('🔧 Supabase validation skipped - disabled for development')
+  console.log('🔧 Supabase validation skipped - using dummy credentials or disabled for development')
+  console.log(`   URL: ${supabaseUrl}`)
+  console.log(`   Key: ${supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'undefined'}`)
 }
 
 // Connection status enum
@@ -117,7 +123,7 @@ class EnhancedSupabaseClient {
       this.initializeClient()
       this.setupNetworkMonitoring()
     } else {
-      console.log('🔧 Supabase client disabled for development')
+      console.log('🔧 Supabase client disabled - storage features unavailable')
       this.connectionStatus = ConnectionStatus.DISCONNECTED
       // Create a mock client to prevent errors
       this.client = {} as SupabaseClient<Database>
@@ -129,9 +135,11 @@ class EnhancedSupabaseClient {
    */
   private async initializeClient(): Promise<void> {
     if (isSupabaseDisabled) {
-      console.log('🔧 Supabase initialization skipped - disabled for development')
+      console.log('🔧 Supabase initialization skipped - using dummy credentials')
       return
     }
+
+    console.log('🔄 Initializing Supabase connection...')
 
     try {
       this.connectionStatus = ConnectionStatus.CONNECTING
@@ -141,6 +149,7 @@ class EnhancedSupabaseClient {
 
       this.connectionStatus = ConnectionStatus.CONNECTED
       this.retryCount = 0
+      console.log('✅ Supabase connection established successfully')
 
       // Process offline queue if any
       if (this.offlineQueue.length > 0) {
@@ -161,14 +170,25 @@ class EnhancedSupabaseClient {
       return
     }
 
-    const { error } = await this.client
-      .from('buildings')
-      .select('count')
-      .limit(1)
-      .single()
+    try {
+      const { error } = await this.client
+        .from('buildings')
+        .select('count')
+        .limit(1)
+        .single()
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      throw error
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned", which is okay
+        throw new Error(`Database connection test failed: ${error.message} (Code: ${error.code})`)
+      }
+    } catch (error: any) {
+      // Re-throw with more context
+      if (error.message?.includes('fetch')) {
+        throw new Error('Network error: Unable to reach Supabase server. Check your internet connection and Supabase URL.')
+      } else if (error.message?.includes('JWT') || error.message?.includes('auth')) {
+        throw new Error('Authentication error: Invalid Supabase API key or permissions.')
+      } else {
+        throw new Error(`Connection test failed: ${error.message || 'Unknown error'}`)
+      }
     }
   }
 
@@ -196,20 +216,37 @@ class EnhancedSupabaseClient {
    * Handle connection errors with retry logic
    */
   private async handleConnectionError(error: any): Promise<void> {
-    console.error('Supabase connection error:', error)
+    // Create a more informative error message
+    const errorMessage = error?.message || error?.toString() || 'Unknown connection error'
+    const errorCode = error?.code || 'NO_CODE'
+    
+    console.error('Supabase connection error:', {
+      message: errorMessage,
+      code: errorCode,
+      url: supabaseUrl,
+      isDisabled: isSupabaseDisabled,
+      originalError: error
+    })
+    
+    // If using dummy credentials, don't retry - just log and set to disabled
+    if (supabaseUrl?.includes('dummy') || supabaseAnonKey?.includes('dummy')) {
+      console.warn('🔧 Supabase connection failed due to dummy credentials. Storage features disabled.')
+      this.connectionStatus = ConnectionStatus.DISCONNECTED
+      return
+    }
     
     if (this.retryCount < this.config.retryAttempts) {
       this.retryCount++
       const delay = this.config.retryDelay * Math.pow(2, this.retryCount - 1) // Exponential backoff
       
-      console.log(`Retrying connection in ${delay}ms (attempt ${this.retryCount}/${this.config.retryAttempts})`)
+      console.log(`Retrying Supabase connection in ${delay}ms (attempt ${this.retryCount}/${this.config.retryAttempts})`)
       
       setTimeout(() => {
         this.initializeClient()
       }, delay)
     } else {
       this.connectionStatus = ConnectionStatus.ERROR
-      console.error('Max retry attempts reached. Connection failed.')
+      console.error('Max Supabase retry attempts reached. Connection failed permanently.')
     }
   }
 
@@ -378,6 +415,16 @@ export const supabase = isSupabaseDisabled ? null : supabaseClient.client
 // Export helper to check if Supabase is available
 export const isSupabaseAvailable = () => !isSupabaseDisabled && supabase !== null
 
+// Export helper to get Supabase status information
+export const getSupabaseStatus = () => ({
+  isAvailable: isSupabaseAvailable(),
+  isDisabled: isSupabaseDisabled,
+  connectionStatus: supabaseClient.getConnectionStatus(),
+  url: supabaseUrl,
+  hasValidKey: !!(supabaseAnonKey && !supabaseAnonKey.includes('dummy')),
+  isDummyCredentials: supabaseUrl?.includes('dummy') || supabaseAnonKey?.includes('dummy')
+})
+
 // Export types and utilities
-export type { Database, SupabaseError }
+export type { Database }
 export { EnhancedSupabaseClient }

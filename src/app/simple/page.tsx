@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormStepNavigation } from '@/hooks/useFormStepNavigation'
 import { Home, User, Mail, Phone, Briefcase, DollarSign, Upload, CheckCircle } from 'lucide-react'
 
-export default function SimplePage() {
-  const [currentStep, setCurrentStep] = useState(0)
+function SimplePageContent() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -25,17 +25,10 @@ export default function SimplePage() {
     { title: 'Complete', icon: CheckCircle }
   ]
 
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
-    }
-  }
-
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
+  // Use form step navigation hook
+  const { currentStep, nextStep, prevStep, canGoNext, canGoPrev } = useFormStepNavigation({
+    totalSteps: steps.length
+  })
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -185,7 +178,7 @@ export default function SimplePage() {
                     🎉 Congratulations!
                   </h3>
                   <p className="text-gray-600">
-                    You've successfully tested the HomeWiz onboarding form!
+                    You've successfully tested the HomeWiz application form!
                   </p>
                   <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
                     <h4 className="font-semibold text-blue-800 mb-2">✨ Full Version Features:</h4>
@@ -209,12 +202,12 @@ export default function SimplePage() {
               <Button
                 variant="outline"
                 onClick={prevStep}
-                disabled={currentStep === 0}
+                disabled={!canGoPrev}
               >
                 Previous
               </Button>
               
-              {currentStep < steps.length - 1 ? (
+              {canGoNext ? (
                 <Button
                   variant="gradient"
                   onClick={nextStep}
@@ -253,5 +246,20 @@ export default function SimplePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SimplePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg text-gray-600">Loading form...</p>
+        </div>
+      </div>
+    }>
+      <SimplePageContent />
+    </Suspense>
   )
 }

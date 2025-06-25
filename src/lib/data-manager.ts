@@ -210,7 +210,7 @@ export class DataValidator {
   }
 
   /**
-   * Validate onboarding form data
+   * Validate application form data
    */
   static validateOnboardingForm(data: any) {
     return this.validate(data, OnboardingFormSchema)

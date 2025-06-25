@@ -2,28 +2,32 @@
 
 import BuildingForm from '../../../components/forms/BuildingForm'
 import { FormDataProvider, useFormData } from '../../../components/forms/FormDataProvider'
+import { FormStepWrapper } from '../../../components/ui/FormStepWrapper'
 import { BuildingFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { apiService } from '../../../services/apiService'
 import FormHeader from '../../../components/ui/FormHeader'
+import { getForwardNavigationUrl } from '../../../lib/form-workflow'
 
 function BuildingFormContent() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const { operators } = useFormData()
 
-  const handleSubmit = async (data: BuildingFormData) => {
+  const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      console.log('Submitting building:', data)
+      console.log('Submitting building:', data instanceof FormData ? 'FormData with files' : 'JSON data', data)
 
       // Make actual API call to save the building
       const response = await apiService.createBuilding(data)
 
       if (response.success) {
-        alert('Building saved successfully!')
-        router.push('/forms')
+        alert('Building saved successfully! Proceeding to Room Setup.')
+        // Navigate to the next form in the workflow
+        const nextUrl = getForwardNavigationUrl('building')
+        router.push(nextUrl)
       } else {
         throw new Error(response.message || 'Failed to save building')
       }
@@ -56,9 +60,13 @@ export default function BuildingFormPage() {
       <FormHeader
         title="Building Configuration"
         subtitle="Add and configure building details, amenities, and policies"
+        currentForm="building"
+        showWorkflowProgress={true}
       />
       <FormDataProvider>
-        <BuildingFormContent />
+        <FormStepWrapper>
+          <BuildingFormContent />
+        </FormStepWrapper>
       </FormDataProvider>
     </div>
   )

@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { ApiResponse, User, OnboardingFormData } from '@/types'
+import { ApiResponse, User, ApplicationFormData } from '@/types'
 import { DataCache, DataConsistency } from './data-manager'
 import { ApiResponseHandler } from './api-response-handler'
 import ErrorHandler, { ErrorType } from './error-handler'
@@ -264,7 +264,7 @@ class AutoSyncManager {
   /**
    * Sync form save
    */
-  private async syncFormSave(data: OnboardingFormData): Promise<void> {
+  private async syncFormSave(data: ApplicationFormData): Promise<void> {
     try {
       // Cache form data locally first
       DataCache.set(`form_${data.email}`, data, 86400) // 24 hours
@@ -464,7 +464,7 @@ export const syncUserData = (userData: User) => {
   autoSyncManager.queueOperation('user_update', userData, SyncPriority.HIGH)
 }
 
-export const syncFormData = (formData: OnboardingFormData) => {
+export const syncFormData = (formData: ApplicationFormData) => {
   autoSyncManager.queueOperation('form_save', formData, SyncPriority.MEDIUM)
 }
 

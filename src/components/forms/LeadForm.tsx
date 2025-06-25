@@ -10,6 +10,12 @@ import { LoadingSpinner } from '../ui/loading-spinner'
 import { HelpTooltip } from '../ui/help-tooltip'
 import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge } from '../ui/enhanced-components'
 import { LeadFormData } from '../../types'
+import { 
+  validateLeadFormData, 
+  transformLeadDataForBackend, 
+  BACKEND_ENUMS,
+  ValidationResult 
+} from '../../lib/backend-sync'
 import {
   Target,
   Mail,
@@ -34,7 +40,8 @@ import {
   HelpCircle,
   Plus,
   Minus,
-  BarChart3
+  BarChart3,
+  ChevronLeft
 } from 'lucide-react'
 import '../../styles/design-system.css'
 
@@ -42,68 +49,32 @@ interface LeadFormProps {
   initialData?: Partial<LeadFormData>
   onSubmit: (data: LeadFormData) => Promise<void>
   onCancel?: () => void
+  onBack?: () => void
   isLoading?: boolean
   rooms?: Array<{ room_id: string; room_number: string; building_name: string; private_room_rent?: number; shared_room_rent_2?: number }>
 }
 
-const LEAD_STATUS_OPTIONS = [
-  {
-    value: 'EXPLORING',
-    label: 'Exploring',
-    color: 'from-gray-500 to-slate-500',
-    icon: <Eye className="w-5 h-5" />,
-    description: 'Just browsing options',
-    score: 10
-  },
-  {
-    value: 'INTERESTED',
-    label: 'Interested',
-    color: 'from-blue-500 to-cyan-500',
-    icon: <Target className="w-5 h-5" />,
-    description: 'Showing genuine interest',
-    score: 25
-  },
-  {
-    value: 'SCHEDULED_VIEWING',
-    label: 'Viewing Scheduled',
-    color: 'from-yellow-500 to-orange-500',
-    icon: <Calendar className="w-5 h-5" />,
-    description: 'Has scheduled a viewing',
-    score: 50
-  },
-  {
-    value: 'APPLICATION_SUBMITTED',
-    label: 'Applied',
-    color: 'from-purple-500 to-indigo-500',
-    icon: <FileText className="w-5 h-5" />,
-    description: 'Submitted application',
-    score: 75
-  },
-  {
-    value: 'APPROVED',
-    label: 'Approved',
-    color: 'from-green-500 to-emerald-500',
-    icon: <CheckCircle className="w-5 h-5" />,
-    description: 'Application approved',
-    score: 90
-  },
-  {
-    value: 'REJECTED',
-    label: 'Rejected',
-    color: 'from-red-500 to-pink-500',
-    icon: <XCircle className="w-5 h-5" />,
-    description: 'Application rejected',
-    score: 0
-  },
-  {
-    value: 'CONVERTED',
-    label: 'Converted',
-    color: 'from-emerald-500 to-green-500',
-    icon: <Star className="w-5 h-5" />,
-    description: 'Became a tenant',
-    score: 100
+// Use backend-validated lead status options
+const LEAD_STATUS_OPTIONS = BACKEND_ENUMS.LEAD_STATUS.map(status => {
+  const statusLabels: Record<string, string> = {
+    'EXPLORING': 'Exploring',
+    'SCHEDULED_VIEWING': 'Scheduled Viewing',
+    'INTERESTED': 'Interested',
+    'APPLICATION_SUBMITTED': 'Application Submitted',
+    'APPROVED': 'Approved',
+    'REJECTED': 'Rejected',
+    'CONVERTED': 'Converted'
   }
-]
+  
+  return {
+    value: status,
+    label: statusLabels[status] || status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()),
+    color: status === 'EXPLORING' ? 'from-gray-500 to-slate-500' : 'from-yellow-500 to-orange-500',
+    icon: status === 'EXPLORING' ? <Eye className="w-5 h-5" /> : <Calendar className="w-5 h-5" />,
+    description: status === 'EXPLORING' ? 'Just browsing options' : 'Has scheduled a viewing',
+    score: status === 'EXPLORING' ? 10 : 50
+  }
+})
 
 const LEAD_SOURCES = [
   { value: 'WEBSITE', label: 'Website', icon: <Globe className="w-4 h-4" /> },
@@ -119,17 +90,13 @@ const COMMUNICATION_PREFERENCES = [
   { value: 'PHONE', label: 'Phone Call', icon: <Phone className="w-4 h-4" /> }
 ]
 
-const VISA_STATUS_OPTIONS = [
-  'US Citizen',
-  'Permanent Resident',
-  'H1-B Visa',
-  'F-1 Student Visa',
-  'J-1 Visa',
-  'L-1 Visa',
-  'O-1 Visa',
-  'Tourist Visa',
-  'Other'
-]
+// Use backend-validated visa status options
+const VISA_STATUS_OPTIONS = BACKEND_ENUMS.VISA_STATUS.map(status => ({
+  value: status,
+  label: status === 'US-CITIZEN' ? 'US Citizen' : 
+         status === 'F1-VISA' ? 'F-1 Student Visa' : 
+         status === 'H1B-VISA' ? 'H1-B Visa' : status.replace('-', ' ')
+}))
 
 const LEASE_TERM_OPTIONS = [
   { value: 3, label: '3 months' },
@@ -149,7 +116,7 @@ const BUDGET_RANGES = [
   { min: 1800, max: 2500, label: '$1800-2500 (Luxury)' }
 ]
 
-export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, rooms = [] }: LeadFormProps) {
+export default function LeadForm({ initialData, onSubmit, onCancel, onBack, isLoading, rooms = [] }: LeadFormProps) {
   const [formData, setFormData] = useState<LeadFormData>({
     email: '',
     status: 'EXPLORING',
@@ -167,16 +134,12 @@ export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, r
     initialData?.showing_dates ? JSON.parse(initialData.showing_dates) : []
   )
 
-  // Real-time validation
+  // Backend-sync validation
   useEffect(() => {
-    const newErrors: Record<string, string> = {}
+    const validationResult = validateLeadFormData(formData)
+    const newErrors: Record<string, string> = { ...validationResult.errors }
     
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
-    }
-
+    // Additional frontend validations for better UX
     if (formData.budget_min && formData.budget_max && formData.budget_min > formData.budget_max) {
       newErrors.budget_max = 'Maximum budget must be greater than minimum'
     }
@@ -237,18 +200,26 @@ export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, r
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (Object.keys(errors).length > 0) {
+    // Final validation using backend-sync
+    const validationResult = validateLeadFormData({
+      ...formData,
+      rooms_interested: interestedRooms,
+      showing_dates: showingDates
+    })
+    
+    if (!validationResult.isValid || Object.keys(errors).length > 0) {
+      setErrors({ ...errors, ...validationResult.errors })
       return
     }
 
-    const submitData = {
+    // Transform data for backend
+    const transformedData = transformLeadDataForBackend({
       ...formData,
-      lead_id: formData.lead_id || `lead_${Date.now()}`,
-      rooms_interested: JSON.stringify(interestedRooms),
-      showing_dates: JSON.stringify(showingDates)
-    }
+      rooms_interested: interestedRooms,
+      showing_dates: showingDates
+    })
 
-    await onSubmit(submitData)
+    await onSubmit(transformedData)
   }
 
   const getStatusBadge = (status: string) => {
@@ -394,10 +365,7 @@ export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, r
                   label="Visa Status"
                   value={formData.visa_status || ''}
                   onChange={(value) => handleInputChange('visa_status', value)}
-                  options={VISA_STATUS_OPTIONS.map(status => ({
-                    value: status,
-                    label: status
-                  }))}
+                  options={VISA_STATUS_OPTIONS}
                   placeholder="Select visa status"
                   searchable
                 />
@@ -800,12 +768,28 @@ export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, r
 
           {/* Enhanced Form Actions */}
           <motion.div
-            className="flex items-center justify-end gap-4 pt-8"
+            className="flex items-center justify-between pt-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
           >
-            {onCancel && (
+            {/* Previous Button */}
+            {onBack && (
+              <motion.button
+                type="button"
+                onClick={onBack}
+                className="px-6 py-3 border-2 border-pink-300 text-pink-700 rounded-lg font-semibold hover:border-pink-400 hover:bg-pink-50 transition-all duration-200 flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                title="Go to previous form"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </motion.button>
+            )}
+
+            <div className="flex items-center gap-4">
+              {onCancel && (
               <motion.button
                 type="button"
                 onClick={onCancel}
@@ -841,6 +825,7 @@ export default function LeadForm({ initialData, onSubmit, onCancel, isLoading, r
                 </>
               )}
             </motion.button>
+            </div>
           </motion.div>
         </form>
       </div>

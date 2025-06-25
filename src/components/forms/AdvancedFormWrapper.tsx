@@ -86,13 +86,13 @@ export function AdvancedFormWrapper<T extends Record<string, any>>({
     formId,
     currentUser,
     onCollaboratorJoin: (collaborator) => {
-      console.log('Collaborator joined:', collaborator.name)
+      // Handle collaborator joining
     },
     onCollaboratorLeave: (collaboratorId) => {
-      console.log('Collaborator left:', collaboratorId)
+      // Handle collaborator leaving
     },
     onFieldActivity: (activity) => {
-      console.log('Field activity:', activity)
+      // Handle field activity
     }
   })
 

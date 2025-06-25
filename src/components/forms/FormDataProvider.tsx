@@ -82,8 +82,8 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [roomsError, setRoomsError] = useState<string | null>(null)
 
-  // Real API configuration
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+  // Real API configuration - using config module for consistency
+  // Note: API_BASE_URL is not used since we're using apiService which already has the correct URL
   const MOCK_OPERATORS: Operator[] = [
     {
       operator_id: 1,
@@ -112,6 +112,43 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       email: 'emily.davis@homewiz.com',
       operator_type: 'ADMIN',
       active: true
+    }
+  ]
+
+  // Demo operators data for fallback
+  const demoOperators: Operator[] = [
+    {
+      operator_id: 1,
+      name: 'John Smith',
+      email: 'john.smith@homewiz.com',
+      phone: '+1-555-0123',
+      role: 'Property Manager',
+      operator_type: 'BUILDING_MANAGER',
+      active: true,
+      date_joined: '2023-01-15',
+      last_active: '2024-06-25'
+    },
+    {
+      operator_id: 2,
+      name: 'Sarah Johnson',
+      email: 'sarah.johnson@homewiz.com',
+      phone: '+1-555-0456',
+      role: 'Leasing Agent',
+      operator_type: 'LEASING_AGENT',
+      active: true,
+      date_joined: '2023-03-20',
+      last_active: '2024-06-24'
+    },
+    {
+      operator_id: 3,
+      name: 'Mike Chen',
+      email: 'mike.chen@homewiz.com',
+      phone: '+1-555-0789',
+      role: 'Maintenance Supervisor',
+      operator_type: 'MAINTENANCE',
+      active: true,
+      date_joined: '2023-05-10',
+      last_active: '2024-06-23'
     }
   ]
 
@@ -223,8 +260,15 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       setOperators(data)
       console.log('📊 Dashboard Update: Operators count updated to', data.length)
     } catch (error) {
-      setOperatorsError(error instanceof Error ? error.message : 'Failed to fetch operators')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch operators'
+      setOperatorsError(errorMessage)
       console.error('❌ Error fetching operators:', error)
+      
+      // If it's a connection error, show demo mode
+      if (errorMessage.includes('Backend server not running') || errorMessage.includes('Failed to fetch')) {
+        console.log('🎭 Using demo data for operators (backend not available)')
+        setOperators(demoOperators)
+      }
     } finally {
       setOperatorsLoading(false)
     }
@@ -239,8 +283,15 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       setBuildings(data)
       console.log('📊 Dashboard Update: Buildings count updated to', data.length)
     } catch (error) {
-      setBuildingsError(error instanceof Error ? error.message : 'Failed to fetch buildings')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch buildings'
+      setBuildingsError(errorMessage)
       console.error('❌ Error fetching buildings:', error)
+      
+      // If it's a connection error, show demo mode
+      if (errorMessage.includes('Backend server not running') || errorMessage.includes('Failed to fetch')) {
+        console.log('🎭 Using demo data for buildings (backend not available)')
+        setBuildings([]) // Empty for demo, or add demo buildings if needed
+      }
     } finally {
       setBuildingsLoading(false)
     }
@@ -256,8 +307,15 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       const availableRooms = data.filter(room => room.status === 'AVAILABLE' && room.ready_to_rent)
       console.log('📊 Dashboard Update: Total rooms updated to', data.length, '| Available rooms:', availableRooms.length)
     } catch (error) {
-      setRoomsError(error instanceof Error ? error.message : 'Failed to fetch rooms')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch rooms'
+      setRoomsError(errorMessage)
       console.error('❌ Error fetching rooms:', error)
+      
+      // If it's a connection error, show demo mode
+      if (errorMessage.includes('Backend server not running') || errorMessage.includes('Failed to fetch')) {
+        console.log('🎭 Using demo data for rooms (backend not available)')
+        setRooms([]) // Empty for demo, or add demo rooms if needed
+      }
     } finally {
       setRoomsLoading(false)
     }

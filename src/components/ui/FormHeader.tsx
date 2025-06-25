@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Home } from 'lucide-react'
 import { Button } from './button'
+import { FormType, getBackNavigationUrl } from '@/lib/form-workflow'
+import { WorkflowProgress } from './WorkflowProgress'
 
 interface FormHeaderProps {
   title?: string
@@ -13,15 +15,19 @@ interface FormHeaderProps {
   onBack?: () => void
   fallbackUrl?: string
   className?: string
+  currentForm?: FormType // Add current form type for workflow navigation
+  showWorkflowProgress?: boolean // Show workflow progress indicator
 }
 
-export function FormHeader({ 
-  title, 
-  subtitle, 
-  showBackButton = true, 
-  onBack, 
+export function FormHeader({
+  title,
+  subtitle,
+  showBackButton = true,
+  onBack,
   fallbackUrl = '/forms',
-  className = '' 
+  className = '',
+  currentForm,
+  showWorkflowProgress = false
 }: FormHeaderProps) {
   const router = useRouter()
 
@@ -31,7 +37,14 @@ export function FormHeader({
       return
     }
 
-    // Check if we can go back in browser history
+    // Use workflow-based navigation if currentForm is provided
+    if (currentForm) {
+      const workflowBackUrl = getBackNavigationUrl(currentForm)
+      router.push(workflowBackUrl)
+      return
+    }
+
+    // Fallback to browser history or default URL
     const canGoBack = window.history.length > 1 && document.referrer !== ''
 
     if (canGoBack) {
@@ -122,6 +135,13 @@ export function FormHeader({
           </div>
         </div>
       </div>
+
+      {/* Workflow Progress */}
+      {showWorkflowProgress && currentForm && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+          <WorkflowProgress currentForm={currentForm} compact />
+        </div>
+      )}
     </motion.div>
   )
 }

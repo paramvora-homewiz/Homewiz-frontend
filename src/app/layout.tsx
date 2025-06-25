@@ -3,17 +3,24 @@ import { Inter } from "next/font/google";
 import { ToastProvider } from '../components/ui/toast'
 import { ThemeProvider } from '../contexts/ThemeContext'
 import { RootAuthProvider } from '../components/auth/RootAuthProvider'
+import { ConnectionStatusBanner } from '../components/ui/ConnectionStatusBanner'
 import config from '../lib/config'
 import "./globals.css";
 import "../styles/design-system.css";
 import "../styles/professional-light-theme.css";
 
+// Load Supabase debug utilities in development
+// Commented out to prevent chunk loading issues
+// if (process.env.NODE_ENV === 'development') {
+//   import('../utils/supabaseDebug')
+// }
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: `${config.app.name} - Find Your Perfect Home`,
-  description: "Fast, easy onboarding for your next rental home. Upload documents, complete your profile, and get approved quickly.",
-  keywords: "rental, housing, apartment, onboarding, application",
+  description: "Fast, easy rental application for your next home. Upload documents, complete your profile, and get approved quickly.",
+  keywords: "rental, housing, apartment, application",
   authors: [{ name: "HomeWiz Team" }],
   robots: config.isProduction ? "index, follow" : "noindex, nofollow",
 };
@@ -21,6 +28,7 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -39,6 +47,7 @@ export default function RootLayout({
                   🎭 Demo Mode - Authentication Disabled
                 </div>
               )}
+              <ConnectionStatusBanner />
               {children}
             </ToastProvider>
           </RootAuthProvider>

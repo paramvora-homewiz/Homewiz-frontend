@@ -1,8 +1,23 @@
+/**
+ * File Upload Utilities for HomeWiz Frontend
+ *
+ * This module provides utilities for handling file uploads, validation,
+ * and FormData preparation for backend submission.
+ */
+
 import { MediaFile } from '@/types'
 
 /**
  * Converts MediaFile objects to FormData for backend submission
- * This function prepares the files for upload to the backend where they will be stored as blobs
+ * Prepares files and metadata for upload to the backend where they will be stored as blobs
+ *
+ * @param buildingData - Building form data object
+ * @param mediaFiles - Array of MediaFile objects to upload
+ * @returns FormData object ready for backend submission
+ *
+ * @example
+ * const formData = createFormDataWithFiles(buildingData, mediaFiles)
+ * await fetch('/api/buildings', { method: 'POST', body: formData })
  */
 export function createFormDataWithFiles(
   buildingData: any,
@@ -38,7 +53,17 @@ export function createFormDataWithFiles(
 }
 
 /**
- * Utility function to validate file types and sizes
+ * Validates file types and sizes for media uploads
+ * Ensures files meet requirements for images and videos
+ *
+ * @param file - File object to validate
+ * @returns Validation result with isValid flag and optional error message
+ *
+ * @example
+ * const result = validateMediaFile(file)
+ * if (!result.isValid) {
+ *   console.error(result.error)
+ * }
  */
 export function validateMediaFile(file: File): { isValid: boolean; error?: string } {
   const isImage = file.type.startsWith('image/')
