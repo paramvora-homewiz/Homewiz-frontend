@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverActions: true,
   // Disable all type checking and linting for deployment
   eslint: {
     ignoreDuringBuilds: true,
