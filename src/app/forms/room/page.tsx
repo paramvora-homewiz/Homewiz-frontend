@@ -30,9 +30,8 @@ function RoomFormContent() {
       const nextUrl = getForwardNavigationUrl('room')
       console.log('Navigating to next form:', nextUrl)
 
-      // Clear any existing URL parameters and navigate to clean URL
-      const cleanUrl = nextUrl.split('?')[0]
-      router.replace(cleanUrl)
+      // Use push instead of replace to prevent page reload issues
+      router.push(nextUrl)
 
     } catch (error) {
       console.error('Error saving room:', error)

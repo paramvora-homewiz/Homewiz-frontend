@@ -279,6 +279,7 @@ export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'upd
   virtual_tour_url?: string
   available_from?: string
   additional_features?: string
+  room_photos?: File[]
 }
 
 // Tenant Form Interface - Maps to tenants table

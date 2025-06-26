@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ import {
   BACKEND_ENUMS,
   ValidationResult
 } from '@/lib/backend-sync'
+import { showSuccessMessage, showInfoMessage } from '@/lib/error-handler'
 import {
   Home,
   Save,
@@ -100,221 +101,20 @@ interface RoomFormProps {
   buildings?: Array<{ building_id: string; building_name: string }>
 }
 
-export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, buildings = [] }: RoomFormProps) {
-  const [currentStep, setCurrentStep] = useState<FormStep>('basic')
-  const [completedSteps, setCompletedSteps] = useState<Set<FormStep>>(new Set())
-  const [formData, setFormData] = useState<RoomFormData>({
-    room_number: '',
-    building_id: '',
-    ready_to_rent: true,
-    status: 'AVAILABLE', // Backend validated
-    booked_from: undefined,
-    booked_till: undefined,
-    active_tenants: 0,
-    maximum_people_in_room: 1, // Required field
-    private_room_rent: 0, // Required field
-    shared_room_rent_2: undefined, // Backend field for shared room pricing
-    floor_number: 1, // Required field
-    bed_count: 1, // Required field
-    bathroom_type: 'Shared', // Backend default
-    bed_size: 'Twin', // Backend validated enum
-    bed_type: 'Single', // Backend validated enum
-    view: 'Street', // Backend validated enum
-    sq_footage: 200, // Backend field with default
-    mini_fridge: false,
-    sink: false,
-    bedding_provided: false,
-    work_desk: false,
-    work_chair: false,
-    heating: false,
-    air_conditioning: false,
-    cable_tv: false,
-    room_storage: 'Built-in Closet', // Backend field with default
-    last_check: undefined, // Backend field for maintenance tracking
-    last_check_by: undefined, // Backend field for operator tracking
-    current_booking_types: undefined, // Backend field for booking types
-    noise_level: undefined,
-    sunlight: undefined,
-    furnished: false,
-    furniture_details: undefined,
-    last_renovation_date: undefined,
-    public_notes: undefined,
-    internal_notes: undefined,
-    virtual_tour_url: undefined,
-    available_from: undefined,
-    additional_features: undefined,
-    ...initialData
-  })
+// Step component props
+interface StepProps {
+  formData: RoomFormData;
+  handleInputChange: (field: keyof RoomFormData, value: any) => void;
+}
 
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [showTemplateSaveDialog, setShowTemplateSaveDialog] = useState(false)
+interface BasicInformationStepProps extends StepProps {
+  errors: Record<string, string>;
+  buildings: Array<{ building_id: string; building_name: string }>;
+  handleTemplateSelect: (template: FormTemplate) => void;
+  handleRecentSelect: (submission: RecentSubmission) => void;
+}
 
-  // Template management
-  const { saveRecentSubmission, saveTemplate } = useFormTemplates({ formType: 'room' })
-
-  // Step navigation functions
-  const getCurrentStepIndex = () => FORM_STEPS.findIndex(step => step.id === currentStep)
-  const isFirstStep = getCurrentStepIndex() === 0
-  const isLastStep = getCurrentStepIndex() === FORM_STEPS.length - 1
-
-  const goToNextStep = () => {
-    const currentIndex = getCurrentStepIndex()
-    if (currentIndex < FORM_STEPS.length - 1) {
-      // Mark current step as completed
-      setCompletedSteps(prev => new Set([...prev, currentStep]))
-      setCurrentStep(FORM_STEPS[currentIndex + 1].id)
-    }
-  }
-
-  const goToPreviousStep = () => {
-    const currentIndex = getCurrentStepIndex()
-    if (currentIndex > 0) {
-      setCurrentStep(FORM_STEPS[currentIndex - 1].id)
-    }
-  }
-
-  const goToStep = (stepId: FormStep) => {
-    setCurrentStep(stepId)
-  }
-
-  // Keyboard navigation
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'ArrowLeft' && !isFirstStep) {
-          e.preventDefault()
-          goToPreviousStep()
-        } else if (e.key === 'ArrowRight' && !isLastStep) {
-          e.preventDefault()
-          goToNextStep()
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isFirstStep, isLastStep])
-
-  const handleInputChange = useCallback((field: keyof RoomFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }, [])
-
-  const handleCopyFromPrevious = useCallback((copiedData: any) => {
-    setFormData(prev => ({
-      ...prev,
-      ...copiedData,
-      room_id: prev.room_id // Keep current room_id
-    }))
-  }, [])
-
-  // Handle template selection
-  const handleTemplateSelect = (template: FormTemplate) => {
-    setFormData(prev => ({
-      ...prev,
-      ...template.data,
-      room_id: prev.room_id, // Keep current room_id
-      room_number: prev.room_number || template.data.room_number // Keep current room number if set
-    }))
-
-    // Show success message
-    import('@/lib/error-handler').then(({ showSuccessMessage }) => {
-      showSuccessMessage(
-        'Template Applied',
-        `Template "${template.name}" has been loaded successfully.`,
-        {
-          action: {
-            label: 'View Details',
-            onClick: () => console.log('Template details:', template)
-          }
-        }
-      )
-    })
-  }
-
-  // Handle recent submission selection
-  const handleRecentSelect = (submission: RecentSubmission) => {
-    setFormData(prev => ({
-      ...prev,
-      ...submission.data,
-      room_id: prev.room_id, // Keep current room_id
-      room_number: prev.room_number || submission.data.room_number // Keep current room number if set
-    }))
-
-    // Show info message
-    import('@/lib/error-handler').then(({ showInfoMessage }) => {
-      showInfoMessage(
-        'Previous Data Loaded',
-        'Your previous submission data has been applied to the form.'
-      )
-    })
-  }
-
-  // Handle template save
-  const handleSaveTemplate = async (templateData: any) => {
-    try {
-      await saveTemplate(templateData)
-      import('@/lib/error-handler').then(({ showSuccessMessage }) => {
-        showSuccessMessage(
-          'Template Saved',
-          `Template "${templateData.name}" has been saved successfully.`,
-          {
-            action: {
-              label: 'View Templates',
-              onClick: () => console.log('Navigate to templates')
-            }
-          }
-        )
-      })
-    } catch (error) {
-      import('@/lib/error-handler').then(({ handleFormSubmissionError }) => {
-        handleFormSubmissionError(error, {
-          additionalInfo: {
-            operation: 'save_template',
-            templateName: templateData.name
-          }
-        })
-      })
-    }
-  }
-
-  // Generate preview text for recent submissions
-  const generatePreviewText = (data: RoomFormData): string => {
-    const parts = []
-    if (data.room_number) parts.push(`Room ${data.room_number}`)
-    if (data.bed_count) parts.push(`${data.bed_count} bed${data.bed_count > 1 ? 's' : ''}`)
-    if (data.bathroom_type) parts.push(data.bathroom_type.toLowerCase())
-    if (data.private_room_rent) parts.push(`$${data.private_room_rent}/month`)
-    return parts.join(', ') || 'Room configuration'
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Validate using backend-sync
-    const validationResult = validateRoomFormData(formData)
-
-    if (!validationResult.isValid) {
-      setErrors(validationResult.errors)
-      return
-    }
-
-    // Transform data for backend
-    const transformedData = transformRoomDataForBackend(formData)
-
-    try {
-      await onSubmit(transformedData)
-
-      // Save to recent submissions after successful submit
-      const previewText = generatePreviewText(formData)
-      await saveRecentSubmission(formData, previewText)
-    } catch (error) {
-      // Handle submission error
-      console.error('Form submission error:', error)
-    }
-  }
-
-  // Step content components
-  const BasicInformationStep = () => (
+const BasicInformationStep = React.memo(({ formData, errors, buildings, handleInputChange, handleTemplateSelect, handleRecentSelect }: BasicInformationStepProps) => (
     <div className="space-y-6">
       {/* Template Selector */}
       <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
@@ -439,11 +239,66 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
             <span className="text-xs text-gray-500">Mark this room as available for new tenants</span>
           </label>
         </div>
+
+        {/* Room Photos Upload */}
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Room Photos
+          </label>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || [])
+                handleInputChange('room_photos', files)
+              }}
+              className="hidden"
+              id="room-photos"
+            />
+            <label htmlFor="room-photos" className="cursor-pointer">
+              <div className="flex flex-col items-center">
+                <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload room photos</span> or drag and drop
+                </p>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB each</p>
+              </div>
+            </label>
+          </div>
+          
+          {/* Display selected photos */}
+          {formData.room_photos && formData.room_photos.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+              {formData.room_photos.map((file, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={`Room photo ${index + 1}`}
+                    className="w-full h-20 object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleInputChange('room_photos', (formData.room_photos || []).filter((_, i) => i !== index))
+                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </Card>
     </div>
-  )
+  ));
 
-  const SpecificationsStep = () => (
+const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProps) => (
     <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -617,9 +472,9 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
         </div>
       </Card>
     </div>
-  )
+  ));
 
-  const AvailabilityStep = () => (
+const AvailabilityStep = React.memo(({ formData, handleInputChange }: StepProps) => (
     <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="space-y-6">
@@ -770,9 +625,9 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
         </div>
       </Card>
     </div>
-  )
+  ));
 
-  const AmenitiesStep = () => (
+const AmenitiesStep = React.memo(({ formData, handleInputChange }: StepProps) => (
     <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div>
@@ -821,9 +676,9 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
         </div>
       </Card>
     </div>
-  )
+  ));
 
-  const MaintenanceStep = () => (
+const MaintenanceStep = React.memo(({ formData, handleInputChange }: StepProps) => (
     <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="space-y-6">
@@ -906,11 +761,245 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
         </div>
       </Card>
     </div>
-  )
+  ));
+
+function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, buildings = [] }: RoomFormProps) {
+
+  const [currentStep, setCurrentStep] = useState<FormStep>('basic')
+  const [completedSteps, setCompletedSteps] = useState<Set<FormStep>>(new Set())
+  const [formData, setFormData] = useState<RoomFormData>({
+    room_number: '',
+    building_id: '',
+    ready_to_rent: true,
+    status: 'AVAILABLE', // Backend validated
+    booked_from: undefined,
+    booked_till: undefined,
+    active_tenants: 0,
+    maximum_people_in_room: 1, // Required field
+    private_room_rent: 0, // Required field
+    shared_room_rent_2: undefined, // Backend field for shared room pricing
+    floor_number: 1, // Required field
+    bed_count: 1, // Required field
+    bathroom_type: 'Shared', // Backend default
+    bed_size: 'Twin', // Backend validated enum
+    bed_type: 'Single', // Backend validated enum
+    view: 'Street', // Backend validated enum
+    sq_footage: 200, // Backend field with default
+    mini_fridge: false,
+    sink: false,
+    bedding_provided: false,
+    work_desk: false,
+    work_chair: false,
+    heating: false,
+    air_conditioning: false,
+    cable_tv: false,
+    room_storage: 'Built-in Closet', // Backend field with default
+    last_check: undefined, // Backend field for maintenance tracking
+    last_check_by: undefined, // Backend field for operator tracking
+    current_booking_types: undefined, // Backend field for booking types
+    noise_level: undefined,
+    sunlight: undefined,
+    furnished: false,
+    furniture_details: undefined,
+    last_renovation_date: undefined,
+    public_notes: undefined,
+    internal_notes: undefined,
+    virtual_tour_url: undefined,
+    available_from: undefined,
+    additional_features: undefined,
+    room_photos: [], // Add room photos array
+    ...initialData
+  })
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showTemplateSaveDialog, setShowTemplateSaveDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Template management
+  const { saveRecentSubmission, saveTemplate } = useFormTemplates({ formType: 'room' })
+
+  // Step navigation functions
+  const getCurrentStepIndex = useCallback(() => FORM_STEPS.findIndex(step => step.id === currentStep), [currentStep])
+  const currentStepIndex = useMemo(() => getCurrentStepIndex(), [getCurrentStepIndex])
+  const isFirstStep = useMemo(() => currentStepIndex === 0, [currentStepIndex])
+  const isLastStep = useMemo(() => currentStepIndex === FORM_STEPS.length - 1, [currentStepIndex])
+
+  const goToNextStep = useCallback(() => {
+    if (currentStepIndex < FORM_STEPS.length - 1) {
+      // Mark current step as completed
+      setCompletedSteps(prev => new Set([...prev, currentStep]))
+      setCurrentStep(FORM_STEPS[currentStepIndex + 1].id)
+    }
+  }, [currentStep, currentStepIndex])
+
+  const goToPreviousStep = useCallback(() => {
+    if (currentStepIndex > 0) {
+      setCurrentStep(FORM_STEPS[currentStepIndex - 1].id)
+    }
+  }, [currentStepIndex])
+
+  const goToStep = useCallback((stepId: FormStep) => {
+    setCurrentStep(stepId)
+  }, [])
+
+
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't interfere with form inputs
+      if (e.target instanceof HTMLInputElement || 
+          e.target instanceof HTMLTextAreaElement || 
+          e.target instanceof HTMLSelectElement) {
+        return
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'ArrowLeft' && !isFirstStep) {
+          e.preventDefault()
+          goToPreviousStep()
+        } else if (e.key === 'ArrowRight' && !isLastStep) {
+          e.preventDefault()
+          goToNextStep()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isFirstStep, isLastStep, goToPreviousStep, goToNextStep])
+
+  const handleInputChange = useCallback((field: keyof RoomFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+
+    // Clear any existing errors for this field
+    setErrors(prev => {
+      if (prev[field]) {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      }
+      return prev
+    })
+  }, []) // Keep empty dependency array since we use functional updates
+
+  const handleCopyFromPrevious = useCallback((copiedData: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...copiedData,
+      room_id: prev.room_id // Keep current room_id
+    }))
+  }, [])
+
+  // Handle template selection
+  const handleTemplateSelect = useCallback((template: FormTemplate) => {
+    setFormData(prev => ({
+      ...prev,
+      ...template.data,
+      room_id: prev.room_id, // Keep current room_id
+      room_number: prev.room_number || template.data.room_number // Keep current room number if set
+    }))
+
+    // Temporarily disable message to test
+    console.log('Template applied:', template.name)
+    // showSuccessMessage(
+    //   'Template Applied',
+    //   `Template "${template.name}" has been loaded successfully.`,
+    //   {
+    //     action: {
+    //       label: 'View Details',
+    //       onClick: () => console.log('Template details:', template)
+    //     }
+    //   }
+    // )
+  }, [])
+
+  // Handle recent submission selection
+  const handleRecentSelect = useCallback((submission: RecentSubmission) => {
+    setFormData(prev => ({
+      ...prev,
+      ...submission.data,
+      room_id: prev.room_id, // Keep current room_id
+      room_number: prev.room_number || submission.data.room_number // Keep current room number if set
+    }))
+
+    // Temporarily disable message to test
+    console.log('Previous data loaded from recent submission')
+    // showInfoMessage(
+    //   'Previous Data Loaded',
+    //   'Your previous submission data has been applied to the form.'
+    // )
+  }, [])
+
+  // Handle template save
+  const handleSaveTemplate = useCallback(async (templateData: any) => {
+    try {
+      await saveTemplate(templateData)
+      console.log('Template saved successfully:', templateData.name)
+      // Temporarily disable message to test
+      // showSuccessMessage(
+      //   'Template Saved',
+      //   `Template "${templateData.name}" has been saved successfully.`,
+      //   {
+      //     action: {
+      //       label: 'View Templates',
+      //       onClick: () => console.log('Navigate to templates')
+      //     }
+      //   }
+      // )
+    } catch (error) {
+      console.error('Error saving template:', error)
+    }
+  }, [saveTemplate])
+
+  // Generate preview text for recent submissions
+  const generatePreviewText = (data: RoomFormData): string => {
+    const parts = []
+    if (data.room_number) parts.push(`Room ${data.room_number}`)
+    if (data.bed_count) parts.push(`${data.bed_count} bed${data.bed_count > 1 ? 's' : ''}`)
+    if (data.bathroom_type) parts.push(data.bathroom_type.toLowerCase())
+    if (data.private_room_rent) parts.push(`${data.private_room_rent}/month`)
+    return parts.join(', ') || 'Room configuration'
+  }
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    // Prevent double submission
+    if (isSubmitting || isLoading) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      // Validate using backend-sync
+      const validationResult = validateRoomFormData(formData)
+      if (!validationResult.isValid) {
+        setErrors(validationResult.errors)
+        return
+      }
+
+      // Transform data for backend
+      const transformedData = transformRoomDataForBackend(formData)
+
+      await onSubmit(transformedData)
+
+      // Save to recent submissions after successful submit
+      const previewText = generatePreviewText(formData)
+      await saveRecentSubmission(formData, previewText)
+    } catch (error) {
+      // Handle submission error
+      console.error('Form submission error:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [formData, onSubmit, saveRecentSubmission, isSubmitting, isLoading])
 
   // Step indicator component
-  const StepIndicator = () => {
-    const progress = ((getCurrentStepIndex() + 1) / FORM_STEPS.length) * 100
+  const StepIndicator = useCallback(() => {
+    const progress = ((currentStepIndex + 1) / FORM_STEPS.length) * 100
 
     return (
       <div className="mb-8">
@@ -935,7 +1024,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
           {FORM_STEPS.map((step, index) => {
             const isActive = step.id === currentStep
             const isCompleted = completedSteps.has(step.id)
-            const isAccessible = index <= getCurrentStepIndex() || isCompleted
+            const isAccessible = index <= currentStepIndex || isCompleted
             const IconComponent = step.icon
 
             return (
@@ -978,7 +1067,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
 
         <div className="mt-4 text-center">
           <h2 className="text-2xl font-bold text-gray-900">
-            {FORM_STEPS[getCurrentStepIndex()].title}
+            {FORM_STEPS[currentStepIndex].title}
             {isLastStep && (
               <motion.span
                 className="ml-2 text-2xl"
@@ -993,13 +1082,13 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
           <p className="text-gray-600 mt-1">
             {isLastStep
               ? "Review your information and complete the room setup"
-              : FORM_STEPS[getCurrentStepIndex()].subtitle
+              : FORM_STEPS[currentStepIndex].subtitle
             }
           </p>
         </div>
       </div>
     )
-  }
+  }, [currentStepIndex, currentStep, completedSteps, isLastStep, goToStep])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100">
@@ -1027,7 +1116,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
         <div className="mb-6">
           <FormGuidance
             formType="room"
-            currentStep={getCurrentStepIndex()}
+            currentStep={currentStepIndex}
             totalSteps={FORM_STEPS.length}
             onStepClick={(stepIndex) => {
               if (stepIndex >= 0 && stepIndex < FORM_STEPS.length) {
@@ -1045,7 +1134,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
           />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <AnimatePresence mode="wait">
             {currentStep === 'basic' && (
               <motion.div
@@ -1055,7 +1144,14 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <BasicInformationStep />
+                <BasicInformationStep
+                  formData={formData}
+                  errors={errors}
+                  buildings={buildings}
+                  handleInputChange={handleInputChange}
+                  handleTemplateSelect={handleTemplateSelect}
+                  handleRecentSelect={handleRecentSelect}
+                />
               </motion.div>
             )}
             {currentStep === 'specifications' && (
@@ -1066,7 +1162,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <SpecificationsStep />
+                <SpecificationsStep formData={formData} handleInputChange={handleInputChange} />
               </motion.div>
             )}
             {currentStep === 'availability' && (
@@ -1077,7 +1173,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <AvailabilityStep />
+                <AvailabilityStep formData={formData} handleInputChange={handleInputChange} />
               </motion.div>
             )}
             {currentStep === 'amenities' && (
@@ -1088,7 +1184,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <AmenitiesStep />
+                <AmenitiesStep formData={formData} handleInputChange={handleInputChange} />
               </motion.div>
             )}
             {currentStep === 'maintenance' && (
@@ -1099,7 +1195,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <MaintenanceStep />
+                <MaintenanceStep formData={formData} handleInputChange={handleInputChange} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1139,7 +1235,7 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
             </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              Step {getCurrentStepIndex() + 1} of {FORM_STEPS.length}
+              Step {currentStepIndex + 1} of {FORM_STEPS.length}
             </div>
 
             <div className="flex items-center gap-3">
@@ -1162,10 +1258,10 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
               ) : (
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isSubmitting}
                   className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
                 >
-                  {isLoading && <LoadingSpinner size="sm" />}
+                  {(isLoading || isSubmitting) && <LoadingSpinner size="sm" />}
                   <Save className="w-4 h-4" />
                   {initialData?.room_id ? 'Update Room' : 'Create Room'}
                 </Button>
@@ -1186,3 +1282,5 @@ export default function RoomForm({ initialData, onSubmit, onCancel, onBack, isLo
     </div>
   )
 }
+
+export default React.memo(RoomForm)

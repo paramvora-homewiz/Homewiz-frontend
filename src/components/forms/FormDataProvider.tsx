@@ -252,7 +252,7 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
   }
 
   // Refresh operators
-  const refreshOperators = async () => {
+  const refreshOperators = React.useCallback(async () => {
     setOperatorsLoading(true)
     setOperatorsError(null)
     try {
@@ -272,10 +272,10 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     } finally {
       setOperatorsLoading(false)
     }
-  }
+  }, [])
 
   // Refresh buildings
-  const refreshBuildings = async () => {
+  const refreshBuildings = React.useCallback(async () => {
     setBuildingsLoading(true)
     setBuildingsError(null)
     try {
@@ -295,10 +295,10 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     } finally {
       setBuildingsLoading(false)
     }
-  }
+  }, [])
 
   // Refresh rooms
-  const refreshRooms = async () => {
+  const refreshRooms = React.useCallback(async () => {
     setRoomsLoading(true)
     setRoomsError(null)
     try {
@@ -319,40 +319,40 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     } finally {
       setRoomsLoading(false)
     }
-  }
+  }, [])
 
   // Refresh all data
-  const refreshAll = async () => {
+  const refreshAll = React.useCallback(async () => {
     await Promise.all([
       refreshOperators(),
       refreshBuildings(),
       refreshRooms()
     ])
-  }
+  }, [refreshOperators, refreshBuildings, refreshRooms])
 
   // Helper methods for filtered data
-  const getOperatorsByType = (type: string): Operator[] => {
+  const getOperatorsByType = React.useCallback((type: string): Operator[] => {
     return operators.filter(op => op.operator_type === type && op.active)
-  }
+  }, [operators])
 
-  const getRoomsByBuilding = (buildingId: string): Room[] => {
+  const getRoomsByBuilding = React.useCallback((buildingId: string): Room[] => {
     return rooms.filter(room => room.building_id === buildingId)
-  }
+  }, [rooms])
 
-  const getAvailableRooms = (): Room[] => {
+  const getAvailableRooms = React.useCallback((): Room[] => {
     return rooms.filter(room => room.status === 'AVAILABLE' && room.ready_to_rent)
-  }
+  }, [rooms])
 
-  const getBuildingsByOperator = (operatorId: number): Building[] => {
+  const getBuildingsByOperator = React.useCallback((operatorId: number): Building[] => {
     return buildings.filter(building => building.operator_id === operatorId && building.available)
-  }
+  }, [buildings])
 
   // Load initial data on mount
   useEffect(() => {
     refreshAll()
-  }, [])
+  }, [refreshAll])
 
-  const contextValue: FormDataContextType = {
+  const contextValue: FormDataContextType = React.useMemo(() => ({
     // Data
     operators,
     buildings,
@@ -379,7 +379,25 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     getRoomsByBuilding,
     getAvailableRooms,
     getBuildingsByOperator
-  }
+  }), [
+    operators,
+    buildings,
+    rooms,
+    operatorsLoading,
+    buildingsLoading,
+    roomsLoading,
+    operatorsError,
+    buildingsError,
+    roomsError,
+    refreshOperators,
+    refreshBuildings,
+    refreshRooms,
+    refreshAll,
+    getOperatorsByType,
+    getRoomsByBuilding,
+    getAvailableRooms,
+    getBuildingsByOperator
+  ])
 
   return (
     <FormDataContext.Provider value={contextValue}>
