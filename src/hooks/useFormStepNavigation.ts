@@ -57,6 +57,14 @@ export function useFormStepNavigation({ totalSteps, onStepChange }: UseFormStepN
     }
   }, [currentStep, goToStep])
 
+  // Reset step navigation and clear URL parameters
+  const resetSteps = useCallback(() => {
+    // Clear all URL parameters and reset to step 0
+    const newUrl = window.location.pathname
+    router.replace(newUrl)
+    setCurrentStep(0)
+  }, [router])
+
   // Check if can navigate
   const canGoNext = currentStep < totalSteps - 1
   const canGoPrev = currentStep > 0
@@ -66,6 +74,7 @@ export function useFormStepNavigation({ totalSteps, onStepChange }: UseFormStepN
     nextStep,
     prevStep,
     goToStep,
+    resetSteps,
     canGoNext,
     canGoPrev
   }

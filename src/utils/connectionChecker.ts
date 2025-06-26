@@ -29,11 +29,21 @@ class ConnectionChecker {
       return this.status
     }
 
+    // Skip connection check if backend is disabled
+    if (config.api.disabled) {
+      this.status = {
+        isConnected: false,
+        lastChecked: new Date(),
+        error: 'Backend disabled for this deployment'
+      }
+      return this.status
+    }
+
     this.checkInProgress = true
 
     try {
       console.log('🔍 Checking backend connection...')
-      
+
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
 
@@ -50,22 +60,22 @@ class ConnectionChecker {
 
       if (response.ok) {
         const data = await response.json()
-        
+
         this.status = {
           isConnected: true,
           lastChecked: new Date(),
           backendVersion: data.message || 'Unknown'
         }
-        
+
         console.log('✅ Backend connection successful')
       } else {
         throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
       console.log('❌ Backend connection failed:', error)
-      
+
       let errorMessage = 'Unknown connection error'
-      
+
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           errorMessage = 'Connection timeout - backend not responding'

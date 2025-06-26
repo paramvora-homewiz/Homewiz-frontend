@@ -48,9 +48,22 @@ services:
         value: pdf,jpg,jpeg,png,doc,docx
       - key: SESSION_TIMEOUT
         value: 86400000
-    # Optional: Add these if you have backend or authentication
-    # - key: NEXT_PUBLIC_API_URL
-    #   sync: false
+      - key: NEXT_PUBLIC_APP_NAME
+        value: HomeWiz
+      - key: NEXT_PUBLIC_APP_VERSION
+        value: 1.0.0
+      - key: NEXT_PUBLIC_LOG_LEVEL
+        value: info
+    # API Configuration
+    - key: NEXT_PUBLIC_API_URL
+      value: http://localhost:8000
+
+    # Supabase Configuration (Disabled for production deployment)
+    # These dummy values prevent build errors while keeping Supabase disabled
+    - key: NEXT_PUBLIC_SUPABASE_URL
+      value: disabled_for_development
+    - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+      value: disabled_for_development
     # - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
     #   sync: false
     # - key: CLERK_SECRET_KEY

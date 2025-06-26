@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { AlertCircle, CheckCircle, RefreshCw, Terminal } from 'lucide-react'
 import { checkBackendConnection, getConnectionStatus, type ConnectionStatus } from '@/utils/connectionChecker'
 import { showInfoMessage } from '@/lib/error-handler'
+import config from '@/lib/config'
 
 export function ConnectionStatusBanner() {
   const [status, setStatus] = useState<ConnectionStatus>(getConnectionStatus())
@@ -52,8 +53,8 @@ If you get a GEMINI_API_KEY error:
     )
   }
 
-  // Don't show banner if backend is connected
-  if (status.isConnected) {
+  // Don't show banner if backend is connected or if backend is disabled
+  if (status.isConnected || config.api.disabled) {
     return null
   }
 

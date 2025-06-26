@@ -172,7 +172,7 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
   ]
 
   // Use form step navigation hook
-  const { currentStep, nextStep, prevStep, canGoNext, canGoPrev } = useFormStepNavigation({
+  const { currentStep, nextStep, prevStep, resetSteps, canGoNext, canGoPrev } = useFormStepNavigation({
     totalSteps: steps.length
   })
 
@@ -876,7 +876,12 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
               {onCancel && (
                 <motion.button
                   type="button"
-                  onClick={onCancel}
+                  onClick={() => {
+                    // Reset step navigation before canceling
+                    resetSteps()
+                    // Call parent cancel handler
+                    onCancel()
+                  }}
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

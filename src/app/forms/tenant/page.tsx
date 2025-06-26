@@ -45,7 +45,8 @@ function TenantFormContent() {
   }
 
   const handleCancel = () => {
-    router.push('/forms')
+    // Use replace to clear URL parameters and ensure clean navigation
+    router.replace('/forms')
   }
 
   return (

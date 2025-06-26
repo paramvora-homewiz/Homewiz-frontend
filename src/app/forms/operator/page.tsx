@@ -54,7 +54,8 @@ export default function OperatorFormPage() {
   }
 
   const handleCancel = () => {
-    router.push('/forms')
+    // Use replace to clear URL parameters and ensure clean navigation
+    router.replace('/forms')
   }
 
   const handleBack = () => {

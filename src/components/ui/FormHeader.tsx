@@ -40,7 +40,8 @@ export function FormHeader({
     // Use workflow-based navigation if currentForm is provided
     if (currentForm) {
       const workflowBackUrl = getBackNavigationUrl(currentForm)
-      router.push(workflowBackUrl)
+      // Use replace to clear URL parameters when navigating back
+      router.replace(workflowBackUrl)
       return
     }
 
@@ -56,16 +57,16 @@ export function FormHeader({
         if (referrerUrl.origin === currentUrl.origin) {
           router.back()
         } else {
-          // External referrer, use fallback
-          router.push(fallbackUrl)
+          // External referrer, use fallback with replace to clear URL params
+          router.replace(fallbackUrl)
         }
       } catch (error) {
         console.warn('Could not navigate back, using fallback URL:', error)
-        router.push(fallbackUrl)
+        router.replace(fallbackUrl)
       }
     } else {
-      // No valid history or referrer, use fallback
-      router.push(fallbackUrl)
+      // No valid history or referrer, use fallback with replace to clear URL params
+      router.replace(fallbackUrl)
     }
   }
 

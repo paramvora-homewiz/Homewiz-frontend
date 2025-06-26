@@ -41,7 +41,7 @@ const nextConfig = {
 
   // Environment variables
   env: {
-    NEXT_PUBLIC_DEMO_MODE: 'true',
+    NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE || 'false',
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
   },
 }
