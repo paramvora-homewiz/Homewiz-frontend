@@ -303,6 +303,79 @@ GEMINI_API_KEY=your_gemini_api_key_here`
     })
   }
 
+  async uploadRoomImages(roomId: string, buildingId: string, files: File[]) {
+    console.log(`📸 Uploading ${files.length} images for room ${roomId} in building ${buildingId}`)
+
+    const formData = new FormData()
+    files.forEach((file) => {
+      formData.append('files', file)
+    })
+
+    // Don't use apiCall for file uploads to avoid Content-Type conflicts
+    const url = `${this.baseUrl}/rooms/${roomId}/images/upload?building_id=${buildingId}`
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type - let browser set it with boundary
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error(`❌ Room image upload error:`, error)
+      throw error
+    }
+  }
+
+  async uploadSingleRoomImage(roomId: string, buildingId: string, file: File) {
+    console.log(`📸 Uploading single image for room ${roomId} in building ${buildingId}`)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const url = `${this.baseUrl}/rooms/${roomId}/images/single?building_id=${buildingId}`
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error(`❌ Single room image upload error:`, error)
+      throw error
+    }
+  }
+
+  async updateRoomImages(roomId: string, imageUrls: string[]) {
+    console.log(`🔗 Updating room ${roomId} with ${imageUrls.length} Supabase image URLs`)
+
+    return this.apiCall<any>(`/rooms/${roomId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        room_id: roomId,
+        room_images: imageUrls
+      }),
+    }, {
+      type: 'UPDATE',
+      table: 'rooms',
+      data: { room_id: roomId, room_images: imageUrls },
+      id: roomId
+    })
+  }
+
   // ===== TENANTS =====
 
   async getTenants() {

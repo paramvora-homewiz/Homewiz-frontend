@@ -416,7 +416,7 @@ export async function uploadBuildingVideo(
 ): Promise<FileUploadResult> {
   const fileName = `${Date.now()}_${sanitizeFileName(file.name)}`
   const path = `buildings/${buildingId}/videos/${fileName}`
-  
+
   return uploadFile({
     bucket: 'BUILDING_IMAGES', // Videos go in the same bucket as images
     path,
@@ -425,6 +425,64 @@ export async function uploadBuildingVideo(
       originalName: file.name,
       uploadedAt: new Date().toISOString(),
       type: 'video'
+    }
+  })
+}
+
+/**
+ * Room-specific upload utilities
+ */
+
+export async function uploadRoomImages(
+  buildingId: string,
+  roomId: string,
+  files: File[]
+): Promise<FileUploadResult[]> {
+  // Validate files before upload
+  const validation = validateMultipleFiles(files, 'BUILDING_IMAGES')
+
+  if (!validation.isValid) {
+    // Return error results for invalid files
+    const results: FileUploadResult[] = []
+
+    // Add error results for invalid files
+    validation.invalidFiles.forEach(({ file, error }) => {
+      results.push({
+        success: false,
+        error: error
+      })
+    })
+
+    // Upload valid files if any
+    if (validation.validFiles.length > 0) {
+      const validResults = await uploadMultipleFiles(validation.validFiles, 'BUILDING_IMAGES', `buildings/${buildingId}/rooms/${roomId}/images`)
+      results.push(...validResults)
+    }
+
+    return results
+  }
+
+  return uploadMultipleFiles(files, 'BUILDING_IMAGES', `buildings/${buildingId}/rooms/${roomId}/images`)
+}
+
+export async function uploadRoomVideo(
+  buildingId: string,
+  roomId: string,
+  file: File
+): Promise<FileUploadResult> {
+  const fileName = `${Date.now()}_${sanitizeFileName(file.name)}`
+  const path = `buildings/${buildingId}/rooms/${roomId}/videos/${fileName}`
+
+  return uploadFile({
+    bucket: 'BUILDING_IMAGES', // Videos go in the same bucket as images
+    path,
+    file,
+    metadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString(),
+      type: 'video',
+      buildingId,
+      roomId
     }
   })
 }

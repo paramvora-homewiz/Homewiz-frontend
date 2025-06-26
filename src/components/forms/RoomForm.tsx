@@ -20,6 +20,7 @@ import {
   ValidationResult
 } from '@/lib/backend-sync'
 import { showSuccessMessage, showInfoMessage } from '@/lib/error-handler'
+import { uploadRoomImages } from '@/lib/supabase/storage'
 import {
   Home,
   Save,
@@ -983,6 +984,35 @@ function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, building
 
       // Transform data for backend
       const transformedData = transformRoomDataForBackend(formData)
+
+      // Upload room images if any are selected
+      let uploadedImageUrls: string[] = []
+      if (formData.room_photos && formData.room_photos.length > 0 && formData.building_id && formData.room_id) {
+        try {
+          console.log(`📸 Uploading ${formData.room_photos.length} room images...`)
+          const imageResults = await uploadRoomImages(formData.building_id, formData.room_id, formData.room_photos)
+
+          // Collect successful uploads
+          imageResults.forEach((result, index) => {
+            if (result.success && result.url) {
+              uploadedImageUrls.push(result.url)
+              console.log(`✅ Room image ${index + 1} uploaded: ${result.url}`)
+            } else {
+              console.error(`❌ Room image ${index + 1} upload failed:`, result.error)
+            }
+          })
+
+          // Add uploaded image URLs to the transformed data
+          if (uploadedImageUrls.length > 0) {
+            transformedData.room_images = JSON.stringify(uploadedImageUrls)
+            console.log(`🔗 Added ${uploadedImageUrls.length} image URLs to room data`)
+          }
+        } catch (error) {
+          console.error('❌ Error uploading room images:', error)
+          // Continue with submission even if image upload fails
+          showInfoMessage('Room images could not be uploaded, but room data will be saved.')
+        }
+      }
 
       await onSubmit(transformedData)
 
