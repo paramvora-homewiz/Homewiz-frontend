@@ -30,8 +30,13 @@ class ApiService {
     options: RequestInit = {},
     operation?: { type: 'INSERT' | 'UPDATE' | 'DELETE', table: string, data?: any, id?: string | number }
   ): Promise<T> {
+    // If backend is disabled, throw a specific error
+    if (config.api.disabled) {
+      throw new Error('Backend is disabled for this deployment. Using demo data only.')
+    }
+
     const url = `${this.baseUrl}${endpoint}`
-    
+
     try {
       console.log(`🌐 API Call: ${options.method || 'GET'} ${endpoint}`)
       

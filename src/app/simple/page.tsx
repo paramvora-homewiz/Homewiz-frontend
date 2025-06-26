@@ -27,7 +27,7 @@ function SimplePageContent() {
   ]
 
   // Use form step navigation hook
-  const { currentStep, nextStep, prevStep, canGoNext, canGoPrev } = useFormStepNavigation({
+  const { currentStep, nextStep, prevStep, resetSteps, canGoNext, canGoPrev } = useFormStepNavigation({
     totalSteps: steps.length
   })
 

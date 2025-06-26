@@ -16,6 +16,7 @@ const envSchema = z.object({
   // Backend API Configuration
   NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8000/api'),
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
+  NEXT_PUBLIC_DISABLE_BACKEND: z.string().transform(val => val === 'true').default('false'),
   
   // Clerk Authentication Configuration
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().optional(),
@@ -92,6 +93,7 @@ export const config = {
   api: {
     baseUrl: env.NEXT_PUBLIC_API_URL,
     timeout: env.NEXT_PUBLIC_API_TIMEOUT,
+    disabled: env.NEXT_PUBLIC_DISABLE_BACKEND,
   },
   
   // Authentication

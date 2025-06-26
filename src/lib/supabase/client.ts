@@ -16,15 +16,28 @@ import { Database } from './types'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Helper function to check if URL is valid
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
 // Check if Supabase is disabled for development or using dummy credentials
 // Allow localhost URLs for local development
 const isSupabaseDisabled = !supabaseUrl ||
   supabaseUrl === 'disabled_for_development' ||
+  supabaseUrl === 'your_supabase_url' ||
   supabaseUrl.includes('dummy.supabase.co') ||
   !supabaseAnonKey ||
   supabaseAnonKey === 'disabled_for_development' ||
+  supabaseAnonKey === 'your_supabase_anon_key' ||
   supabaseAnonKey === 'dummy_key' ||
-  supabaseAnonKey.startsWith('dummy')
+  supabaseAnonKey.startsWith('dummy') ||
+  !isValidUrl(supabaseUrl || '')
 
 // Validate required environment variables only if not disabled
 if (!isSupabaseDisabled) {
@@ -36,12 +49,7 @@ if (!isSupabaseDisabled) {
     throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
   }
 
-  // Validate URL format
-  try {
-    new URL(supabaseUrl)
-  } catch {
-    throw new Error('Invalid NEXT_PUBLIC_SUPABASE_URL format')
-  }
+  // URL validation is already done in isSupabaseDisabled check above
 } else {
   console.log('🔧 Supabase validation skipped - using dummy credentials or disabled for development')
   console.log(`   URL: ${supabaseUrl}`)
