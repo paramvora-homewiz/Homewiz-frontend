@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { uploadRoomImages } from '@/lib/supabase/storage'
+import { showInfoMessage } from '@/lib/error-handler'
 import {
   Home,
   Save,
@@ -59,6 +61,7 @@ interface RoomFormData {
   available_from?: string
   additional_features?: string
   room_photos?: File[]
+  room_images?: string  // JSON string of uploaded image URLs
   last_check?: string
   last_check_by?: number
   current_booking_types?: string
@@ -161,12 +164,47 @@ export default function NewRoomForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (isSubmitting || isLoading) return
-    
+
     setIsSubmitting(true)
     try {
-      await onSubmit(formData)
+      // Create a copy of form data to modify
+      let submissionData = { ...formData }
+
+      // Upload room images if any are selected
+      if (formData.room_photos && formData.room_photos.length > 0 && formData.building_id && formData.room_number) {
+        try {
+          // Generate room_id from building_id and room_number for upload path
+          const roomId = `${formData.building_id}_${formData.room_number}`
+          console.log(`📸 Uploading ${formData.room_photos.length} room images...`)
+
+          const imageResults = await uploadRoomImages(formData.building_id, roomId, formData.room_photos)
+
+          // Collect successful uploads
+          const uploadedImageUrls: string[] = []
+          imageResults.forEach((result, index) => {
+            if (result.success && result.url) {
+              uploadedImageUrls.push(result.url)
+              console.log(`✅ Room image ${index + 1} uploaded: ${result.url}`)
+            } else {
+              console.error(`❌ Room image ${index + 1} upload failed:`, result.error)
+            }
+          })
+
+          // Add uploaded image URLs to the submission data
+          if (uploadedImageUrls.length > 0) {
+            submissionData.room_images = JSON.stringify(uploadedImageUrls)
+            console.log(`🔗 Added ${uploadedImageUrls.length} image URLs to room data`)
+          }
+        } catch (error) {
+          console.error('❌ Error uploading room images:', error)
+          // Continue with submission even if image upload fails
+          showInfoMessage('Room images could not be uploaded, but room data will be saved.')
+        }
+      }
+
+      await onSubmit(submissionData)
     } catch (error) {
       console.error('Form submission error:', error)
     } finally {

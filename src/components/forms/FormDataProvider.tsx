@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { apiService } from '../../services/apiService'
+import { databaseService } from '../../lib/supabase/database'
+import { isSupabaseAvailable } from '../../lib/supabase/client'
+import config from '../../lib/config'
 
 // Types for form data
 interface Operator {
@@ -227,28 +230,64 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     }
   ]
 
-  // Fetch operators from real API
+  // Fetch operators from API or Supabase
   const fetchOperators = async (): Promise<Operator[]> => {
-    console.log('🔄 Fetching operators from API...')
-    const data = await apiService.getOperators()
-    console.log('✅ Operators fetched:', data.length, 'operators')
-    return data
+    if (config.api.disabled && isSupabaseAvailable()) {
+      console.log('🔄 Fetching operators from Supabase...')
+      const result = await databaseService.operators.list()
+      if (result.success && result.data) {
+        console.log('✅ Operators fetched from Supabase:', result.data.length, 'operators')
+        return result.data as Operator[]
+      } else {
+        console.error('❌ Failed to fetch operators from Supabase:', result.error)
+        return MOCK_OPERATORS
+      }
+    } else {
+      console.log('🔄 Fetching operators from API...')
+      const data = await apiService.getOperators()
+      console.log('✅ Operators fetched:', data.length, 'operators')
+      return data
+    }
   }
 
-  // Fetch buildings from real API
+  // Fetch buildings from API or Supabase
   const fetchBuildings = async (): Promise<Building[]> => {
-    console.log('🔄 Fetching buildings from API...')
-    const data = await apiService.getBuildings()
-    console.log('✅ Buildings fetched:', data.length, 'buildings')
-    return data
+    if (config.api.disabled && isSupabaseAvailable()) {
+      console.log('🔄 Fetching buildings from Supabase...')
+      const result = await databaseService.buildings.list()
+      if (result.success && result.data) {
+        console.log('✅ Buildings fetched from Supabase:', result.data.length, 'buildings')
+        return result.data as Building[]
+      } else {
+        console.error('❌ Failed to fetch buildings from Supabase:', result.error)
+        return []
+      }
+    } else {
+      console.log('🔄 Fetching buildings from API...')
+      const data = await apiService.getBuildings()
+      console.log('✅ Buildings fetched:', data.length, 'buildings')
+      return data
+    }
   }
 
-  // Fetch rooms from real API
+  // Fetch rooms from API or Supabase
   const fetchRooms = async (): Promise<Room[]> => {
-    console.log('🔄 Fetching rooms from API...')
-    const data = await apiService.getRooms()
-    console.log('✅ Rooms fetched:', data.length, 'rooms')
-    return data
+    if (config.api.disabled && isSupabaseAvailable()) {
+      console.log('🔄 Fetching rooms from Supabase...')
+      const result = await databaseService.rooms.list()
+      if (result.success && result.data) {
+        console.log('✅ Rooms fetched from Supabase:', result.data.length, 'rooms')
+        return result.data as Room[]
+      } else {
+        console.error('❌ Failed to fetch rooms from Supabase:', result.error)
+        return MOCK_ROOMS
+      }
+    } else {
+      console.log('🔄 Fetching rooms from API...')
+      const data = await apiService.getRooms()
+      console.log('✅ Rooms fetched:', data.length, 'rooms')
+      return data
+    }
   }
 
   // Refresh operators
@@ -287,10 +326,15 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       setBuildingsError(errorMessage)
       console.error('❌ Error fetching buildings:', error)
       
-      // If it's a connection error, show demo mode
+      // If it's a connection error and we're not using Supabase, show demo mode
       if (errorMessage.includes('Backend server not running') || errorMessage.includes('Failed to fetch')) {
-        console.log('🎭 Using demo data for buildings (backend not available)')
-        setBuildings([]) // Empty for demo, or add demo buildings if needed
+        if (config.api.disabled && isSupabaseAvailable()) {
+          console.log('🔧 Supabase mode enabled but no data available')
+          setBuildings([]) // Empty for Supabase mode
+        } else {
+          console.log('🎭 Using demo data for buildings (backend not available)')
+          setBuildings([]) // Empty for demo, or add demo buildings if needed
+        }
       }
     } finally {
       setBuildingsLoading(false)
@@ -311,10 +355,15 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       setRoomsError(errorMessage)
       console.error('❌ Error fetching rooms:', error)
       
-      // If it's a connection error, show demo mode
+      // If it's a connection error and we're not using Supabase, show demo mode
       if (errorMessage.includes('Backend server not running') || errorMessage.includes('Failed to fetch')) {
-        console.log('🎭 Using demo data for rooms (backend not available)')
-        setRooms([]) // Empty for demo, or add demo rooms if needed
+        if (config.api.disabled && isSupabaseAvailable()) {
+          console.log('🔧 Supabase mode enabled but no data available')
+          setRooms([]) // Empty for Supabase mode
+        } else {
+          console.log('🎭 Using demo data for rooms (backend not available)')
+          setRooms([]) // Empty for demo, or add demo rooms if needed
+        }
       }
     } finally {
       setRoomsLoading(false)
@@ -349,6 +398,15 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
 
   // Load initial data on mount
   useEffect(() => {
+    // Log the current data source mode
+    if (config.api.disabled && isSupabaseAvailable()) {
+      console.log('🔧 FormDataProvider: Using Supabase cloud database')
+    } else if (config.api.disabled) {
+      console.log('🎭 FormDataProvider: Backend disabled, Supabase not available - using demo mode')
+    } else {
+      console.log('🔌 FormDataProvider: Using backend API')
+    }
+
     refreshAll()
   }, [refreshAll])
 
