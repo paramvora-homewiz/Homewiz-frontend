@@ -53,10 +53,8 @@ If you get a GEMINI_API_KEY error:
     )
   }
 
-  // Don't show banner if backend is connected or if backend is disabled
-  if (status.isConnected || config.api.disabled) {
-    return null
-  }
+  // Don't show banner - always hidden per user request
+  return null
 
   return (
     <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">

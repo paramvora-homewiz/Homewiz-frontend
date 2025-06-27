@@ -42,11 +42,7 @@ export default function RootLayout({
         <ThemeProvider defaultTheme="light">
           <RootAuthProvider>
             <ToastProvider>
-              {config.app.demoMode && (
-                <div className="demo-mode-banner bg-yellow-100 text-yellow-800 text-center py-2 text-sm">
-                  🎭 Demo Mode - Authentication Disabled
-                </div>
-              )}
+
               <ConnectionStatusBanner />
               {children}
             </ToastProvider>

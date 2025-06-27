@@ -53,19 +53,18 @@ class DatabaseLogger {
    * Trigger notifications based on database operations
    */
   private triggerNotifications(logEntry: LogEntry): void {
-    // Import notification service dynamically to avoid circular dependencies
-    import('./notificationService').then(({ notificationService }) => {
-      notificationService.processDataChange({
+    // Skip notifications for now to avoid webpack chunking issues
+    // TODO: Implement proper notification system without dynamic imports
+    try {
+      console.log('📢 Database operation notification:', {
         operation: logEntry.operation.operation,
         table: logEntry.operation.table,
-        data: logEntry.operation.data,
         success: logEntry.success,
-        error: logEntry.error,
         timestamp: logEntry.timestamp
       })
-    }).catch(error => {
-      console.error('Failed to trigger notifications:', error)
-    })
+    } catch (error) {
+      console.error('Failed to log notification:', error)
+    }
   }
 
   /**

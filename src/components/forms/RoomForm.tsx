@@ -21,6 +21,7 @@ import {
 } from '@/lib/backend-sync'
 import { showSuccessMessage, showInfoMessage } from '@/lib/error-handler'
 import { uploadRoomImages } from '@/lib/supabase/storage'
+import { apiService } from '@/services/apiService'
 import {
   Home,
   Save,
@@ -335,7 +336,7 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Floor Number *
+              Floor Number
             </label>
             <Input
               type="number"
@@ -349,7 +350,7 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Maximum People *
+              Maximum People
             </label>
             <Input
               type="number"
@@ -363,7 +364,7 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bed Count *
+              Bed Count
             </label>
             <Input
               type="number"
@@ -391,7 +392,7 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bathroom Type *
+              Bathroom Type
             </label>
             <select
               value={formData.bathroom_type}
@@ -406,7 +407,7 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bed Size *
+              Bed Size
             </label>
             <select
               value={formData.bed_size}
@@ -422,7 +423,7 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bed Type *
+              Bed Type
             </label>
             <select
               value={formData.bed_type}
@@ -978,43 +979,50 @@ function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, building
       // Validate using backend-sync
       const validationResult = validateRoomFormData(formData)
       if (!validationResult.isValid) {
+        console.error('❌ Room form validation failed:', validationResult)
+        console.error('❌ Missing required fields:', validationResult.missingRequired)
+        console.error('❌ Validation errors:', validationResult.errors)
+        console.error('❌ Current form data:', formData)
         setErrors(validationResult.errors)
+
+        // Show user-friendly error message
+        showInfoMessage(`Please fill in all required fields. Missing: ${validationResult.missingRequired?.join(', ') || 'Unknown fields'}`)
         return
       }
 
       // Transform data for backend
       const transformedData = transformRoomDataForBackend(formData)
 
-      // Upload room images if any are selected
-      let uploadedImageUrls: string[] = []
-      if (formData.room_photos && formData.room_photos.length > 0 && formData.building_id && formData.room_id) {
+      // Store room photos for upload after room creation
+      const roomPhotos = formData.room_photos && formData.room_photos.length > 0 ? formData.room_photos : null
+
+      // Submit room data first (without images)
+      const createdRoom = await onSubmit(transformedData)
+
+      // Upload room images after room creation if we have photos and room was created successfully
+      if (roomPhotos && formData.building_id && createdRoom?.room_id) {
         try {
-          console.log(`📸 Uploading ${formData.room_photos.length} room images...`)
-          const imageResults = await uploadRoomImages(formData.building_id, formData.room_id, formData.room_photos)
-
-          // Collect successful uploads
-          imageResults.forEach((result, index) => {
-            if (result.success && result.url) {
-              uploadedImageUrls.push(result.url)
-              console.log(`✅ Room image ${index + 1} uploaded: ${result.url}`)
-            } else {
-              console.error(`❌ Room image ${index + 1} upload failed:`, result.error)
-            }
-          })
-
-          // Add uploaded image URLs to the transformed data
-          if (uploadedImageUrls.length > 0) {
-            transformedData.room_images = JSON.stringify(uploadedImageUrls)
-            console.log(`🔗 Added ${uploadedImageUrls.length} image URLs to room data`)
+          console.log(`📸 Uploading ${roomPhotos.length} room images for created room ${createdRoom.room_id}...`)
+          
+          // Use backend API service to upload images
+          const uploadResult = await apiService.uploadRoomImages(createdRoom.room_id, formData.building_id, roomPhotos)
+          
+          if (uploadResult && uploadResult.success) {
+            console.log(`✅ Successfully uploaded ${roomPhotos.length} room images`)
+            console.log('📸 Upload result:', uploadResult)
+            showSuccessMessage('Room images uploaded successfully!')
+          } else {
+            console.error('❌ Room image upload failed:', uploadResult)
+            showInfoMessage('Room created successfully, but some images could not be uploaded.')
           }
         } catch (error) {
           console.error('❌ Error uploading room images:', error)
-          // Continue with submission even if image upload fails
-          showInfoMessage('Room images could not be uploaded, but room data will be saved.')
+          showInfoMessage('Room created successfully, but images could not be uploaded.')
         }
+      } else if (roomPhotos && !formData.building_id) {
+        console.warn('⚠️ Cannot upload room images: missing building_id')
+        showInfoMessage('Room created successfully, but images could not be uploaded (missing building ID).')
       }
-
-      await onSubmit(transformedData)
 
       // Save to recent submissions after successful submit
       const previewText = generatePreviewText(formData)

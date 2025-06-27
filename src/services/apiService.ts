@@ -4,7 +4,7 @@
  */
 
 import { databaseLogger, logDataAdded, logDataUpdated, logDataDeleted, logDatabaseError } from './databaseLogger'
-import config from '../lib/config'
+import config, { getActiveApiUrl } from '../lib/config'
 import { transformBackendDataForFrontend } from '../lib/backend-sync'
 
 const API_BASE_URL = config.api.baseUrl
@@ -17,9 +17,21 @@ export interface ApiResponse<T> {
 
 class ApiService {
   private baseUrl: string
+  private activeUrl: string | null = null
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl
+  }
+
+  private async getBaseUrl(): Promise<string> {
+    if (!this.activeUrl) {
+      this.activeUrl = await getActiveApiUrl()
+    }
+    return this.activeUrl || this.baseUrl
+  }
+
+  public resetConnection(): void {
+    this.activeUrl = null
   }
 
   /**
@@ -35,7 +47,8 @@ class ApiService {
       throw new Error('Backend is disabled for this deployment. Using demo data only.')
     }
 
-    const url = `${this.baseUrl}${endpoint}`
+    const baseUrl = await this.getBaseUrl()
+    const url = `${baseUrl}${endpoint}`
 
     try {
       console.log(`🌐 API Call: ${options.method || 'GET'} ${endpoint}`)
@@ -204,7 +217,8 @@ GEMINI_API_KEY=your_gemini_api_key_here`
     })
 
     // Don't use apiCall for file uploads to avoid Content-Type conflicts
-    const url = `${this.baseUrl}/buildings/${buildingId}/images/upload`
+    const baseUrl = await this.getBaseUrl()
+    const url = `${baseUrl}/buildings/${buildingId}/images/upload`
     
     try {
       const response = await fetch(url, {
@@ -312,7 +326,8 @@ GEMINI_API_KEY=your_gemini_api_key_here`
     })
 
     // Don't use apiCall for file uploads to avoid Content-Type conflicts
-    const url = `${this.baseUrl}/rooms/${roomId}/images/upload?building_id=${buildingId}`
+    const baseUrl = await this.getBaseUrl()
+    const url = `${baseUrl}/rooms/${roomId}/images/upload?building_id=${buildingId}`
 
     try {
       const response = await fetch(url, {
@@ -339,7 +354,8 @@ GEMINI_API_KEY=your_gemini_api_key_here`
     const formData = new FormData()
     formData.append('file', file)
 
-    const url = `${this.baseUrl}/rooms/${roomId}/images/single?building_id=${buildingId}`
+    const baseUrl = await this.getBaseUrl()
+    const url = `${baseUrl}/rooms/${roomId}/images/single?building_id=${buildingId}`
 
     try {
       const response = await fetch(url, {

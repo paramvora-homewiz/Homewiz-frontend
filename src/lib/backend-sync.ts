@@ -23,29 +23,9 @@ export const REQUIRED_FIELDS = {
   OPERATOR: ['name', 'email'] as const,
   BUILDING: ['building_id', 'building_name'] as const,
   ROOM: [
-    'room_id',
     'room_number',
     'building_id',
-    'ready_to_rent',
-    'status',
-    'active_tenants',
-    'maximum_people_in_room',
-    'private_room_rent',
-    'floor_number',
-    'bed_count',
-    'bathroom_type',
-    'bed_size',
-    'bed_type',
-    'sq_footage',
-    'mini_fridge',
-    'sink',
-    'bedding_provided',
-    'work_desk',
-    'work_chair',
-    'heating',
-    'air_conditioning',
-    'cable_tv',
-    'furnished'
+    'private_room_rent'
   ] as const,
   TENANT: [
     'tenant_name',
@@ -231,9 +211,17 @@ export function validateRequiredFields(data: any, entityType: keyof typeof REQUI
   const requiredFields = REQUIRED_FIELDS[entityType]
   
   requiredFields.forEach(field => {
-    if (!data[field] || (typeof data[field] === 'string' && !data[field].trim())) {
+    const value = data[field]
+    
+    // Handle different data types appropriately
+    if (value === null || value === undefined) {
+      missingFields.push(field)
+    } else if (typeof value === 'string' && !value.trim()) {
+      missingFields.push(field)
+    } else if (typeof value === 'number' && isNaN(value)) {
       missingFields.push(field)
     }
+    // Boolean fields (including false) are valid, so don't check them
   })
   
   return missingFields

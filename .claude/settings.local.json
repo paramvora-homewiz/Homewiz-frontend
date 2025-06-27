@@ -15,7 +15,10 @@
       "Bash(npm uninstall:*)",
       "Bash(true)",
       "Bash(python:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

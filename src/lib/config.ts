@@ -15,8 +15,10 @@ const envSchema = z.object({
   
   // Backend API Configuration
   NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8000/api'),
+  NEXT_PUBLIC_CLOUD_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
   NEXT_PUBLIC_DISABLE_BACKEND: z.string().transform(val => val === 'true').default('false'),
+  NEXT_PUBLIC_PREFER_CLOUD: z.string().transform(val => val === 'true').default('false'),
   
   // Clerk Authentication Configuration
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().optional(),
@@ -92,8 +94,10 @@ export const config = {
   // API Configuration
   api: {
     baseUrl: env.NEXT_PUBLIC_API_URL,
+    cloudUrl: env.NEXT_PUBLIC_CLOUD_API_URL,
     timeout: env.NEXT_PUBLIC_API_TIMEOUT,
     disabled: env.NEXT_PUBLIC_DISABLE_BACKEND,
+    preferCloud: env.NEXT_PUBLIC_PREFER_CLOUD,
   },
   
   // Authentication
@@ -158,6 +162,73 @@ export const getApiUrl = (endpoint: string): string => {
   const baseUrl = config.api.baseUrl.replace(/\/$/, '')
   const cleanEndpoint = endpoint.replace(/^\//, '')
   return `${baseUrl}/${cleanEndpoint}`
+}
+
+export const getActiveApiUrl = async (): Promise<string> => {
+  // If backend is disabled, return empty string
+  if (config.api.disabled) {
+    return ''
+  }
+  
+  // If no cloud URL is configured, use local
+  if (!config.api.cloudUrl) {
+    return config.api.baseUrl
+  }
+  
+  // If prefer cloud is set, try cloud first
+  if (config.api.preferCloud) {
+    try {
+      const cloudBaseUrl = config.api.cloudUrl.replace('/api', '')
+      const response = await fetch(`${cloudBaseUrl}/`, { 
+        method: 'GET', 
+        mode: 'cors',
+        signal: AbortSignal.timeout(3000)
+      })
+      if (response.ok) {
+        return config.api.cloudUrl
+      }
+    } catch (error) {
+      console.log('☁️ Cloud backend not available, falling back to local')
+    }
+    
+    // Fall back to local
+    return config.api.baseUrl
+  }
+  
+  // Default behavior: try local first, then cloud
+  try {
+    const localBaseUrl = config.api.baseUrl.replace('/api', '')
+    const response = await fetch(`${localBaseUrl}/`, { 
+      method: 'GET', 
+      mode: 'cors',
+      signal: AbortSignal.timeout(3000)
+    })
+    if (response.ok) {
+      return config.api.baseUrl
+    }
+  } catch (error) {
+    console.log('🏠 Local backend not available, trying cloud...')
+  }
+  
+  // Try cloud as fallback
+  if (config.api.cloudUrl) {
+    try {
+      const cloudBaseUrl = config.api.cloudUrl.replace('/api', '')
+      const response = await fetch(`${cloudBaseUrl}/`, { 
+        method: 'GET', 
+        mode: 'cors',
+        signal: AbortSignal.timeout(3000)
+      })
+      if (response.ok) {
+        return config.api.cloudUrl
+      }
+    } catch (error) {
+      console.log('☁️ Cloud backend also not available')
+    }
+  }
+  
+  // No backend available, return local as fallback
+  return config.api.baseUrl
 }
 
 export const isFeatureEnabled = (feature: keyof typeof config.features): boolean => {
