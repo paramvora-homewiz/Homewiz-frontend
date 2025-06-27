@@ -1,0 +1,269 @@
+
+> homewiz-frontend@0.1.0 dev
+> next dev
+
+  ▲ Next.js 13.5.6
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+  - Experiments (use at your own risk):
+     · serverActions
+
+ ✓ Ready in 1168ms
+ ✓ Compiled /src/middleware in 229ms (54 modules)
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+ ○ Compiling /page ...
+ ✓ Compiled /page in 3s (1424 modules)
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+ ✓ Compiled in 429ms (686 modules)
+🎭 Demo mode enabled - no authentication required
+ ✓ Compiled /not-found in 1216ms (1380 modules)
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+🎭 Demo mode enabled - no authentication required
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+🎭 Demo mode enabled - no authentication required
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+ ○ Compiling /forms/page ...
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+   Reload env: .env.local
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+🎭 Demo mode enabled - no authentication required
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+🔄 Initializing Supabase connection...
+🎭 Demo mode enabled - no authentication required
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+✅ Supabase connection established successfully
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+🔧 HomeWiz Frontend Configuration Loaded
+Environment: development
+Demo Mode: false
+API URL: http://127.0.0.1:8000/api
+Clerk Configured: false
+⚠️ Clerk authentication not properly configured
+🎭 Demo mode enabled - no authentication required
+🔄 Initializing Supabase connection...
+✅ Supabase connection established successfully
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required
+🎭 Demo mode enabled - no authentication required

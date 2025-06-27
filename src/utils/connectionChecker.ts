@@ -3,13 +3,14 @@
  * Provides backend connectivity status and graceful error handling
  */
 
-import config from '@/lib/config'
+import config, { getActiveApiUrl } from '@/lib/config'
 
 export interface ConnectionStatus {
   isConnected: boolean
   lastChecked: Date
   error?: string
   backendVersion?: string
+  activeUrl?: string
 }
 
 class ConnectionChecker {
@@ -44,11 +45,14 @@ class ConnectionChecker {
     try {
       console.log('🔍 Checking backend connection...')
 
+      // Get the active backend URL
+      const activeApiUrl = await getActiveApiUrl()
+      const baseUrl = activeApiUrl.replace('/api', '')
+
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
 
       // Check the root endpoint instead of the API endpoint
-      const baseUrl = config.api.baseUrl.replace('/api', '')
       const response = await fetch(`${baseUrl}/`, {
         method: 'GET',
         mode: 'cors',
@@ -64,10 +68,11 @@ class ConnectionChecker {
         this.status = {
           isConnected: true,
           lastChecked: new Date(),
-          backendVersion: data.message || 'Unknown'
+          backendVersion: data.message || 'Unknown',
+          activeUrl: activeApiUrl
         }
 
-        console.log('✅ Backend connection successful')
+        console.log(`✅ Backend connection successful to: ${baseUrl}`)
       } else {
         throw new Error(`HTTP ${response.status}`)
       }

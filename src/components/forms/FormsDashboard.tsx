@@ -148,6 +148,9 @@ function FormsDashboardContent() {
       // Show enhanced success message
       showFormSuccessMessage(formType, 'saved')
 
+      // Return the result for image upload and other post-processing
+      return result
+
     } catch (error) {
       console.error(`❌ Error submitting ${formType} form:`, error)
 
@@ -224,7 +227,10 @@ function FormsDashboardContent() {
       case 'room':
         return (
           <RoomForm
-            onSubmit={(data) => handleFormSubmit(data, 'room')}
+            onSubmit={async (data) => {
+              const result = await handleFormSubmit(data, 'room')
+              return result
+            }}
             onCancel={handleFormCancel}
             isLoading={isLoading}
             buildings={formData.buildings}

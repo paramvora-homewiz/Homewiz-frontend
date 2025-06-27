@@ -410,7 +410,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       const buildingResponse = await onSubmit(backendData)
       
       // Extract building_id from response
-      const buildingId = buildingResponse?.building_id || backendData.building_id
+      const buildingId = (buildingResponse as any)?.building_id || backendData.building_id
       console.log(`✅ Building created with ID: ${buildingId}`)
       
       // Step 2: Upload images to Supabase and update building if any

@@ -1,0 +1,7 @@
+active,calendar_external_id,calendar_sync_enabled,date_joined,email,emergency_contact,last_active,name,notification_preferences,operator_id,operator_type,permissions,phone,role,working_hours
+true,,false,2024-12-27,john.manager@homewiz.com,false,2025-06-25,John Manager,EMAIL,1,LEASING_AGENT,,(415)555-0101,Property Manager,
+true,,false,2024-12-27,sarah.admin@homewiz.com,false,2025-06-25,Sarah Admin,EMAIL,2,LEASING_AGENT,,(415)555-0102,Assistant Manager,
+true,,false,2024-12-27,mike.maintenance@homewiz.com,false,2025-06-25,Mike Maintenance,EMAIL,3,LEASING_AGENT,,(415)555-0103,Maintenance,
+true,,false,2024-12-27,lisa.leasing@homewiz.com,false,2025-06-25,Lisa Leasing,EMAIL,4,LEASING_AGENT,,(415)555-0104,Leasing Agent,
+true,,false,2024-12-27,tom.support@homewiz.com,false,2025-06-25,Tom Support,EMAIL,5,LEASING_AGENT,,(415)555-0105,Leasing Agent,
+true,,false,2025-06-26,Trivei.aku@northeastern.edu,false,,Kausha ,EMAIL,6,LEASING_AGENT,,(123) 456-7890,Assistant Manager,

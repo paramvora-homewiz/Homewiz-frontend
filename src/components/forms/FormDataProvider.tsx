@@ -124,34 +124,22 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       operator_id: 1,
       name: 'John Smith',
       email: 'john.smith@homewiz.com',
-      phone: '+1-555-0123',
-      role: 'Property Manager',
       operator_type: 'BUILDING_MANAGER',
-      active: true,
-      date_joined: '2023-01-15',
-      last_active: '2024-06-25'
+      active: true
     },
     {
       operator_id: 2,
       name: 'Sarah Johnson',
       email: 'sarah.johnson@homewiz.com',
-      phone: '+1-555-0456',
-      role: 'Leasing Agent',
       operator_type: 'LEASING_AGENT',
-      active: true,
-      date_joined: '2023-03-20',
-      last_active: '2024-06-24'
+      active: true
     },
     {
       operator_id: 3,
       name: 'Mike Chen',
       email: 'mike.chen@homewiz.com',
-      phone: '+1-555-0789',
-      role: 'Maintenance Supervisor',
       operator_type: 'MAINTENANCE',
-      active: true,
-      date_joined: '2023-05-10',
-      last_active: '2024-06-23'
+      active: true
     }
   ]
 
@@ -230,6 +218,37 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     }
   ]
 
+  // Map backend role to frontend operator_type
+  const mapRoleToOperatorType = (role: string): 'LEASING_AGENT' | 'MAINTENANCE' | 'BUILDING_MANAGER' | 'ADMIN' => {
+    switch (role.toLowerCase()) {
+      case 'property manager':
+      case 'building manager':
+        return 'BUILDING_MANAGER'
+      case 'assistant manager':
+      case 'admin':
+        return 'ADMIN'
+      case 'maintenance':
+      case 'maintenance supervisor':
+        return 'MAINTENANCE'
+      case 'leasing agent':
+      case 'leasing':
+        return 'LEASING_AGENT'
+      default:
+        return 'LEASING_AGENT' // Default fallback
+    }
+  }
+
+  // Transform backend operator data to frontend format
+  const transformOperatorData = (backendOperators: any[]): Operator[] => {
+    return backendOperators.map(op => ({
+      operator_id: op.operator_id,
+      name: op.name,
+      email: op.email,
+      operator_type: mapRoleToOperatorType(op.role || 'Leasing Agent'),
+      active: op.active
+    }))
+  }
+
   // Fetch operators from API or Supabase
   const fetchOperators = async (): Promise<Operator[]> => {
     if (config.api.disabled && isSupabaseAvailable()) {
@@ -237,7 +256,13 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       const result = await databaseService.operators.list()
       if (result.success && result.data) {
         console.log('✅ Operators fetched from Supabase:', result.data.length, 'operators')
-        return result.data as Operator[]
+        return result.data.map((op: any) => ({
+          operator_id: op.operator_id,
+          name: op.name,
+          email: op.email,
+          operator_type: op.operator_type || 'LEASING_AGENT',
+          active: op.status === 'active' || op.active || true
+        })) as Operator[]
       } else {
         console.error('❌ Failed to fetch operators from Supabase:', result.error)
         return MOCK_OPERATORS
@@ -245,8 +270,13 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
     } else {
       console.log('🔄 Fetching operators from API...')
       const data = await apiService.getOperators()
-      console.log('✅ Operators fetched:', data.length, 'operators')
-      return data
+      console.log('✅ Operators fetched from backend:', data.length, 'operators')
+      
+      // Transform backend data to frontend format
+      const transformedData = transformOperatorData(data)
+      console.log('🔄 Transformed operators:', transformedData.map(op => `${op.name} (${op.operator_type})`))
+      
+      return transformedData
     }
   }
 
@@ -257,7 +287,14 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       const result = await databaseService.buildings.list()
       if (result.success && result.data) {
         console.log('✅ Buildings fetched from Supabase:', result.data.length, 'buildings')
-        return result.data as Building[]
+        return result.data.map((bldg: any) => ({
+          building_id: bldg.building_id,
+          building_name: bldg.building_name || bldg.name,
+          operator_id: bldg.operator_id,
+          floors: bldg.floors || bldg.total_floors,
+          total_rooms: bldg.total_rooms || bldg.total_units,
+          available: bldg.available || bldg.available_units > 0
+        })) as Building[]
       } else {
         console.error('❌ Failed to fetch buildings from Supabase:', result.error)
         return []
