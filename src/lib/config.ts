@@ -19,6 +19,10 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
   NEXT_PUBLIC_DISABLE_BACKEND: z.string().transform(val => val === 'true').default('false'),
   NEXT_PUBLIC_PREFER_CLOUD: z.string().transform(val => val === 'true').default('false'),
+
+  // Supabase Configuration
+  NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
   
   // Clerk Authentication Configuration
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().optional(),
@@ -96,10 +100,23 @@ export const config = {
     baseUrl: env.NEXT_PUBLIC_API_URL,
     cloudUrl: env.NEXT_PUBLIC_CLOUD_API_URL,
     timeout: env.NEXT_PUBLIC_API_TIMEOUT,
-    disabled: env.NEXT_PUBLIC_DISABLE_BACKEND,
+    // Auto-disable backend in production when Supabase is available
+    disabled: env.NEXT_PUBLIC_DISABLE_BACKEND || (
+      env.NEXT_PUBLIC_APP_ENV === 'production' &&
+      env.NEXT_PUBLIC_SUPABASE_URL &&
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+      env.NEXT_PUBLIC_SUPABASE_URL !== 'your_supabase_url' &&
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'your_supabase_anon_key'
+    ),
     preferCloud: env.NEXT_PUBLIC_PREFER_CLOUD,
   },
-  
+
+  // Supabase Configuration
+  supabase: {
+    url: env.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  },
+
   // Authentication
   auth: {
     clerk: {
@@ -267,6 +284,8 @@ if (typeof window === 'undefined') {
   console.log(`Environment: ${config.environment}`)
   console.log(`Demo Mode: ${config.app.demoMode}`)
   console.log(`API URL: ${config.api.baseUrl}`)
+  console.log(`Backend Disabled: ${config.api.disabled}`)
+  console.log(`Supabase URL: ${config.supabase.url ? 'configured' : 'not configured'}`)
   console.log(`Clerk Configured: ${validateClerkConfig()}`)
 
   if (!validateApiConfig()) {

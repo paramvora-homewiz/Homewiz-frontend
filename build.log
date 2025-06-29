@@ -267,3 +267,577 @@ Clerk Configured: false
 🎭 Demo mode enabled - no authentication required
 🎭 Demo mode enabled - no authentication required
 🎭 Demo mode enabled - no authentication required
+   Reload env: .env.local
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+   Reload env: .env.local
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+   Reload env: .env.local
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/MediaUploadSection.tsx
+./src/components/forms/BuildingForm.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+   Reload env: .env.local
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+   Reload env: .env.local
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/buffer-util.js
+Module not found: Can't resolve 'bufferutil' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/buffer-util.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx
+
+./node_modules/ws/lib/validation.js
+Module not found: Can't resolve 'utf-8-validate' in '/Users/kaushatrivedi/Downloads/Homewiz-frontend-main/node_modules/ws/lib'
+
+Import trace for requested module:
+./node_modules/ws/lib/validation.js
+./node_modules/ws/lib/websocket.js
+./node_modules/ws/index.js
+./node_modules/isows/_cjs/index.js
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/client.ts
+./src/components/forms/FormDataProvider.tsx
+./src/components/forms/FormsDashboard.tsx

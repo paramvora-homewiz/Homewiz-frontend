@@ -43,7 +43,7 @@ export default function RootLayout({
           <RootAuthProvider>
             <ToastProvider>
 
-              <ConnectionStatusBanner />
+              {!config.api.disabled && <ConnectionStatusBanner />}
               {children}
             </ToastProvider>
           </RootAuthProvider>

@@ -294,43 +294,46 @@ export interface Database {
       }
       operators: {
         Row: {
-          operator_id: number
-          name: string
+          operator_id: string
+          first_name: string
+          last_name: string
           email: string
           phone: string | null
-          operator_type: string
+          role: string
+          permissions: string | null
+          buildings_assigned: string | null
           status: string
+          hire_date: string | null
           created_at: string
           updated_at: string
-          department: string | null
-          hire_date: string | null
-          permissions: Json | null
         }
         Insert: {
-          operator_id?: number
-          name: string
+          operator_id?: string
+          first_name: string
+          last_name: string
           email: string
           phone?: string | null
-          operator_type: string
+          role: string
+          permissions?: string | null
+          buildings_assigned?: string | null
           status?: string
+          hire_date?: string | null
           created_at?: string
           updated_at?: string
-          department?: string | null
-          hire_date?: string | null
-          permissions?: Json | null
         }
         Update: {
-          operator_id?: number
-          name?: string
+          operator_id?: string
+          first_name?: string
+          last_name?: string
           email?: string
           phone?: string | null
-          operator_type?: string
+          role?: string
+          permissions?: string | null
+          buildings_assigned?: string | null
           status?: string
+          hire_date?: string | null
           created_at?: string
           updated_at?: string
-          department?: string | null
-          hire_date?: string | null
-          permissions?: Json | null
         }
         Relationships: []
       }

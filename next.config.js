@@ -14,8 +14,15 @@ const nextConfig = {
   // Basic settings for stability
   reactStrictMode: false,
 
-  // Webpack configuration for chunk loading stability
+  // Webpack configuration for chunk loading stability and WebSocket support
   webpack: (config, { dev, isServer }) => {
+    // Handle WebSocket dependencies for Supabase realtime
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      bufferutil: false,
+      'utf-8-validate': false,
+    }
+
     if (dev && !isServer) {
       // Increase chunk loading timeout
       config.output.chunkLoadTimeout = 30000

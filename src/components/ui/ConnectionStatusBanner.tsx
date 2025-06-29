@@ -26,6 +26,11 @@ export function ConnectionStatusBanner() {
   }, [])
 
   const handleManualCheck = async () => {
+    // Skip manual check if backend is disabled
+    if (config.api.disabled) {
+      return
+    }
+
     setIsChecking(true)
     const newStatus = await checkBackendConnection()
     setStatus(newStatus)
@@ -37,7 +42,7 @@ export function ConnectionStatusBanner() {
 To start the backend server:
 
 1. Open a new terminal
-2. Navigate to: /Users/kaushatrivedi/Downloads/homewiz-backend-shardul-backend  
+2. Navigate to: /Users/kaushatrivedi/Downloads/homewiz-backend-shardul-backend
 3. Run: python -m uvicorn app.main:app --reload --port 8000
 
 If you get a GEMINI_API_KEY error:
@@ -45,7 +50,7 @@ If you get a GEMINI_API_KEY error:
 2. Add: GEMINI_API_KEY=your_gemini_api_key_here
 3. Get your API key from: https://makersuite.google.com/app/apikey
     `
-    
+
     showInfoMessage(
       'Backend Setup Instructions',
       instructions.trim(),
