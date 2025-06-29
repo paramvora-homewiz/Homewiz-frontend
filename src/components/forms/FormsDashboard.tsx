@@ -14,6 +14,8 @@ import LeadForm from './LeadForm'
 import { FormDataProvider, useFormData } from './FormDataProvider'
 import { OperatorFormData, BuildingFormData, RoomFormData, TenantFormData, LeadFormData } from '@/types'
 import { apiService } from '../../services/apiService'
+import { formIntegration } from '../../lib/supabase/form-integration'
+import config from '../../lib/config'
 import DatabaseLogsPanel from '../dashboard/DatabaseLogsPanel'
 import AdvancedAnalyticsDashboard from '../analytics/AdvancedAnalyticsDashboard'
 import AdvancedSearchPanel from '../search/AdvancedSearchPanel'
@@ -110,34 +112,73 @@ function FormsDashboardContent() {
     setIsLoading(true)
     try {
       console.log(`🚀 Submitting ${formType} form:`, data)
+      console.log('🔧 Config debug:', {
+        'config.api.disabled': config.api.disabled,
+        'NEXT_PUBLIC_DISABLE_BACKEND': process.env.NEXT_PUBLIC_DISABLE_BACKEND,
+        'config.environment': config.environment
+      })
 
-      // Make real API call to save the data
+      // Use Supabase form integration when backend is disabled, otherwise use API service
+      const backendDisabled = process.env.NEXT_PUBLIC_DISABLE_BACKEND === 'true' || config.api.disabled
       let result
-      switch (formType) {
-        case 'operator':
-          result = await apiService.createOperator(data)
-          await formData.refreshOperators()
-          break
-        case 'building':
-          result = await apiService.createBuilding(data)
-          await formData.refreshBuildings()
-          break
-        case 'room':
-          result = await apiService.createRoom(data)
-          await formData.refreshRooms()
-          break
-        case 'tenant':
-          result = await apiService.createTenant(data)
-          // Refresh multiple data sources for tenant
-          await Promise.all([
-            formData.refreshRooms(),
-            formData.refreshBuildings()
-          ])
-          break
-        case 'lead':
-          result = await apiService.createLead(data)
-          await formData.refreshRooms()
-          break
+      
+      if (backendDisabled) {
+        console.log('🔧 Using Supabase form integration (backend disabled)')
+        switch (formType) {
+          case 'operator':
+            result = await formIntegration.operator.submitOperator(data)
+            await formData.refreshOperators()
+            break
+          case 'building':
+            result = await formIntegration.building.submitBuilding(data)
+            await formData.refreshBuildings()
+            break
+          case 'room':
+            // For now, use API service for rooms as form integration might not exist
+            result = await apiService.createRoom(data)
+            await formData.refreshRooms()
+            break
+          case 'tenant':
+            result = await formIntegration.tenant.submitTenant(data)
+            await Promise.all([
+              formData.refreshRooms(),
+              formData.refreshBuildings()
+            ])
+            break
+          case 'lead':
+            // For now, use API service for leads as form integration might not exist
+            result = await apiService.createLead(data)
+            await formData.refreshRooms()
+            break
+        }
+      } else {
+        console.log('🔌 Using API service (backend enabled)')
+        console.log('🔧 Backend disabled check:', backendDisabled)
+        switch (formType) {
+          case 'operator':
+            result = await apiService.createOperator(data)
+            await formData.refreshOperators()
+            break
+          case 'building':
+            result = await apiService.createBuilding(data)
+            await formData.refreshBuildings()
+            break
+          case 'room':
+            result = await apiService.createRoom(data)
+            await formData.refreshRooms()
+            break
+          case 'tenant':
+            result = await apiService.createTenant(data)
+            await Promise.all([
+              formData.refreshRooms(),
+              formData.refreshBuildings()
+            ])
+            break
+          case 'lead':
+            result = await apiService.createLead(data)
+            await formData.refreshRooms()
+            break
+        }
       }
 
       console.log(`✅ ${formType} saved successfully:`, result)

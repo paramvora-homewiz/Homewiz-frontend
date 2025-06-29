@@ -294,46 +294,55 @@ export interface Database {
       }
       operators: {
         Row: {
-          operator_id: string
-          first_name: string
-          last_name: string
+          operator_id: number
+          name: string
           email: string
           phone: string | null
-          role: string
+          role: string | null
+          active: boolean
+          date_joined: string | null
+          last_active: string | null
+          operator_type: string
           permissions: string | null
-          buildings_assigned: string | null
-          status: string
-          hire_date: string | null
-          created_at: string
-          updated_at: string
+          notification_preferences: string
+          working_hours: string | null
+          emergency_contact: boolean
+          calendar_sync_enabled: boolean
+          calendar_external_id: string | null
         }
         Insert: {
-          operator_id?: string
-          first_name: string
-          last_name: string
+          operator_id?: number  // Auto-generated, but optional in TypeScript
+          name: string
           email: string
           phone?: string | null
-          role: string
+          role?: string | null
+          active?: boolean
+          date_joined?: string | null
+          last_active?: string | null
+          operator_type?: string
           permissions?: string | null
-          buildings_assigned?: string | null
-          status?: string
-          hire_date?: string | null
-          created_at?: string
-          updated_at?: string
+          notification_preferences?: string
+          working_hours?: string | null
+          emergency_contact?: boolean
+          calendar_sync_enabled?: boolean
+          calendar_external_id?: string | null
         }
         Update: {
-          operator_id?: string
-          first_name?: string
-          last_name?: string
+          operator_id?: number
+          name?: string
           email?: string
           phone?: string | null
-          role?: string
+          role?: string | null
+          active?: boolean
+          date_joined?: string | null
+          last_active?: string | null
+          operator_type?: string
           permissions?: string | null
-          buildings_assigned?: string | null
-          status?: string
-          hire_date?: string | null
-          created_at?: string
-          updated_at?: string
+          notification_preferences?: string
+          working_hours?: string | null
+          emergency_contact?: boolean
+          calendar_sync_enabled?: boolean
+          calendar_external_id?: string | null
         }
         Relationships: []
       }

@@ -259,10 +259,10 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
         console.log('✅ Operators fetched from Supabase:', result.data.length, 'operators')
         return result.data.map((op: any) => ({
           operator_id: parseInt(op.operator_id) || 0,
-          name: `${op.first_name || ''} ${op.last_name || ''}`.trim(),
+          name: op.name || '',
           email: op.email,
-          operator_type: op.role || 'LEASING_AGENT',
-          active: op.status === 'active'
+          operator_type: op.operator_type || 'LEASING_AGENT',
+          active: op.active !== undefined ? Boolean(op.active) : true
         })) as Operator[]
       } else {
         console.error('❌ Failed to fetch operators from Supabase:', result.error)
@@ -291,10 +291,10 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
             console.log('✅ Operators fetched from Supabase fallback:', result.data.length, 'operators')
             return result.data.map((op: any) => ({
               operator_id: parseInt(op.operator_id) || 0,
-              name: `${op.first_name || ''} ${op.last_name || ''}`.trim(),
+              name: op.name || '',
               email: op.email,
-              operator_type: op.role || 'LEASING_AGENT',
-              active: op.status === 'active'
+              operator_type: op.operator_type || 'LEASING_AGENT',
+              active: op.active !== undefined ? Boolean(op.active) : true
             })) as Operator[]
           }
         }

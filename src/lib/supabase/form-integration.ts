@@ -407,15 +407,20 @@ export class OperatorFormIntegration {
    */
   private static transformOperatorData(formData: any): OperatorInsert {
     return {
+      // operator_id will be auto-generated, so we don't include it
       name: formData.name.trim(),
       email: formData.email.trim().toLowerCase(),
       phone: formData.phone?.trim() || null,
-      operator_type: formData.operator_type,
-      status: formData.status || 'ACTIVE',
-      department: formData.department?.trim() || null,
-      hire_date: formData.hire_date || null,
+      role: formData.role?.trim() || null,
+      active: formData.active !== undefined ? Boolean(formData.active) : true,
+      operator_type: formData.operator_type || 'LEASING_AGENT',
+      date_joined: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for Date column
       permissions: formData.permissions || null,
-      created_at: new Date().toISOString()
+      notification_preferences: formData.notification_preferences || 'EMAIL',
+      working_hours: formData.working_hours || null,
+      emergency_contact: Boolean(formData.emergency_contact),
+      calendar_sync_enabled: Boolean(formData.calendar_sync_enabled),
+      calendar_external_id: null
     }
   }
 }
