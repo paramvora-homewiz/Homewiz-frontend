@@ -251,38 +251,64 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
 
   // Fetch operators from API or Supabase
   const fetchOperators = async (): Promise<Operator[]> => {
-    if (config.api.disabled && isSupabaseAvailable()) {
+    // Use Supabase if backend is disabled or if Supabase is available and backend is not preferred
+    if (config.api.disabled || (isSupabaseAvailable() && !config.api.preferCloud)) {
       console.log('🔄 Fetching operators from Supabase...')
       const result = await databaseService.operators.list()
       if (result.success && result.data) {
         console.log('✅ Operators fetched from Supabase:', result.data.length, 'operators')
         return result.data.map((op: any) => ({
-          operator_id: op.operator_id,
-          name: op.name,
+          operator_id: parseInt(op.operator_id) || 0,
+          name: `${op.first_name || ''} ${op.last_name || ''}`.trim(),
           email: op.email,
-          operator_type: op.operator_type || 'LEASING_AGENT',
-          active: op.status === 'active' || op.active || true
+          operator_type: op.role || 'LEASING_AGENT',
+          active: op.status === 'active'
         })) as Operator[]
       } else {
         console.error('❌ Failed to fetch operators from Supabase:', result.error)
         return MOCK_OPERATORS
       }
-    } else {
-      console.log('🔄 Fetching operators from API...')
-      const data = await apiService.getOperators()
-      console.log('✅ Operators fetched from backend:', data.length, 'operators')
-      
-      // Transform backend data to frontend format
-      const transformedData = transformOperatorData(data)
-      console.log('🔄 Transformed operators:', transformedData.map(op => `${op.name} (${op.operator_type})`))
-      
-      return transformedData
+    } else if (!config.api.disabled) {
+      // Try backend API only if not disabled
+      try {
+        console.log('🔄 Fetching operators from API...')
+        const data = await apiService.getOperators()
+        console.log('✅ Operators fetched from backend:', data.length, 'operators')
+
+        // Transform backend data to frontend format
+        const transformedData = transformOperatorData(data)
+        console.log('🔄 Transformed operators:', transformedData.map(op => `${op.name} (${op.operator_type})`))
+
+        return transformedData
+      } catch (error) {
+        console.warn('⚠️ Backend API failed, trying Supabase fallback...')
+
+        // Fallback to Supabase if backend fails and Supabase is available
+        if (isSupabaseAvailable()) {
+          console.log('🔄 Fetching operators from Supabase (fallback)...')
+          const result = await databaseService.operators.list()
+          if (result.success && result.data) {
+            console.log('✅ Operators fetched from Supabase fallback:', result.data.length, 'operators')
+            return result.data.map((op: any) => ({
+              operator_id: parseInt(op.operator_id) || 0,
+              name: `${op.first_name || ''} ${op.last_name || ''}`.trim(),
+              email: op.email,
+              operator_type: op.role || 'LEASING_AGENT',
+              active: op.status === 'active'
+            })) as Operator[]
+          }
+        }
+
+        // If both fail, throw the original error
+        throw error
+      }
     }
   }
 
   // Fetch buildings from API or Supabase
   const fetchBuildings = async (): Promise<Building[]> => {
-    if (config.api.disabled && isSupabaseAvailable()) {
+    // Use Supabase if backend is disabled or if Supabase is available and backend is not preferred
+    if (config.api.disabled || (isSupabaseAvailable() && !config.api.preferCloud)) {
       console.log('🔄 Fetching buildings from Supabase...')
       const result = await databaseService.buildings.list()
       if (result.success && result.data) {
@@ -299,17 +325,43 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
         console.error('❌ Failed to fetch buildings from Supabase:', result.error)
         return []
       }
-    } else {
-      console.log('🔄 Fetching buildings from API...')
-      const data = await apiService.getBuildings()
-      console.log('✅ Buildings fetched:', data.length, 'buildings')
-      return data
+    } else if (!config.api.disabled) {
+      // Try backend API only if not disabled
+      try {
+        console.log('🔄 Fetching buildings from API...')
+        const data = await apiService.getBuildings()
+        console.log('✅ Buildings fetched:', data.length, 'buildings')
+        return data
+      } catch (error) {
+        console.warn('⚠️ Backend API failed, trying Supabase fallback for buildings...')
+
+        // Fallback to Supabase if backend fails and Supabase is available
+        if (isSupabaseAvailable()) {
+          console.log('🔄 Fetching buildings from Supabase (fallback)...')
+          const result = await databaseService.buildings.list()
+          if (result.success && result.data) {
+            console.log('✅ Buildings fetched from Supabase fallback:', result.data.length, 'buildings')
+            return result.data.map((bldg: any) => ({
+              building_id: bldg.building_id,
+              building_name: bldg.building_name || bldg.name,
+              operator_id: bldg.operator_id,
+              floors: bldg.floors || bldg.total_floors,
+              total_rooms: bldg.total_rooms || bldg.total_units,
+              available: bldg.available || bldg.available_units > 0
+            })) as Building[]
+          }
+        }
+
+        // If both fail, throw the original error
+        throw error
+      }
     }
   }
 
   // Fetch rooms from API or Supabase
   const fetchRooms = async (): Promise<Room[]> => {
-    if (config.api.disabled && isSupabaseAvailable()) {
+    // Use Supabase if backend is disabled or if Supabase is available and backend is not preferred
+    if (config.api.disabled || (isSupabaseAvailable() && !config.api.preferCloud)) {
       console.log('🔄 Fetching rooms from Supabase...')
       const result = await databaseService.rooms.list()
       if (result.success && result.data) {
@@ -319,11 +371,29 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
         console.error('❌ Failed to fetch rooms from Supabase:', result.error)
         return MOCK_ROOMS
       }
-    } else {
-      console.log('🔄 Fetching rooms from API...')
-      const data = await apiService.getRooms()
-      console.log('✅ Rooms fetched:', data.length, 'rooms')
-      return data
+    } else if (!config.api.disabled) {
+      // Try backend API only if not disabled
+      try {
+        console.log('🔄 Fetching rooms from API...')
+        const data = await apiService.getRooms()
+        console.log('✅ Rooms fetched:', data.length, 'rooms')
+        return data
+      } catch (error) {
+        console.warn('⚠️ Backend API failed, trying Supabase fallback for rooms...')
+
+        // Fallback to Supabase if backend fails and Supabase is available
+        if (isSupabaseAvailable()) {
+          console.log('🔄 Fetching rooms from Supabase (fallback)...')
+          const result = await databaseService.rooms.list()
+          if (result.success && result.data) {
+            console.log('✅ Rooms fetched from Supabase fallback:', result.data.length, 'rooms')
+            return result.data as Room[]
+          }
+        }
+
+        // If both fail, throw the original error
+        throw error
+      }
     }
   }
 
@@ -365,7 +435,7 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       
       // If it's a connection error and we're not using Supabase, show demo mode
       if (errorMessage.includes('Backend server not running') || errorMessage.includes('Failed to fetch')) {
-        if (config.api.disabled && isSupabaseAvailable()) {
+        if (config.api.disabled || isSupabaseAvailable()) {
           console.log('🔧 Supabase mode enabled but no data available')
           setBuildings([]) // Empty for Supabase mode
         } else {
@@ -394,7 +464,7 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
       
       // If it's a connection error and we're not using Supabase, show demo mode
       if (errorMessage.includes('Backend server not running') || errorMessage.includes('Failed to fetch')) {
-        if (config.api.disabled && isSupabaseAvailable()) {
+        if (config.api.disabled || isSupabaseAvailable()) {
           console.log('🔧 Supabase mode enabled but no data available')
           setRooms([]) // Empty for Supabase mode
         } else {
@@ -436,7 +506,7 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
   // Load initial data on mount
   useEffect(() => {
     // Log the current data source mode
-    if (config.api.disabled && isSupabaseAvailable()) {
+    if (config.api.disabled || isSupabaseAvailable()) {
       console.log('🔧 FormDataProvider: Using Supabase cloud database')
     } else if (config.api.disabled) {
       console.log('🎭 FormDataProvider: Backend disabled, Supabase not available - using demo mode')

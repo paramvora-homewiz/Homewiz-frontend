@@ -288,7 +288,7 @@ abstract class BaseService<T, TInsert, TUpdate> {
     const {
       page = 1,
       limit = 50,
-      sortBy = 'created_at',
+      sortBy = this.getDefaultSortColumn(),
       sortOrder = 'desc',
       filters = {},
       search,
@@ -364,6 +364,13 @@ abstract class BaseService<T, TInsert, TUpdate> {
    * Get the primary key column name for the table
    */
   protected abstract getIdColumn(): string
+
+  /**
+   * Get the default sort column for this table
+   */
+  protected getDefaultSortColumn(): string {
+    return 'created_at' // Default, can be overridden by subclasses
+  }
 
   /**
    * Clear cache for this service
@@ -446,6 +453,10 @@ export class RoomsService extends BaseService<Room, RoomInsert, RoomUpdate> {
 
   protected getIdColumn(): string {
     return 'room_id'
+  }
+
+  protected getDefaultSortColumn(): string {
+    return 'room_id' // rooms table doesn't have created_at
   }
 
   /**
@@ -612,6 +623,10 @@ export class OperatorsService extends BaseService<Operator, OperatorInsert, Oper
 
   protected getIdColumn(): string {
     return 'operator_id'
+  }
+
+  protected getDefaultSortColumn(): string {
+    return 'operator_id' // operators table doesn't have created_at
   }
 
   /**
