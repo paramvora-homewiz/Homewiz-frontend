@@ -118,20 +118,15 @@ export const sanitizers = {
 // Zod schemas for comprehensive validation
 export const validationSchemas = {
   /**
-   * Tenant validation schema
+   * Tenant validation schema - matches backend database schema
    */
   tenant: z.object({
-    first_name: z.string()
-      .min(1, 'First name is required')
-      .max(50, 'First name must be less than 50 characters')
+    tenant_name: z.string()
+      .min(1, 'Tenant name is required')
+      .max(100, 'Tenant name must be less than 100 characters')
       .transform(sanitizers.string),
-    
-    last_name: z.string()
-      .min(1, 'Last name is required')
-      .max(50, 'Last name must be less than 50 characters')
-      .transform(sanitizers.string),
-    
-    email: z.string()
+
+    tenant_email: z.string()
       .email('Please enter a valid email address')
       .transform(sanitizers.email),
     
@@ -139,11 +134,7 @@ export const validationSchemas = {
       .optional()
       .refine(val => !val || customValidators.phone(val), 'Please enter a valid phone number')
       .transform(val => val ? sanitizers.phone(val) : null),
-    
-    date_of_birth: z.string()
-      .optional()
-      .refine(val => !val || !isNaN(Date.parse(val)), 'Please enter a valid date'),
-    
+
     tenant_nationality: z.string()
       .optional()
       .transform(val => val ? sanitizers.string(val) : null),

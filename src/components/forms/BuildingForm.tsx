@@ -157,6 +157,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
   const [formData, setFormData] = useState<BuildingFormData>({
     // Required fields from Building interface
+    building_id: initialData?.building_id || `BLD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
     building_name: '',
     address: '',
     city: '',
@@ -279,9 +280,77 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   }, [currentStep, formData])
 
   const handleInputChange = (field: keyof BuildingFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => {
+      const updatedData = { ...prev, [field]: value }
+      
+      // Real-time validation with updated data
+      validateFieldInRealTime(field, value, updatedData)
+      
+      return updatedData
+    })
+    
     // Mark field as touched when user interacts with it
     setTouchedFields(prev => new Set([...prev, field]))
+  }
+
+  // Real-time validation function
+  const validateFieldInRealTime = (field: keyof BuildingFormData, value: any, updatedData: BuildingFormData) => {
+    setErrors(prev => {
+      const newErrors = { ...prev }
+      
+      // Check if the field is now valid and remove error if so
+      switch (field) {
+        case 'building_name':
+          if (value?.trim()) {
+            delete newErrors.building_name
+          } else {
+            newErrors.building_name = 'Building name is required'
+          }
+          break
+          
+        case 'address':
+        case 'full_address':
+        case 'street':
+          // If any address field has value, clear street error (database field)
+          if (updatedData.address?.trim() || updatedData.full_address?.trim() || updatedData.street?.trim()) {
+            delete newErrors.street
+            delete newErrors.address // Clear legacy error too
+          } else {
+            newErrors.street = 'Street address is required'
+          }
+          break
+          
+        case 'city':
+          if (value?.trim()) {
+            delete newErrors.city
+          } else {
+            newErrors.city = 'City is required'
+          }
+          break
+          
+        case 'state':
+          if (value?.trim()) {
+            delete newErrors.state
+          } else {
+            newErrors.state = 'State is required'
+          }
+          break
+          
+        case 'zip_code':
+        case 'zip':
+          // If any zip field has value, clear zip error (database field)
+          if (updatedData.zip_code?.trim() || updatedData.zip?.trim()) {
+            delete newErrors.zip
+            delete newErrors.zip_code // Clear legacy error too
+          } else {
+            newErrors.zip = 'ZIP code is required'
+          }
+          break
+          
+      }
+      
+      return newErrors
+    })
   }
 
   // Prevent Enter key from submitting form when not on final step
@@ -292,14 +361,43 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   }
 
   const handleAddressSelect = (addressData: AddressData) => {
-    setFormData(prev => ({
-      ...prev,
-      full_address: addressData.fullAddress,
-      street: addressData.street,
-      city: addressData.city,
-      state: addressData.state,
-      zip: addressData.zip
-    }))
+    console.log('📍 Address selected:', addressData)
+    
+    setFormData(prev => {
+      const updatedData = {
+        ...prev,
+        full_address: addressData.fullAddress,
+        address: addressData.street, // Map to address field for validation
+        street: addressData.street, // Keep for compatibility
+        city: addressData.city,
+        state: addressData.state,
+        zip_code: addressData.zip, // Map to zip_code field for validation
+        zip: addressData.zip // Keep for compatibility
+      }
+      
+      // Clear all address-related validation errors
+      setErrors(prevErrors => {
+        const newErrors = { ...prevErrors }
+        delete newErrors.street
+        delete newErrors.address // Clear legacy error too
+        delete newErrors.city
+        delete newErrors.state
+        delete newErrors.zip
+        delete newErrors.zip_code // Clear legacy error too
+        return newErrors
+      })
+      
+      return updatedData
+    })
+
+    // Show success feedback
+    import('@/lib/error-handler').then(({ showSuccessMessage }) => {
+      showSuccessMessage(
+        'Address Auto-filled! ✅',
+        `All location fields have been populated from: ${addressData.street}, ${addressData.city}, ${addressData.state}`,
+        { duration: 3000 }
+      )
+    })
   }
 
   const handleCopyFromPrevious = (copiedData: any) => {
@@ -396,7 +494,10 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         media_files: mediaFiles
       })
       
-      console.log('Submitting transformed building data:', backendData)
+      console.log('🔍 Form data before transform:', formData)
+      console.log('🏢 Building ID in form data:', formData.building_id)
+      console.log('🚀 Submitting transformed building data:', backendData)
+      console.log('🏢 Building ID in transformed data:', backendData.building_id)
 
       // Save to history for smart defaults (excluding media files for storage efficiency)
       const historyData = { ...backendData }
@@ -409,9 +510,30 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       // First, create building (JSON only, no images)
       const buildingResponse = await onSubmit(backendData)
       
-      // Extract building_id from response
-      const buildingId = (buildingResponse as any)?.building_id || backendData.building_id
-      console.log(`✅ Building created with ID: ${buildingId}`)
+      // Check if submission was successful
+      if (!buildingResponse || !buildingResponse.success) {
+        console.error('❌ Building submission failed:', buildingResponse)
+        
+        // Handle validation errors
+        if (buildingResponse?.validationErrors) {
+          setErrors(buildingResponse.validationErrors)
+          console.error('Validation errors:', buildingResponse.validationErrors)
+          return // Stop here - don't proceed with image upload
+        }
+        
+        // Handle other errors
+        if (buildingResponse?.error) {
+          console.error('Submission error:', buildingResponse.error)
+          return // Stop here
+        }
+        
+        console.error('Unknown submission failure')
+        return
+      }
+      
+      // Extract building_id from successful response
+      const buildingId = buildingResponse.data?.building_id || backendData.building_id
+      console.log(`✅ Building created successfully with ID: ${buildingId}`)
       
       // Step 2: Upload images to Supabase and update building if any
       if (mediaFiles && mediaFiles.length > 0) {
@@ -600,6 +722,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 </select>
               </div>
 
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Year Built
@@ -684,30 +807,35 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Address
+                Full Address *
               </label>
               <AddressAutocomplete
                 value={formData.full_address || ''}
                 onChange={(value) => handleInputChange('full_address', value)}
                 onAddressSelect={handleAddressSelect}
-                placeholder="Start typing address for suggestions..."
+                placeholder="Start typing address (e.g. 123 Main St, Boston)"
               />
               <p className="text-xs text-gray-500 mt-1">
-                💡 Start typing to see address suggestions that auto-fill all location fields
+                💡 Type 3+ characters to search real addresses. Selecting an address auto-fills all fields below.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
+                  Street Address *
                 </label>
                 <Input
-                  value={formData.street || ''}
-                  onChange={(e) => handleInputChange('street', e.target.value)}
+                  value={formData.address || formData.street || ''}
+                  onChange={(e) => {
+                    handleInputChange('address', e.target.value)
+                    handleInputChange('street', e.target.value) // Keep both for compatibility
+                  }}
                   onKeyDown={handleKeyDown}
                   placeholder="123 Main Street"
+                  className={errors.street || errors.address ? 'border-red-500' : ''}
                 />
+                {(errors.street || errors.address) && <p className="text-red-500 text-sm mt-1">{errors.street || errors.address}</p>}
               </div>
 
               <div>
@@ -744,38 +872,47 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  City
+                  City *
                 </label>
                 <Input
                   value={formData.city || ''}
                   onChange={(e) => handleInputChange('city', e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="City name"
+                  className={errors.city ? 'border-red-500' : ''}
                 />
+                {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State/Province
+                  State/Province *
                 </label>
                 <Input
                   value={formData.state || ''}
                   onChange={(e) => handleInputChange('state', e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="State or province"
+                  className={errors.state ? 'border-red-500' : ''}
                 />
+                {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ZIP/Postal Code
+                  ZIP/Postal Code *
                 </label>
                 <Input
-                  value={formData.zip || ''}
-                  onChange={(e) => handleInputChange('zip', e.target.value)}
+                  value={formData.zip_code || formData.zip || ''}
+                  onChange={(e) => {
+                    handleInputChange('zip_code', e.target.value)
+                    handleInputChange('zip', e.target.value) // Keep both for compatibility
+                  }}
                   onKeyDown={handleKeyDown}
                   placeholder="12345"
+                  className={errors.zip || errors.zip_code ? 'border-red-500' : ''}
                 />
+                {(errors.zip || errors.zip_code) && <p className="text-red-500 text-sm mt-1">{errors.zip || errors.zip_code}</p>}
               </div>
 
               <div>
@@ -1359,10 +1496,10 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <motion.button
                     type="submit"
                     disabled={isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0}
-                    className={`px-8 py-3 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 ${
+                    className={`px-8 py-3 bg-gradient-to-r text-white rounded-lg font-semibold shadow-lg transition-all duration-200 flex items-center gap-2 ${
                       isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:from-emerald-700 hover:to-blue-700'
+                        ? 'from-gray-400 to-gray-500 cursor-not-allowed opacity-75'
+                        : 'from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 hover:shadow-xl'
                     }`}
                     whileHover={!(isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0) ? { scale: 1.02 } : {}}
                     whileTap={!(isLoading || Object.keys(errors).length > 0 || fileValidationErrors.length > 0) ? { scale: 0.98 } : {}}

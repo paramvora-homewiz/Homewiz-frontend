@@ -174,20 +174,18 @@ export interface Database {
       tenants: {
         Row: {
           tenant_id: string
-          first_name: string
-          last_name: string
-          email: string
+          tenant_name: string
+          tenant_email: string
           phone: string | null
-          date_of_birth: string | null
           tenant_nationality: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
-          emergency_contact_relationship: string | null
+          emergency_contact_relation: string | null
           building_id: string | null
           room_id: string | null
+          room_number: string | null
           lease_start_date: string | null
           lease_end_date: string | null
-          rent_amount: number | null
           deposit_amount: number | null
           payment_status: string | null
           rent_payment_method: string | null
@@ -197,29 +195,32 @@ export interface Database {
           special_requests: string | null
           communication_preferences: string | null
           payment_reminders_enabled: boolean
+          last_payment_date: string | null
+          next_payment_date: string | null
           has_pets: boolean
+          pet_details: string | null
           has_vehicles: boolean
+          vehicle_details: string | null
           has_renters_insurance: boolean
+          insurance_details: string | null
           status: string
           created_at: string
-          updated_at: string
+          last_modified: string
         }
         Insert: {
           tenant_id?: string
-          first_name: string
-          last_name: string
-          email: string
+          tenant_name: string
+          tenant_email: string
           phone?: string | null
-          date_of_birth?: string | null
           tenant_nationality?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
-          emergency_contact_relationship?: string | null
+          emergency_contact_relation?: string | null
           building_id?: string | null
           room_id?: string | null
+          room_number?: string | null
           lease_start_date?: string | null
           lease_end_date?: string | null
-          rent_amount?: number | null
           deposit_amount?: number | null
           payment_status?: string | null
           rent_payment_method?: string | null
@@ -229,29 +230,32 @@ export interface Database {
           special_requests?: string | null
           communication_preferences?: string | null
           payment_reminders_enabled?: boolean
+          last_payment_date?: string | null
+          next_payment_date?: string | null
           has_pets?: boolean
+          pet_details?: string | null
           has_vehicles?: boolean
+          vehicle_details?: string | null
           has_renters_insurance?: boolean
+          insurance_details?: string | null
           status?: string
           created_at?: string
-          updated_at?: string
+          last_modified?: string
         }
         Update: {
           tenant_id?: string
-          first_name?: string
-          last_name?: string
-          email?: string
+          tenant_name?: string
+          tenant_email?: string
           phone?: string | null
-          date_of_birth?: string | null
           tenant_nationality?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
-          emergency_contact_relationship?: string | null
+          emergency_contact_relation?: string | null
           building_id?: string | null
           room_id?: string | null
+          room_number?: string | null
           lease_start_date?: string | null
           lease_end_date?: string | null
-          rent_amount?: number | null
           deposit_amount?: number | null
           payment_status?: string | null
           rent_payment_method?: string | null
@@ -261,12 +265,17 @@ export interface Database {
           special_requests?: string | null
           communication_preferences?: string | null
           payment_reminders_enabled?: boolean
+          last_payment_date?: string | null
+          next_payment_date?: string | null
           has_pets?: boolean
+          pet_details?: string | null
           has_vehicles?: boolean
+          vehicle_details?: string | null
           has_renters_insurance?: boolean
+          insurance_details?: string | null
           status?: string
           created_at?: string
-          updated_at?: string
+          last_modified?: string
         }
         Relationships: [
           {

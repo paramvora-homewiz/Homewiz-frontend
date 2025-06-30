@@ -39,9 +39,9 @@ function TenantFormContent() {
         // Show enhanced success message
         showFormSuccessMessage('tenant', 'saved')
 
-        // Navigate to the next form in the workflow
-        const nextUrl = getForwardNavigationUrl('tenant')
-        router.push(nextUrl)
+        // Navigate back to forms dashboard (consistent with building and room form behavior)
+        console.log('Navigating back to forms dashboard')
+        router.push('/forms')
       } else {
         throw new Error(result.error?.message || 'Failed to create tenant')
       }

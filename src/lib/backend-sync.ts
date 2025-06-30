@@ -21,7 +21,7 @@ export const BACKEND_ENUMS = {
 // Required Fields Mapping (Backend requirements)
 export const REQUIRED_FIELDS = {
   OPERATOR: ['name', 'email'] as const,
-  BUILDING: ['building_id', 'building_name'] as const,
+  BUILDING: ['building_id', 'building_name', 'street', 'city', 'state', 'zip'] as const,
   ROOM: [
     'room_number',
     'building_id',
@@ -115,14 +115,16 @@ export function transformBuildingDataForBackend(frontendData: any) {
       [frontendData.street, frontendData.area, frontendData.city, frontendData.state, frontendData.zip]
         .filter(Boolean).join(', '),
 
-    // Individual address fields
-    street: frontendData.street,
+    // Individual address fields (match database schema)
+    street: frontendData.address || frontendData.street,
     area: frontendData.area,
     city: frontendData.city,
     state: frontendData.state,
-    zip: frontendData.zip,
+    zip: frontendData.zip_code || frontendData.zip,
 
-    // Basic building info
+    // Basic building info (remove building_type as it doesn't exist in database)
+    year_built: frontendData.year_built,
+    last_renovation: frontendData.last_renovation,
     operator_id: frontendData.operator_id,
     available: frontendData.available ?? true,
     floors: frontendData.floors,
@@ -233,6 +235,14 @@ export function validateEmailFormat(email: string): boolean {
   return emailRegex.test(email)
 }
 
+// Validate phone number format
+export function validatePhoneFormat(phone: string): boolean {
+  // Remove all non-digit characters for validation
+  const digitsOnly = phone.replace(/\D/g, '')
+  // Accept phone numbers with 10-15 digits (international format)
+  return digitsOnly.length >= 10 && digitsOnly.length <= 15
+}
+
 // Validate date is in proper ISO format (YYYY-MM-DD)
 export function validateDateFormat(dateString: string): boolean {
   const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
@@ -288,46 +298,107 @@ export interface ValidationResult {
 
 export function validateTenantFormData(data: any): ValidationResult {
   const errors: Record<string, string> = {}
-  
+
   // Transform data first
   const backendData = transformTenantDataForBackend(data)
-  
-  // Check required fields
-  const missingRequired = validateRequiredFields(backendData, 'TENANT')
-  
+
+  // Check required fields and map them back to frontend field names
+  const missingRequiredBackend = validateRequiredFields(backendData, 'TENANT')
+  const missingRequired = missingRequiredBackend.map(field => {
+    // Map backend field names back to frontend field names for error display
+    switch (field) {
+      case 'tenant_name': return 'tenant_name'
+      case 'tenant_email': return 'tenant_email'
+      case 'tenant_nationality': return 'tenant_nationality'
+      case 'room_id': return 'room_id'
+      case 'building_id': return 'building_id'
+      case 'operator_id': return 'operator_id'
+      case 'booking_type': return 'booking_type'
+      case 'lease_start_date': return 'lease_start_date'
+      case 'lease_end_date': return 'lease_end_date'
+      case 'deposit_amount': return 'deposit_amount'
+      default: return field
+    }
+  })
+
+  // Add required field errors to the errors object
+  missingRequired.forEach(field => {
+    switch (field) {
+      case 'tenant_name':
+        errors.tenant_name = 'Full name is required'
+        break
+      case 'tenant_email':
+        errors.tenant_email = 'Email address is required'
+        break
+      case 'tenant_nationality':
+        errors.tenant_nationality = 'Nationality is required'
+        break
+      case 'room_id':
+        errors.room_id = 'Room selection is required'
+        break
+      case 'building_id':
+        errors.building_id = 'Building selection is required'
+        break
+      case 'operator_id':
+        errors.operator_id = 'Operator selection is required'
+        break
+      case 'booking_type':
+        errors.booking_type = 'Booking type is required'
+        break
+      case 'lease_start_date':
+        errors.lease_start_date = 'Lease start date is required'
+        break
+      case 'lease_end_date':
+        errors.lease_end_date = 'Lease end date is required'
+        break
+      case 'deposit_amount':
+        errors.deposit_amount = 'Deposit amount is required'
+        break
+    }
+  })
+
   // Validate email format
   if (backendData.tenant_email && !validateEmailFormat(backendData.tenant_email)) {
-    errors.email = 'Invalid email format'
+    errors.tenant_email = 'Please enter a valid email address'
   }
-  
+
   // Validate enum values
   if (backendData.booking_type && !validateEnum(backendData.booking_type, 'BOOKING_TYPES')) {
     errors.booking_type = 'Invalid booking type'
   }
-  
+
   if (backendData.status && !validateEnum(backendData.status, 'TENANT_STATUS')) {
     errors.status = 'Invalid tenant status'
   }
-  
+
   // Validate dates
   if (backendData.lease_start_date && !validateDateFormat(backendData.lease_start_date)) {
     errors.lease_start_date = 'Invalid date format (use YYYY-MM-DD)'
   }
-  
+
   if (backendData.lease_end_date && !validateDateFormat(backendData.lease_end_date)) {
     errors.lease_end_date = 'Invalid date format (use YYYY-MM-DD)'
   }
-  
-  if (backendData.lease_start_date && backendData.lease_end_date && 
+
+  if (backendData.lease_start_date && backendData.lease_end_date &&
       !validateLeaseDates(backendData.lease_start_date, backendData.lease_end_date)) {
-    errors.lease_dates = 'Lease end date must be after start date'
+    errors.lease_end_date = 'Lease end date must be after start date'
   }
-  
+
   // Validate deposit amount
-  if (backendData.deposit_amount && backendData.deposit_amount < 0) {
-    errors.deposit_amount = 'Deposit amount must be positive'
+  if (backendData.deposit_amount !== undefined && backendData.deposit_amount !== null) {
+    if (isNaN(Number(backendData.deposit_amount))) {
+      errors.deposit_amount = 'Deposit amount must be a valid number'
+    } else if (Number(backendData.deposit_amount) < 0) {
+      errors.deposit_amount = 'Deposit amount must be positive'
+    }
   }
-  
+
+  // Validate phone number format if provided
+  if (backendData.phone && !validatePhoneFormat(backendData.phone)) {
+    errors.phone = 'Please enter a valid phone number'
+  }
+
   return {
     isValid: missingRequired.length === 0 && Object.keys(errors).length === 0,
     errors,

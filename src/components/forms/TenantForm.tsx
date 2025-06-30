@@ -133,11 +133,41 @@ const PAYMENT_METHODS = [
   { value: 'ONLINE_PAYMENT', label: 'Online Payment', icon: <CreditCard className="w-4 h-4" /> }
 ]
 
-// Common nationalities for auto-complete
+// Common nationalities for auto-complete - Expanded list
 const COMMON_NATIONALITIES = [
-  'American', 'Canadian', 'British', 'Australian', 'German', 'French', 'Italian', 'Spanish',
-  'Japanese', 'Chinese', 'Indian', 'Brazilian', 'Mexican', 'Dutch', 'Swedish', 'Norwegian'
-]
+  // North America
+  'American', 'Canadian', 'Mexican',
+
+  // Europe
+  'British', 'German', 'French', 'Italian', 'Spanish', 'Dutch', 'Swedish', 'Norwegian',
+  'Danish', 'Finnish', 'Swiss', 'Austrian', 'Belgian', 'Portuguese', 'Irish', 'Polish',
+  'Czech', 'Hungarian', 'Romanian', 'Bulgarian', 'Croatian', 'Serbian', 'Slovenian',
+  'Slovak', 'Estonian', 'Latvian', 'Lithuanian', 'Greek', 'Turkish', 'Russian', 'Ukrainian',
+
+  // Asia
+  'Chinese', 'Japanese', 'Korean', 'Indian', 'Pakistani', 'Bangladeshi', 'Sri Lankan',
+  'Thai', 'Vietnamese', 'Filipino', 'Indonesian', 'Malaysian', 'Singaporean', 'Taiwanese',
+  'Hong Kong', 'Nepalese', 'Burmese', 'Cambodian', 'Laotian', 'Mongolian', 'Afghan',
+
+  // Middle East
+  'Iranian', 'Iraqi', 'Israeli', 'Lebanese', 'Syrian', 'Jordanian', 'Saudi Arabian',
+  'Emirati', 'Kuwaiti', 'Qatari', 'Bahraini', 'Omani', 'Yemeni',
+
+  // Africa
+  'South African', 'Nigerian', 'Kenyan', 'Ethiopian', 'Egyptian', 'Moroccan', 'Tunisian',
+  'Algerian', 'Ghanaian', 'Ugandan', 'Tanzanian', 'Zimbabwean', 'Botswanan', 'Namibian',
+
+  // Oceania
+  'Australian', 'New Zealand', 'Fijian', 'Papua New Guinean',
+
+  // South America
+  'Brazilian', 'Argentinian', 'Chilean', 'Colombian', 'Peruvian', 'Venezuelan', 'Ecuadorian',
+  'Uruguayan', 'Paraguayan', 'Bolivian', 'Guyanese', 'Surinamese',
+
+  // Central America & Caribbean
+  'Guatemalan', 'Costa Rican', 'Panamanian', 'Honduran', 'Nicaraguan', 'Belizean',
+  'Jamaican', 'Cuban', 'Dominican', 'Haitian', 'Puerto Rican', 'Trinidadian', 'Barbadian'
+].sort()
 
 // Emergency contact relationships
 const EMERGENCY_RELATIONSHIPS = [
@@ -148,6 +178,15 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
   const [formData, setFormData] = useState<TenantFormData>({
     tenant_name: '',
     tenant_email: '',
+    tenant_nationality: '',
+    room_id: '',
+    room_number: '',
+    building_id: '',
+    operator_id: undefined,
+    booking_type: '',
+    lease_start_date: '',
+    lease_end_date: '',
+    deposit_amount: undefined,
     status: 'ACTIVE',
     payment_reminders_enabled: true,
     communication_preferences: 'EMAIL',
@@ -197,38 +236,54 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
     }
   }, [formData.room_id, rooms])
 
-  // Validation function (doesn't automatically set errors)
+  // Validation function for real-time field validation
   const validateField = (fieldName: string, value: any): string | null => {
+    // Create a temporary form data object with the current field value
+    const tempFormData = { ...formData, [fieldName]: value }
+
     // Use comprehensive backend validation
-    const validationResult = validateTenantFormData(formData)
-    
+    const validationResult = validateTenantFormData(tempFormData)
+
     // Return specific field error if exists
     if (validationResult.errors[fieldName]) {
       return validationResult.errors[fieldName]
     }
-    
-    // Additional real-time validations for UX
+
+    // Additional real-time validations for better UX
     switch (fieldName) {
       case 'tenant_name':
-        if (!value?.trim()) return 'Tenant name is required'
+        if (!value?.trim()) return 'Full name is required'
+        if (value?.trim().length < 2) return 'Name must be at least 2 characters'
         break
       case 'tenant_email':
-        if (!value?.trim()) return 'Email is required'
+        if (!value?.trim()) return 'Email address is required'
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Please enter a valid email address'
         break
+      case 'tenant_nationality':
+        if (!value?.trim()) return 'Nationality is required'
+        break
       case 'phone':
-        if (value && !/^\+?[\d\s\-\(\)]+$/.test(value)) return 'Please enter a valid phone number'
+        if (value && value.trim()) {
+          const digitsOnly = value.replace(/\D/g, '')
+          if (digitsOnly.length < 10) return 'Phone number must be at least 10 digits'
+          if (digitsOnly.length > 15) return 'Phone number is too long'
+        }
         break
       case 'deposit_amount':
-        if (value && value < 0) return 'Deposit amount must be positive'
-        if (!value && formData.lease_start_date) return 'Deposit amount is required'
+        if (value !== undefined && value !== null && value !== '') {
+          if (isNaN(Number(value))) return 'Deposit amount must be a valid number'
+          if (Number(value) < 0) return 'Deposit amount must be positive'
+        }
         break
       case 'lease_start_date':
-        if (!value && formData.lease_end_date) return 'Lease start date is required'
+        if (value && formData.lease_end_date) {
+          const startDate = new Date(value)
+          const endDate = new Date(formData.lease_end_date)
+          if (startDate >= endDate) return 'Start date must be before end date'
+        }
         break
       case 'lease_end_date':
-        if (!value && formData.lease_start_date) return 'Lease end date is required'
-        if (formData.lease_start_date && value) {
+        if (value && formData.lease_start_date) {
           const startDate = new Date(formData.lease_start_date)
           const endDate = new Date(value)
           if (endDate <= startDate) return 'End date must be after start date'
@@ -301,7 +356,7 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
 
     // Comprehensive validation using backend-sync utilities
     const validationResult = validateAllFields()
-    
+
     // Set form errors
     setErrors(validationResult.errors)
 
@@ -309,26 +364,41 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
     const allFieldNames = Object.keys(formData)
     setTouchedFields(new Set(allFieldNames))
 
-    // Show missing required fields error
-    if (validationResult.missingRequired.length > 0) {
-      const missingFieldNames = validationResult.missingRequired.join(', ')
-      import('@/lib/error-handler').then(({ showWarningMessage }) => {
-        showWarningMessage(
-          'Required Fields Missing',
-          `Please complete all required fields: ${missingFieldNames}`,
-          { duration: 6000 }
-        )
-      })
-      return
-    }
-
-    // Show validation errors
+    // Show validation errors with better user feedback
     if (!validationResult.isValid) {
-      const errorMessages = Object.values(validationResult.errors).join('\n')
+      // Debug logging to help identify the issue
+      console.log('🔍 Form Validation Debug Info:')
+      console.log('Form Data:', formData)
+      console.log('Validation Errors:', validationResult.errors)
+      console.log('Missing Required Fields:', validationResult.missingRequired)
+      console.log('Transformed Backend Data:', transformTenantDataForBackend(formData))
+
+      // Focus on the first field with an error
+      const firstErrorField = Object.keys(validationResult.errors)[0]
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`) as HTMLElement
+        if (element) {
+          element.focus()
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }
+
+      // Show comprehensive error message with specific field details
+      const errorCount = Object.keys(validationResult.errors).length
+      const missingCount = validationResult.missingRequired.length
+
+      let errorMessage = ''
+      if (missingCount > 0) {
+        errorMessage += `${missingCount} required field${missingCount > 1 ? 's' : ''} missing: ${validationResult.missingRequired.join(', ')}. `
+      }
+      if (errorCount > 0) {
+        errorMessage += `${errorCount} validation error${errorCount > 1 ? 's' : ''} found.`
+      }
+
       import('@/lib/error-handler').then(({ showWarningMessage }) => {
         showWarningMessage(
-          'Validation Errors',
-          `Please fix the following errors:\n${errorMessages}`,
+          'Form Validation Failed',
+          errorMessage + ' Please review the highlighted fields and correct the errors.',
           { duration: 8000 }
         )
       })
@@ -338,14 +408,23 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
     try {
       // Transform data to match backend expectations
       const backendData = transformTenantDataForBackend(formData)
-      
+
       // Ensure required IDs are generated if missing
       if (!backendData.tenant_id) {
         backendData.tenant_id = `TNT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       }
 
       console.log('Submitting transformed tenant data:', backendData)
-      
+
+      // Show success feedback
+      import('@/lib/error-handler').then(({ showSuccessMessage }) => {
+        showSuccessMessage(
+          'Submitting Form',
+          'Processing tenant information...',
+          { duration: 3000 }
+        )
+      })
+
       await onSubmit(backendData)
       
     } catch (error) {
@@ -376,43 +455,50 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <EnhancedInput
           label="Full Name"
-          value={formData.tenant_name}
+          name="tenant_name"
+          value={formData.tenant_name || ''}
           onChange={(value) => handleInputChange('tenant_name', value)}
           onBlur={() => handleFieldBlur('tenant_name')}
           placeholder="Enter tenant's full name"
-          error={errors.tenant_name}
+          error={touchedFields.has('tenant_name') ? errors.tenant_name : undefined}
           icon={<UserCheck className="w-4 h-4" />}
           required
         />
 
         <EnhancedInput
           label="Email Address"
+          name="tenant_email"
           type="email"
-          value={formData.tenant_email}
+          value={formData.tenant_email || ''}
           onChange={(value) => handleInputChange('tenant_email', value)}
           onBlur={() => handleFieldBlur('tenant_email')}
           placeholder="tenant@example.com"
-          error={errors.tenant_email}
+          error={touchedFields.has('tenant_email') ? errors.tenant_email : undefined}
           icon={<Mail className="w-4 h-4" />}
           required
         />
 
         <EnhancedInput
           label="Phone Number"
+          name="phone"
           value={formData.phone || ''}
           onChange={(value) => handleInputChange('phone', value)}
           onBlur={() => handleFieldBlur('phone')}
           placeholder="+1 (555) 123-4567"
-          error={errors.phone}
+          error={touchedFields.has('phone') ? errors.phone : undefined}
           icon={<Phone className="w-4 h-4" />}
         />
 
         <EnhancedInput
           label="Nationality"
+          name="tenant_nationality"
           value={formData.tenant_nationality || ''}
           onChange={(value) => handleInputChange('tenant_nationality', value)}
+          onBlur={() => handleFieldBlur('tenant_nationality')}
           placeholder="e.g., American, Canadian"
+          error={touchedFields.has('tenant_nationality') ? errors.tenant_nationality : undefined}
           suggestions={COMMON_NATIONALITIES}
+          required
         />
       </div>
 
@@ -500,13 +586,22 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
         <EnhancedSelect
           label="Building"
           value={formData.building_id || ''}
-          onChange={(value) => handleInputChange('building_id', value)}
+          onChange={(value) => {
+            handleInputChange('building_id', value)
+            // Clear room selection when building changes
+            if (formData.room_id) {
+              handleInputChange('room_id', '')
+            }
+          }}
+          onBlur={() => handleFieldBlur('building_id')}
           options={buildings.map(building => ({
             value: building.building_id,
             label: building.building_name,
             icon: <Building className="w-4 h-4" />
           }))}
           placeholder="Select a building"
+          error={touchedFields.has('building_id') ? errors.building_id : undefined}
+          required
           searchable
         />
 
@@ -514,19 +609,24 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
           label="Room"
           value={formData.room_id || ''}
           onChange={(value) => handleInputChange('room_id', value)}
+          onBlur={() => handleFieldBlur('room_id')}
           options={availableRooms.map(room => ({
             value: room.room_id,
             label: `Room ${room.room_number}${room.private_room_rent ? ` - $${room.private_room_rent}/month` : ''}`,
             icon: <Home className="w-4 h-4" />
           }))}
-          placeholder="Select a room"
+          placeholder={formData.building_id ? "Select a room" : "Select a building first"}
+          error={touchedFields.has('room_id') ? errors.room_id : undefined}
+          required
           searchable
+          disabled={!formData.building_id}
         />
 
         <EnhancedSelect
           label="Assigned Operator"
           value={formData.operator_id?.toString() || ''}
           onChange={(value) => handleInputChange('operator_id', value ? parseInt(value) : undefined)}
+          onBlur={() => handleFieldBlur('operator_id')}
           options={operators
             .filter(op => op.operator_type === 'LEASING_AGENT' || op.operator_type === 'BUILDING_MANAGER')
             .map(operator => ({
@@ -535,6 +635,8 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
               icon: <UserCheck className="w-4 h-4" />
             }))}
           placeholder="Select an operator"
+          error={touchedFields.has('operator_id') ? errors.operator_id : undefined}
+          required
           searchable
         />
 
@@ -542,8 +644,11 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
           label="Booking Type"
           value={formData.booking_type || ''}
           onChange={(value) => handleInputChange('booking_type', value)}
+          onBlur={() => handleFieldBlur('booking_type')}
           options={BOOKING_TYPES}
           placeholder="Select booking type"
+          error={touchedFields.has('booking_type') ? errors.booking_type : undefined}
+          required
         />
       </div>
 
@@ -586,29 +691,39 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <EnhancedInput
           label="Lease Start Date"
+          name="lease_start_date"
           type="date"
           value={formData.lease_start_date || ''}
           onChange={(value) => handleInputChange('lease_start_date', value)}
+          onBlur={() => handleFieldBlur('lease_start_date')}
+          error={touchedFields.has('lease_start_date') ? errors.lease_start_date : undefined}
           icon={<Calendar className="w-4 h-4" />}
+          required
         />
 
         <EnhancedInput
           label="Lease End Date"
+          name="lease_end_date"
           type="date"
           value={formData.lease_end_date || ''}
           onChange={(value) => handleInputChange('lease_end_date', value)}
-          error={errors.lease_end_date}
+          onBlur={() => handleFieldBlur('lease_end_date')}
+          error={touchedFields.has('lease_end_date') ? errors.lease_end_date : undefined}
           icon={<Calendar className="w-4 h-4" />}
+          required
         />
 
         <EnhancedInput
           label="Security Deposit ($)"
+          name="deposit_amount"
           type="number"
           value={formData.deposit_amount?.toString() || ''}
           onChange={(value) => handleInputChange('deposit_amount', value ? parseFloat(value) : undefined)}
+          onBlur={() => handleFieldBlur('deposit_amount')}
           placeholder="0.00"
-          error={errors.deposit_amount}
+          error={touchedFields.has('deposit_amount') ? errors.deposit_amount : undefined}
           icon={<DollarSign className="w-4 h-4" />}
+          required
         />
 
         <EnhancedInput
