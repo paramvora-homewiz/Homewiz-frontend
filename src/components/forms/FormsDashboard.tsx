@@ -134,8 +134,7 @@ function FormsDashboardContent() {
             await formData.refreshBuildings()
             break
           case 'room':
-            // For now, use API service for rooms as form integration might not exist
-            result = await apiService.createRoom(data)
+            result = await formIntegration.room.submitRoom(data)
             await formData.refreshRooms()
             break
           case 'tenant':
@@ -146,8 +145,7 @@ function FormsDashboardContent() {
             ])
             break
           case 'lead':
-            // For now, use API service for leads as form integration might not exist
-            result = await apiService.createLead(data)
+            result = await formIntegration.lead.submitLead(data)
             await formData.refreshRooms()
             break
         }

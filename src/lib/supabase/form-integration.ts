@@ -12,9 +12,10 @@
 import { databaseService } from './database'
 import { errorHandler, handleDatabaseError } from './error-handler'
 import { realtimeManager } from './realtime'
-import { 
-  TenantInsert, TenantUpdate, 
+import {
+  TenantInsert, TenantUpdate,
   BuildingInsert, BuildingUpdate,
+  RoomInsert, RoomUpdate,
   OperatorInsert, OperatorUpdate,
   LeadInsert, LeadUpdate
 } from './types'
@@ -335,6 +336,286 @@ export class BuildingFormIntegration {
 }
 
 /**
+ * Room Form Integration
+ */
+export class RoomFormIntegration {
+  /**
+   * Submit room form data
+   */
+  static async submitRoom(formData: any): Promise<FormSubmissionResult> {
+    try {
+      const validationResult = this.validateRoomData(formData)
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          validationErrors: validationResult.errors,
+          message: 'Please correct the validation errors and try again.'
+        }
+      }
+
+      const roomData: RoomInsert = this.transformRoomData(formData)
+      const result = await databaseService.rooms.create(roomData)
+
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data,
+          message: 'Room created successfully!'
+        }
+      } else {
+        const enhancedError = handleDatabaseError(result.error, 'room_creation')
+        return {
+          success: false,
+          error: enhancedError.userMessage,
+          message: 'Failed to create room. Please try again.'
+        }
+      }
+    } catch (error) {
+      const enhancedError = handleDatabaseError(error, 'room_form_submission')
+      return {
+        success: false,
+        error: enhancedError.userMessage,
+        message: 'An unexpected error occurred. Please try again.'
+      }
+    }
+  }
+
+  /**
+   * Update room data
+   */
+  static async updateRoom(roomId: string, formData: any): Promise<FormSubmissionResult> {
+    try {
+      const validationResult = this.validateRoomData(formData, true)
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          validationErrors: validationResult.errors
+        }
+      }
+
+      const roomData: RoomUpdate = this.transformRoomData(formData, true)
+      const result = await databaseService.rooms.update(roomId, roomData)
+
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data,
+          message: 'Room updated successfully!'
+        }
+      } else {
+        const enhancedError = handleDatabaseError(result.error, 'room_update')
+        return {
+          success: false,
+          error: enhancedError.userMessage
+        }
+      }
+    } catch (error) {
+      const enhancedError = handleDatabaseError(error, 'room_form_update')
+      return {
+        success: false,
+        error: enhancedError.userMessage
+      }
+    }
+  }
+
+  /**
+   * Validate room form data
+   */
+  private static validateRoomData(formData: any, isUpdate = false): { isValid: boolean; errors: Record<string, string> } {
+    const errors: Record<string, string> = {}
+
+    // Required fields validation
+    if (!isUpdate && !formData.room_number?.trim()) {
+      errors.room_number = 'Room number is required'
+    }
+
+    if (!formData.building_id?.trim()) {
+      errors.building_id = 'Building selection is required'
+    }
+
+    // Validate numeric fields
+    if (formData.private_room_rent && (isNaN(formData.private_room_rent) || formData.private_room_rent < 0)) {
+      errors.private_room_rent = 'Private room rent must be a valid positive number'
+    }
+
+    if (formData.shared_room_rent_2 && (isNaN(formData.shared_room_rent_2) || formData.shared_room_rent_2 < 0)) {
+      errors.shared_room_rent_2 = 'Shared room rent must be a valid positive number'
+    }
+
+    if (formData.bed_count && (isNaN(formData.bed_count) || formData.bed_count < 1)) {
+      errors.bed_count = 'Bed count must be at least 1'
+    }
+
+    if (formData.maximum_people_in_room && (isNaN(formData.maximum_people_in_room) || formData.maximum_people_in_room < 1)) {
+      errors.maximum_people_in_room = 'Maximum people must be at least 1'
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    }
+  }
+
+  /**
+   * Transform room form data to database format
+   */
+  private static transformRoomData(formData: any, isUpdate = false): RoomInsert | RoomUpdate {
+    const baseData = {
+      room_number: formData.room_number?.trim(),
+      building_id: formData.building_id?.trim(),
+      ready_to_rent: formData.ready_to_rent !== undefined ? Boolean(formData.ready_to_rent) : true,
+      status: formData.status || 'AVAILABLE',
+      booked_from: formData.booked_from || null,
+      booked_till: formData.booked_till || null,
+      active_tenants: formData.active_tenants ? parseInt(formData.active_tenants) : 0,
+      maximum_people_in_room: formData.maximum_people_in_room ? parseInt(formData.maximum_people_in_room) : 1,
+      available_from: formData.available_from || null,
+      private_room_rent: formData.private_room_rent ? parseFloat(formData.private_room_rent) : null,
+      shared_room_rent_2: formData.shared_room_rent_2 ? parseFloat(formData.shared_room_rent_2) : null,
+      bed_count: formData.bed_count ? parseInt(formData.bed_count) : 1,
+      bed_type: formData.bed_type?.trim() || null,
+      bed_size: formData.bed_size?.trim() || null,
+      bathroom_type: formData.bathroom_type?.trim() || null,
+      sq_footage: formData.sq_footage ? parseInt(formData.sq_footage) : null, // Integer in database
+      view: formData.view?.trim() || null,
+      noise_level: formData.noise_level?.trim() || null,
+      sunlight: formData.sunlight?.trim() || null,
+      furnished: formData.furnished !== undefined ? Boolean(formData.furnished) : false,
+      furniture_details: formData.furniture_details?.trim() || null,
+      last_renovation_date: formData.last_renovation_date || null,
+      public_notes: formData.public_notes?.trim() || null,
+      internal_notes: formData.internal_notes?.trim() || null,
+      virtual_tour_url: formData.virtual_tour_url?.trim() || null,
+      additional_features: formData.additional_features?.trim() || null,
+      room_images: formData.room_images || null,
+      // Additional fields from database schema
+      floor_number: formData.floor_number ? parseInt(formData.floor_number) : null,
+      current_booking_types: formData.current_booking_types?.trim() || null,
+      last_check: formData.last_check || null,
+      last_check_by: formData.last_check_by ? parseInt(formData.last_check_by) : null,
+      mini_fridge: formData.mini_fridge !== undefined ? Boolean(formData.mini_fridge) : false,
+      sink: formData.sink !== undefined ? Boolean(formData.sink) : false,
+      bedding_provided: formData.bedding_provided !== undefined ? Boolean(formData.bedding_provided) : false,
+      work_desk: formData.work_desk !== undefined ? Boolean(formData.work_desk) : false,
+      work_chair: formData.work_chair !== undefined ? Boolean(formData.work_chair) : false,
+      heating: formData.heating !== undefined ? Boolean(formData.heating) : false,
+      air_conditioning: formData.air_conditioning !== undefined ? Boolean(formData.air_conditioning) : false,
+      cable_tv: formData.cable_tv !== undefined ? Boolean(formData.cable_tv) : false,
+      room_storage: formData.room_storage?.trim() || null
+    }
+
+    if (!isUpdate) {
+      // For new rooms, include room_id
+      return {
+        room_id: formData.room_id || `ROOM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...baseData
+      } as RoomInsert
+    }
+
+    return baseData as RoomUpdate
+  }
+}
+
+/**
+ * Lead Form Integration
+ */
+export class LeadFormIntegration {
+  /**
+   * Submit lead form data
+   */
+  static async submitLead(formData: any): Promise<FormSubmissionResult> {
+    try {
+      const validationResult = this.validateLeadData(formData)
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          validationErrors: validationResult.errors,
+          message: 'Please correct the validation errors and try again.'
+        }
+      }
+
+      const leadData: LeadInsert = this.transformLeadData(formData)
+      const result = await databaseService.leads.create(leadData)
+
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data,
+          message: 'Lead created successfully!'
+        }
+      } else {
+        const enhancedError = handleDatabaseError(result.error, 'lead_creation')
+        return {
+          success: false,
+          error: enhancedError.userMessage,
+          message: 'Failed to create lead. Please try again.'
+        }
+      }
+    } catch (error) {
+      const enhancedError = handleDatabaseError(error, 'lead_form_submission')
+      return {
+        success: false,
+        error: enhancedError.userMessage,
+        message: 'An unexpected error occurred. Please try again.'
+      }
+    }
+  }
+
+  /**
+   * Validate lead form data
+   */
+  private static validateLeadData(formData: any): { isValid: boolean; errors: Record<string, string> } {
+    const errors: Record<string, string> = {}
+
+    // Required fields validation
+    if (!formData.email?.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    // Validate numeric fields
+    if (formData.lead_score && (isNaN(formData.lead_score) || formData.lead_score < 0 || formData.lead_score > 100)) {
+      errors.lead_score = 'Lead score must be between 0 and 100'
+    }
+
+    if (formData.interaction_count && (isNaN(formData.interaction_count) || formData.interaction_count < 0)) {
+      errors.interaction_count = 'Interaction count must be a positive number'
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    }
+  }
+
+  /**
+   * Transform lead form data to database format
+   */
+  private static transformLeadData(formData: any): LeadInsert {
+    return {
+      lead_id: formData.lead_id || `LEAD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      email: formData.email?.trim().toLowerCase(),
+      status: formData.status || 'EXPLORING',
+      interaction_count: formData.interaction_count ? parseInt(formData.interaction_count) : 0,
+      lead_score: formData.lead_score ? parseInt(formData.lead_score) : 0,
+      preferred_communication: formData.preferred_communication || 'EMAIL',
+      rooms_interested: formData.rooms_interested ? JSON.stringify(formData.rooms_interested) : null,
+      showing_dates: formData.showing_dates ? JSON.stringify(formData.showing_dates) : null,
+      selected_room_id: formData.selected_room_id || null,
+      planned_move_in: formData.planned_move_in || null,
+      planned_move_out: formData.planned_move_out || null,
+      visa_status: formData.visa_status?.trim() || null,
+      notes: formData.notes?.trim() || null,
+      source: formData.source?.trim() || null,
+      budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
+      budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null,
+      created_at: new Date().toISOString()
+    }
+  }
+}
+
+/**
  * Operator Form Integration
  */
 export class OperatorFormIntegration {
@@ -429,5 +710,7 @@ export class OperatorFormIntegration {
 export const formIntegration = {
   tenant: TenantFormIntegration,
   building: BuildingFormIntegration,
+  room: RoomFormIntegration,
+  lead: LeadFormIntegration,
   operator: OperatorFormIntegration
 }

@@ -6,7 +6,8 @@ import { FormStepWrapper } from '../../../components/ui/FormStepWrapper'
 import { BuildingFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { apiService } from '../../../services/apiService'
+import { databaseService } from '../../../lib/supabase/database'
+import { transformBuildingDataForBackend } from '../../../lib/backend-sync'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getForwardNavigationUrl } from '../../../lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '../../../lib/error-handler'
@@ -19,17 +20,22 @@ function BuildingFormContent() {
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      console.log('Submitting building:', data instanceof FormData ? 'FormData with files' : 'JSON data', data)
+      console.log('Submitting building to Supabase:', data)
 
-      // Make actual API call to save the building
-      const response = await apiService.createBuilding(data)
-      console.log('API Response:', response)
+      // Transform data for database
+      const transformedData = transformBuildingDataForBackend(data)
 
-      // Handle different response formats
-      // If response has success property, use it; otherwise assume success if no error was thrown
-      const isSuccess = response?.success !== undefined ? response.success : true
+      // Generate building_id if not present
+      if (!transformedData.building_id) {
+        transformedData.building_id = `BLD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
 
-      if (isSuccess) {
+      // Save building to Supabase database
+      const result = await databaseService.buildings.create(transformedData)
+
+      if (result.success) {
+        console.log('✅ Building created successfully:', result.data)
+
         // Show enhanced success message
         showFormSuccessMessage('building', 'saved')
 
@@ -49,44 +55,17 @@ function BuildingFormContent() {
           window.location.href = cleanUrl
         }, 1000) // Give time for success message to show
       } else {
-        throw new Error(response?.message || 'Failed to save building')
+        throw new Error(result.error?.message || 'Failed to save building')
       }
 
     } catch (error) {
       console.error('Error saving building:', error)
-
-      // Check if this is a network/API error
-      const isNetworkError = error instanceof Error && (
-        error.message.includes('Failed to fetch') ||
-        error.message.includes('Network') ||
-        error.message.includes('CORS') ||
-        error.message.includes('HTTP 500') ||
-        error.message.includes('HTTP 404')
-      )
-
-      if (isNetworkError) {
-        // For network errors, show a warning but allow proceeding
-        console.warn('Backend API not available, proceeding with form navigation')
-        showFormSuccessMessage('building', 'saved')
-
-        const nextUrl = getForwardNavigationUrl('building')
-        console.log('Navigating to next form (offline mode):', nextUrl)
-
-        // Clear any existing URL parameters and navigate to clean URL
-        const cleanUrl = nextUrl.split('?')[0]
-        setTimeout(() => {
-          console.log('Attempting navigation to (offline mode):', cleanUrl)
-          window.location.href = cleanUrl
-        }, 1000)
-      } else {
-        // For other errors, show the error message
-        handleFormSubmissionError(error, {
-          additionalInfo: {
-            formType: 'building',
-            operation: 'save'
-          }
-        })
-      }
+      handleFormSubmissionError(error, {
+        additionalInfo: {
+          formType: 'building',
+          operation: 'save'
+        }
+      })
     } finally {
       setIsLoading(false)
     }

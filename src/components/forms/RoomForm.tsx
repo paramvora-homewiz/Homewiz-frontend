@@ -21,7 +21,6 @@ import {
 } from '@/lib/backend-sync'
 import { showSuccessMessage, showInfoMessage } from '@/lib/error-handler'
 import { uploadRoomImages } from '@/lib/supabase/storage'
-import { apiService } from '@/services/apiService'
 import {
   Home,
   Save,
@@ -965,14 +964,40 @@ function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, building
   }
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    console.log('🚀 handleSubmit called', {
+      eventType: e.type,
+      target: e.target,
+      currentTarget: e.currentTarget,
+      isSubmitting,
+      isLoading,
+      timestamp: new Date().toISOString()
+    })
+
     e.preventDefault()
     e.stopPropagation()
 
     // Prevent double submission
     if (isSubmitting || isLoading) {
+      console.log('⚠️ Submission blocked - already submitting or loading')
       return
     }
 
+    // Additional check: only allow submission on the last step
+    console.log('🔍 Step debug:', {
+      currentStep,
+      currentStepIndex,
+      isLastStep,
+      totalSteps: FORM_STEPS.length,
+      lastStepIndex: FORM_STEPS.length - 1
+    })
+
+    // Temporarily remove step restriction to show validation errors
+    // if (!isLastStep) {
+    //   console.log('⚠️ Submission blocked - not on last step')
+    //   return
+    // }
+
+    console.log('✅ Proceeding with form submission')
     setIsSubmitting(true)
 
     try {
@@ -1003,17 +1028,26 @@ function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, building
       if (roomPhotos && formData.building_id && createdRoom?.room_id) {
         try {
           console.log(`📸 Uploading ${roomPhotos.length} room images for created room ${createdRoom.room_id}...`)
-          
-          // Use backend API service to upload images
-          const uploadResult = await apiService.uploadRoomImages(createdRoom.room_id, formData.building_id, roomPhotos)
-          
-          if (uploadResult && uploadResult.success) {
-            console.log(`✅ Successfully uploaded ${roomPhotos.length} room images`)
-            console.log('📸 Upload result:', uploadResult)
-            showSuccessMessage('Room images uploaded successfully!')
+
+          // Use Supabase storage to upload images
+          const uploadResults = await uploadRoomImages(formData.building_id, createdRoom.room_id, roomPhotos)
+
+          // Check if any uploads were successful
+          const successfulUploads = uploadResults.filter(result => result.success)
+          const failedUploads = uploadResults.filter(result => !result.success)
+
+          if (successfulUploads.length > 0) {
+            console.log(`✅ Successfully uploaded ${successfulUploads.length} room images`)
+            console.log('📸 Upload results:', successfulUploads)
+
+            if (failedUploads.length > 0) {
+              showInfoMessage(`${successfulUploads.length} images uploaded successfully, ${failedUploads.length} failed.`)
+            } else {
+              showSuccessMessage('All room images uploaded successfully!')
+            }
           } else {
-            console.error('❌ Room image upload failed:', uploadResult)
-            showInfoMessage('Room created successfully, but some images could not be uploaded.')
+            console.error('❌ All room image uploads failed:', failedUploads)
+            showInfoMessage('Room created successfully, but images could not be uploaded.')
           }
         } catch (error) {
           console.error('❌ Error uploading room images:', error)
@@ -1172,7 +1206,22 @@ function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, building
           />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            // Prevent Enter key from auto-submitting the form unless it's the submit button
+            if (e.key === 'Enter') {
+              const target = e.target as HTMLElement
+              // Only allow submission if Enter is pressed on the submit button
+              if (target.type !== 'submit' && target.tagName !== 'BUTTON') {
+                e.preventDefault()
+                e.stopPropagation()
+              }
+            }
+          }}
+          className="space-y-6"
+          noValidate
+        >
           <AnimatePresence mode="wait">
             {currentStep === 'basic' && (
               <motion.div
@@ -1295,9 +1344,22 @@ function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, building
                 </Button>
               ) : (
                 <Button
-                  type="submit"
+                  type="button"
                   disabled={isLoading || isSubmitting}
                   className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                  onClick={(e) => {
+                    // Ensure this is an intentional click, not an accidental trigger
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('🔘 Create Room button clicked intentionally')
+
+                    // Manually trigger form submission
+                    const form = e.currentTarget.closest('form')
+                    if (form) {
+                      const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+                      form.dispatchEvent(submitEvent)
+                    }
+                  }}
                 >
                   {(isLoading || isSubmitting) && <LoadingSpinner size="sm" />}
                   <Save className="w-4 h-4" />

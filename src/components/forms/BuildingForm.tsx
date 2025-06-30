@@ -458,14 +458,20 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           if (uploadedImageUrls.length > 0) {
             console.log(`🔗 Step 3: Updating building with ${uploadedImageUrls.length} Supabase URLs...`)
 
-            // Import the API service to update building with image URLs
-            const { apiService } = await import('@/services/apiService')
+            // Import the database service to update building with image URLs
+            const { databaseService } = await import('@/lib/supabase/database')
 
             // Update building with Supabase image URLs
-            const updateResponse = await apiService.updateBuildingImages(buildingId, uploadedImageUrls)
+            const updateResponse = await databaseService.buildings.update(buildingId, {
+              building_images: uploadedImageUrls
+            })
 
-            console.log('✅ Building updated with Supabase image URLs:', updateResponse)
-            console.log(`📸 Total images linked: ${uploadedImageUrls.length}`)
+            if (updateResponse.success) {
+              console.log('✅ Building updated with Supabase image URLs:', updateResponse.data)
+              console.log(`📸 Total images linked: ${uploadedImageUrls.length}`)
+            } else {
+              console.error('❌ Failed to update building with image URLs:', updateResponse.error)
+            }
           } else {
             console.log('⚠️ No images were successfully uploaded to Supabase - building created without images')
           }

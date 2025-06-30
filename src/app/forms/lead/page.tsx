@@ -8,6 +8,8 @@ import { useState } from 'react'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getBackNavigationUrl } from '../../../lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
+import { databaseService } from '../../../lib/supabase/database'
+import { transformLeadDataForBackend } from '../../../lib/backend-sync'
 
 function LeadFormContent() {
   const router = useRouter()
@@ -17,15 +19,28 @@ function LeadFormContent() {
   const handleSubmit = async (data: LeadFormData) => {
     setIsLoading(true)
     try {
-      // Here you would make an API call to save the lead
-      console.log('Submitting lead:', data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Show enhanced success message
-      showFormSuccessMessage('lead', 'saved')
-      router.push('/forms')
+      console.log('Submitting lead to Supabase:', data)
+
+      // Transform data for database
+      const transformedData = transformLeadDataForBackend(data)
+
+      // Generate lead_id if not present
+      if (!transformedData.lead_id) {
+        transformedData.lead_id = `LEAD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+
+      // Save lead to Supabase database
+      const result = await databaseService.leads.create(transformedData)
+
+      if (result.success) {
+        console.log('✅ Lead created successfully:', result.data)
+
+        // Show enhanced success message
+        showFormSuccessMessage('lead', 'saved')
+        router.push('/forms')
+      } else {
+        throw new Error(result.error?.message || 'Failed to create lead')
+      }
 
     } catch (error) {
       console.error('Error saving lead:', error)
