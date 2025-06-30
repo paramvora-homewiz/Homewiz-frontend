@@ -139,7 +139,7 @@ const BasicInformationStep = React.memo(({ formData, errors, buildings, handleIn
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Room Number *
+              Room Number <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Input
@@ -174,7 +174,7 @@ const BasicInformationStep = React.memo(({ formData, errors, buildings, handleIn
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Building *
+              Building <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.building_id}
@@ -305,7 +305,7 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Private Room Rent ($) *
+              Private Room Rent ($) <span className="text-red-500">*</span>
             </label>
             <Input
               type="number"
@@ -676,6 +676,88 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange }: StepProps) =>
           </div>
         </div>
       </Card>
+
+      {/* Room Photos Upload Section */}
+      <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 mt-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Camera className="w-5 h-5" />
+            Room Photos
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Upload photos of this room. Images will be saved to the building's room folder.
+          </p>
+          
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+            <div className="mb-4">
+              <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="room-photos-upload" className="cursor-pointer">
+                <span className="text-blue-600 hover:text-blue-500 font-medium">
+                  Click to upload room photos
+                </span>
+                <span className="text-gray-500"> or drag and drop</span>
+              </label>
+              <input
+                id="room-photos-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  const files = e.target.files
+                  if (files) {
+                    const fileArray = Array.from(files)
+                    handleInputChange('room_photos', fileArray)
+                  }
+                }}
+                className="hidden"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Supported formats: JPEG, PNG, WebP, GIF up to 10MB each
+            </p>
+          </div>
+
+          {/* Display selected photos */}
+          {formData.room_photos && formData.room_photos.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-md font-medium text-gray-900 mb-3">
+                Selected Photos ({formData.room_photos.length})
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {formData.room_photos.map((file, index) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Room photo ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPhotos = formData.room_photos.filter((_, i) => i !== index)
+                        handleInputChange('room_photos', newPhotos)
+                      }}
+                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 rounded-b-lg">
+                      <p className="text-xs truncate">{file.name}</p>
+                      <p className="text-xs text-gray-300">
+                        {(file.size / 1024 / 1024).toFixed(1)}MB
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   ));
 
@@ -1040,10 +1122,37 @@ function RoomForm({ initialData, onSubmit, onCancel, onBack, isLoading, building
             console.log(`✅ Successfully uploaded ${successfulUploads.length} room images`)
             console.log('📸 Upload results:', successfulUploads)
 
-            if (failedUploads.length > 0) {
-              showInfoMessage(`${successfulUploads.length} images uploaded successfully, ${failedUploads.length} failed.`)
-            } else {
-              showSuccessMessage('All room images uploaded successfully!')
+            // Extract image URLs from successful uploads
+            const imageUrls = successfulUploads.map(result => result.url).filter(Boolean)
+
+            if (imageUrls.length > 0) {
+              try {
+                // Update room record in database with image URLs
+                console.log(`🔗 Updating room ${createdRoom.room_id} with ${imageUrls.length} image URLs...`)
+
+                // Import database service dynamically to avoid circular dependencies
+                const { databaseService } = await import('@/lib/supabase/database')
+
+                const updateResult = await databaseService.rooms.update(createdRoom.room_id, {
+                  room_images: JSON.stringify(imageUrls)
+                })
+
+                if (updateResult.success) {
+                  console.log(`✅ Room database record updated with ${imageUrls.length} image URLs`)
+
+                  if (failedUploads.length > 0) {
+                    showInfoMessage(`${successfulUploads.length} images uploaded and saved successfully, ${failedUploads.length} failed.`)
+                  } else {
+                    showSuccessMessage('All room images uploaded and saved successfully!')
+                  }
+                } else {
+                  console.error('❌ Failed to update room record with image URLs:', updateResult.error)
+                  showInfoMessage(`${successfulUploads.length} images uploaded to storage, but failed to save URLs to database.`)
+                }
+              } catch (dbError) {
+                console.error('❌ Error updating room record with image URLs:', dbError)
+                showInfoMessage(`${successfulUploads.length} images uploaded to storage, but failed to save URLs to database.`)
+              }
             }
           } else {
             console.error('❌ All room image uploads failed:', failedUploads)
