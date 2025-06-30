@@ -193,6 +193,7 @@ export function EnhancedSelect({
 }: EnhancedSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom')
   const selectRef = useRef<HTMLDivElement>(null)
 
   const filteredOptions = searchable
@@ -202,6 +203,23 @@ export function EnhancedSelect({
     : options
 
   const selectedOption = options.find(opt => opt.value === value)
+
+  // Calculate dropdown position to avoid viewport cutoff
+  const calculateDropdownPosition = () => {
+    if (!selectRef.current) return
+
+    const rect = selectRef.current.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const dropdownHeight = 320 // max-h-80 = 20rem = 320px
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+      setDropdownPosition('top')
+    } else {
+      setDropdownPosition('bottom')
+    }
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -218,6 +236,14 @@ export function EnhancedSelect({
     }
   }, [])
 
+  // Handle dropdown opening with position calculation
+  const handleToggleDropdown = () => {
+    if (!isOpen) {
+      calculateDropdownPosition()
+    }
+    setIsOpen(!isOpen)
+  }
+
   return (
     <div className={`relative ${className}`} ref={selectRef}>
       {label && (
@@ -229,7 +255,7 @@ export function EnhancedSelect({
       <div className="relative">
         <motion.button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggleDropdown}
           className={`
             w-full px-4 py-3 text-left border-2 rounded-lg transition-all duration-200
             ${isOpen
@@ -259,10 +285,12 @@ export function EnhancedSelect({
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: dropdownPosition === 'bottom' ? -10 : 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-2xl max-h-60 overflow-hidden"
+              exit={{ opacity: 0, y: dropdownPosition === 'bottom' ? -10 : 10 }}
+              className={`absolute z-[9999] w-full bg-white border border-gray-200 rounded-lg shadow-2xl max-h-80 overflow-hidden ${
+                dropdownPosition === 'bottom' ? 'mt-1 top-full' : 'mb-1 bottom-full'
+              }`}
               style={{
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
               }}
@@ -283,7 +311,7 @@ export function EnhancedSelect({
                 </div>
               )}
 
-              <div className="max-h-48 overflow-y-auto bg-white">
+              <div className="max-h-64 overflow-y-auto bg-white">
                 {filteredOptions.length === 0 ? (
                   <div className="px-4 py-3 text-gray-500 text-center">
                     No options found
@@ -298,22 +326,26 @@ export function EnhancedSelect({
                       setSearchTerm('')
                     }}
                     className={`
-                      px-4 py-3 cursor-pointer transition-colors duration-150
+                      px-4 py-4 cursor-pointer transition-colors duration-150
                       hover:bg-blue-50 border-b border-gray-100 last:border-b-0
                       ${value === option.value ? 'bg-blue-100 text-blue-900' : 'text-gray-700'}
                     `}
                     whileHover={{ backgroundColor: 'rgb(239 246 255)' }}
                   >
-                    <div className="flex items-center gap-3">
-                      {option.icon}
-                      <div className="flex-1">
-                        <div className="font-medium">{option.label}</div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {option.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm leading-5 break-words">{option.label}</div>
                         {option.description && (
-                          <div className="text-sm text-gray-500">{option.description}</div>
+                          <div className="text-xs text-gray-500 mt-1 leading-4 break-words">{option.description}</div>
                         )}
                       </div>
                       {value === option.value && (
-                        <Check className="w-5 h-5 text-blue-600" />
+                        <div className="flex-shrink-0">
+                          <Check className="w-4 h-4 text-blue-600" />
+                        </div>
                       )}
                     </div>
                   </motion.div>

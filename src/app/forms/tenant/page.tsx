@@ -9,6 +9,8 @@ import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
 import { getForwardNavigationUrl } from '@/lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
+import { databaseService } from '@/lib/supabase/database'
+import { transformTenantDataForBackend } from '@/lib/backend-sync'
 
 function TenantFormContent() {
   const router = useRouter()
@@ -18,18 +20,31 @@ function TenantFormContent() {
   const handleSubmit = async (data: TenantFormData) => {
     setIsLoading(true)
     try {
-      // Here you would make an API call to save the tenant
-      console.log('Submitting tenant:', data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Show enhanced success message
-      showFormSuccessMessage('tenant', 'saved')
+      console.log('Submitting tenant to Supabase:', data)
 
-      // Navigate to the next form in the workflow
-      const nextUrl = getForwardNavigationUrl('tenant')
-      router.push(nextUrl)
+      // Transform data for database
+      const transformedData = transformTenantDataForBackend(data)
+
+      // Generate tenant_id if not present
+      if (!transformedData.tenant_id) {
+        transformedData.tenant_id = `TNT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+
+      // Save tenant to Supabase database
+      const result = await databaseService.tenants.create(transformedData)
+
+      if (result.success) {
+        console.log('✅ Tenant created successfully:', result.data)
+
+        // Show enhanced success message
+        showFormSuccessMessage('tenant', 'saved')
+
+        // Navigate to the next form in the workflow
+        const nextUrl = getForwardNavigationUrl('tenant')
+        router.push(nextUrl)
+      } else {
+        throw new Error(result.error?.message || 'Failed to create tenant')
+      }
 
     } catch (error) {
       console.error('Error saving tenant:', error)

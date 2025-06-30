@@ -6,8 +6,10 @@ import { RoomFormData } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
-import { getForwardNavigationUrl, getBackNavigationUrl } from '@/lib/form-workflow'
+import { getBackNavigationUrl } from '@/lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
+import { databaseService } from '@/lib/supabase/database'
+import { transformRoomDataForBackend } from '@/lib/backend-sync'
 
 function RoomFormContent() {
   const router = useRouter()
@@ -17,21 +19,33 @@ function RoomFormContent() {
   const handleSubmit = async (data: RoomFormData) => {
     setIsLoading(true)
     try {
-      // Here you would make an API call to save the room
-      console.log('Submitting room:', data)
+      console.log('Submitting room to Supabase:', data)
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Transform data for database
+      const transformedData = transformRoomDataForBackend(data)
 
-      // Show enhanced success message
-      showFormSuccessMessage('room', 'saved')
+      // Generate room_id if not present
+      if (!transformedData.room_id) {
+        transformedData.room_id = `ROOM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
 
-      // Navigate to the next form in the workflow
-      const nextUrl = getForwardNavigationUrl('room')
-      console.log('Navigating to next form:', nextUrl)
+      // Save room to Supabase database
+      const result = await databaseService.rooms.create(transformedData)
 
-      // Use push instead of replace to prevent page reload issues
-      router.push(nextUrl)
+      if (result.success) {
+        console.log('✅ Room created successfully:', result.data)
+
+        // Show enhanced success message
+        showFormSuccessMessage('room', 'saved')
+
+        // Navigate back to forms dashboard (consistent with building form behavior)
+        console.log('Navigating back to forms dashboard')
+
+        // Use push to navigate to forms dashboard
+        router.push('/forms')
+      } else {
+        throw new Error(result.error?.message || 'Failed to create room')
+      }
 
     } catch (error) {
       console.error('Error saving room:', error)
