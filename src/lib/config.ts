@@ -192,14 +192,21 @@ export const getActiveApiUrl = async (): Promise<string> => {
     return config.api.baseUrl
   }
   
+  // Helper function to create timeout signal
+  const createTimeoutSignal = (timeoutMs: number) => {
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), timeoutMs)
+    return controller.signal
+  }
+
   // If prefer cloud is set, try cloud first
   if (config.api.preferCloud) {
     try {
       const cloudBaseUrl = config.api.cloudUrl.replace('/api', '')
-      const response = await fetch(`${cloudBaseUrl}/`, { 
-        method: 'GET', 
+      const response = await fetch(`${cloudBaseUrl}/`, {
+        method: 'GET',
         mode: 'cors',
-        signal: AbortSignal.timeout(3000)
+        signal: createTimeoutSignal(3000)
       })
       if (response.ok) {
         return config.api.cloudUrl
@@ -207,18 +214,18 @@ export const getActiveApiUrl = async (): Promise<string> => {
     } catch (error) {
       console.log('☁️ Cloud backend not available, falling back to local')
     }
-    
+
     // Fall back to local
     return config.api.baseUrl
   }
-  
+
   // Default behavior: try local first, then cloud
   try {
     const localBaseUrl = config.api.baseUrl.replace('/api', '')
-    const response = await fetch(`${localBaseUrl}/`, { 
-      method: 'GET', 
+    const response = await fetch(`${localBaseUrl}/`, {
+      method: 'GET',
       mode: 'cors',
-      signal: AbortSignal.timeout(3000)
+      signal: createTimeoutSignal(3000)
     })
     if (response.ok) {
       return config.api.baseUrl
@@ -226,15 +233,15 @@ export const getActiveApiUrl = async (): Promise<string> => {
   } catch (error) {
     console.log('🏠 Local backend not available, trying cloud...')
   }
-  
+
   // Try cloud as fallback
   if (config.api.cloudUrl) {
     try {
       const cloudBaseUrl = config.api.cloudUrl.replace('/api', '')
-      const response = await fetch(`${cloudBaseUrl}/`, { 
-        method: 'GET', 
+      const response = await fetch(`${cloudBaseUrl}/`, {
+        method: 'GET',
         mode: 'cors',
-        signal: AbortSignal.timeout(3000)
+        signal: createTimeoutSignal(3000)
       })
       if (response.ok) {
         return config.api.cloudUrl

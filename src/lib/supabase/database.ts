@@ -218,10 +218,16 @@ abstract class BaseService<T, TInsert, TUpdate> {
   async update(id: string | number, data: TUpdate): Promise<DatabaseResponse<T>> {
     try {
       const result = await this.client.executeWithRetry(async () => {
+        // Use the correct timestamp field for this table
+        const timestampField = this.getTimestampField()
+        const updateData = timestampField 
+          ? { ...data, [timestampField]: new Date().toISOString() }
+          : data
+
         const { data: record, error } = await this.client
           .getClient()
           .from(this.tableName)
-          .update({ ...data, updated_at: new Date().toISOString() })
+          .update(updateData)
           .eq(this.getIdColumn(), id)
           .select()
           .single()
@@ -370,6 +376,15 @@ abstract class BaseService<T, TInsert, TUpdate> {
    */
   protected getDefaultSortColumn(): string {
     return 'created_at' // Default, can be overridden by subclasses
+  }
+
+  /**
+   * Get the timestamp field name for updates (handles schema differences)
+   */
+  protected getTimestampField(): string | null {
+    // Most tables use 'last_modified', but some use 'updated_at'
+    // Override in subclasses that use different field names
+    return 'last_modified'
   }
 
   /**

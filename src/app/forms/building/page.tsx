@@ -22,16 +22,9 @@ function BuildingFormContent() {
     try {
       console.log('Submitting building to Supabase:', data)
 
-      // Transform data for database
-      const transformedData = transformBuildingDataForBackend(data)
-
-      // Generate building_id if not present
-      if (!transformedData.building_id) {
-        transformedData.building_id = `BLD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      }
-
-      // Save building to Supabase database
-      const result = await databaseService.buildings.create(transformedData)
+      // First, use the form integration service for proper validation
+      const { BuildingFormIntegration } = await import('@/lib/supabase/form-integration')
+      const result = await BuildingFormIntegration.submitBuilding(data)
 
       if (result.success) {
         console.log('✅ Building created successfully:', result.data)
@@ -39,14 +32,11 @@ function BuildingFormContent() {
         // Show enhanced success message
         showFormSuccessMessage('building', 'saved')
 
-        // Navigate to the next form in the workflow
-        const nextUrl = getForwardNavigationUrl('building')
-        console.log('Next URL from workflow:', nextUrl)
+        // Navigate back to forms dashboard (per user preference)
+        console.log('Navigating back to forms dashboard')
 
-        // Clear any existing URL parameters and navigate to clean URL
-        // This ensures step parameters don't persist
-        const cleanUrl = nextUrl.split('?')[0] // Remove any existing query parameters
-        console.log('Clean URL for navigation:', cleanUrl)
+        // Get the clean URL without step parameters
+        const cleanUrl = '/forms'
 
         // Force navigation with window.location to ensure clean URL
         // This bypasses any router state that might be causing issues
@@ -54,8 +44,32 @@ function BuildingFormContent() {
           console.log('Attempting navigation to:', cleanUrl)
           window.location.href = cleanUrl
         }, 1000) // Give time for success message to show
+      } else if (result.validationErrors) {
+        // Handle validation errors - don't redirect, show errors to user
+        console.error('❌ Validation errors:', result.validationErrors)
+
+        // Import and use the validation error handler
+        const { handleValidationError } = await import('@/lib/error-handler')
+
+        // Create a comprehensive error message from validation errors
+        const errorMessages = Object.entries(result.validationErrors)
+          .map(([field, message]) => `${field}: ${message}`)
+          .join('\n')
+
+        handleValidationError(
+          new Error(`Validation failed:\n${errorMessages}`),
+          {
+            formType: 'building',
+            operation: 'validation',
+            validationErrors: result.validationErrors
+          }
+        )
+
+        // Don't redirect on validation errors - let user fix them
+        return
       } else {
-        throw new Error(result.error?.message || 'Failed to save building')
+        // Handle other errors (database, network, etc.)
+        throw new Error(result.error || 'Failed to save building')
       }
 
     } catch (error) {
@@ -66,6 +80,7 @@ function BuildingFormContent() {
           operation: 'save'
         }
       })
+      // Don't redirect on errors - let user try again
     } finally {
       setIsLoading(false)
     }

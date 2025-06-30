@@ -108,6 +108,15 @@ function FormsDashboardContent() {
   const [isLoading, setIsLoading] = useState(false)
   const formData = useFormData()
 
+  // Handle form navigation - redirect tenant form to dedicated page
+  const handleFormNavigation = (formId: FormType) => {
+    if (formId === 'tenant') {
+      window.location.href = '/forms/tenant'
+    } else {
+      setCurrentForm(formId)
+    }
+  }
+
   const handleFormSubmit = async (data: any, formType: FormType) => {
     setIsLoading(true)
     try {
@@ -179,13 +188,33 @@ function FormsDashboardContent() {
         }
       }
 
-      console.log(`✅ ${formType} saved successfully:`, result)
+      console.log(`📋 ${formType} submission result:`, result)
 
-      // Return to dashboard after successful submission
-      setCurrentForm('dashboard')
+      // Check if submission was actually successful
+      if (result.success) {
+        console.log(`✅ ${formType} saved successfully`)
+        
+        // Return to dashboard after successful submission
+        setCurrentForm('dashboard')
 
-      // Show enhanced success message
-      showFormSuccessMessage(formType, 'saved')
+        // Show enhanced success message
+        showFormSuccessMessage(formType, 'saved')
+      } else {
+        console.log(`❌ ${formType} submission failed:`, result.error || result.validationErrors)
+        
+        // Don't redirect to dashboard - stay on form to show errors
+        if (result.validationErrors) {
+          console.error('Validation errors:', result.validationErrors)
+          // The form should handle displaying validation errors
+        }
+        
+        if (result.error) {
+          // Show error message but don't redirect
+          handleFormSubmissionError(new Error(result.error), {
+            additionalInfo: { formType, data }
+          })
+        }
+      }
 
       // Return the result for image upload and other post-processing
       return result
@@ -276,18 +305,7 @@ function FormsDashboardContent() {
           />
         )
       
-      case 'tenant':
-        return (
-          <TenantForm
-            onSubmit={(data) => handleFormSubmit(data, 'tenant')}
-            onCancel={handleFormCancel}
-            isLoading={isLoading}
-            buildings={formData.buildings}
-            rooms={formData.rooms}
-            operators={formData.operators}
-          />
-        )
-      
+
       case 'lead':
         return (
           <LeadForm
@@ -530,7 +548,7 @@ function FormsDashboardContent() {
                     <EnhancedCard
                       variant="premium"
                       className="p-6 cursor-pointer group overflow-hidden relative bg-white/95 backdrop-blur-md hover:bg-white/98 transition-all duration-300 hover:shadow-2xl hover:-translate-y-3 interactive-element"
-                      onClick={() => setCurrentForm(form.id)}
+                      onClick={() => handleFormNavigation(form.id)}
                     >
                       {/* Background gradient overlay */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${form.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
@@ -613,7 +631,7 @@ function FormsDashboardContent() {
                 </motion.button>
 
                 <motion.button
-                  onClick={() => setCurrentForm('tenant')}
+                  onClick={() => window.location.href = '/forms/tenant'}
                   className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border-2 border-orange-200 hover:border-orange-300 transition-all duration-200"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

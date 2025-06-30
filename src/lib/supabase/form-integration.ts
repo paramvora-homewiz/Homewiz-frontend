@@ -131,22 +131,28 @@ export class TenantFormIntegration {
   private static validateTenantData(data: any, isUpdate = false): { isValid: boolean; errors: Record<string, string> } {
     const errors: Record<string, string> = {}
 
-    // Required fields for creation
+    // Required fields for creation - validate based on form field names but map errors correctly
     if (!isUpdate) {
-      if (!data.first_name?.trim()) {
-        errors.first_name = 'First name is required'
+      if (!data.tenant_name?.trim()) {
+        errors.tenant_name = 'Tenant name is required'
       }
-      if (!data.last_name?.trim()) {
-        errors.last_name = 'Last name is required'
+      if (!data.tenant_email?.trim()) {
+        errors.tenant_email = 'Email is required'
       }
-      if (!data.email?.trim()) {
-        errors.email = 'Email is required'
+
+      // Additional validation for name splitting
+      if (data.tenant_name?.trim()) {
+        const nameParts = data.tenant_name.trim().split(' ')
+        if (nameParts.length < 2 || !nameParts[1]) {
+          errors.tenant_name = 'Please enter both first and last name'
+        }
       }
     }
 
-    // Email validation
-    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      errors.email = 'Please enter a valid email address'
+    // Email validation - check both possible field names
+    const email = data.tenant_email || data.email
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.tenant_email = 'Please enter a valid email address'
     }
 
     // Phone validation
@@ -184,21 +190,29 @@ export class TenantFormIntegration {
    * Transform form data to database format
    */
   private static transformTenantData(formData: any, isUpdate = false): TenantInsert | TenantUpdate {
+    // Handle tenant_name - combine first_name and last_name if provided separately
+    let tenantName = ''
+
+    if (formData.tenant_name?.trim()) {
+      tenantName = formData.tenant_name.trim()
+    } else if (formData.first_name && formData.last_name) {
+      tenantName = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim()
+    }
+
     const baseData = {
-      first_name: formData.first_name?.trim(),
-      last_name: formData.last_name?.trim(),
-      email: formData.email?.trim().toLowerCase(),
+      // Use backend database schema field names
+      tenant_name: tenantName,
+      tenant_email: formData.tenant_email?.trim().toLowerCase() || formData.email?.trim().toLowerCase(),
       phone: formData.phone?.trim() || null,
-      date_of_birth: formData.date_of_birth || null,
       tenant_nationality: formData.tenant_nationality?.trim() || null,
       emergency_contact_name: formData.emergency_contact_name?.trim() || null,
       emergency_contact_phone: formData.emergency_contact_phone?.trim() || null,
-      emergency_contact_relationship: formData.emergency_contact_relationship?.trim() || null,
+      emergency_contact_relation: formData.emergency_contact_relation?.trim() || formData.emergency_contact_relationship?.trim() || null,
       building_id: formData.building_id || null,
       room_id: formData.room_id || null,
       lease_start_date: formData.lease_start_date || null,
       lease_end_date: formData.lease_end_date || null,
-      rent_amount: formData.rent_amount ? parseFloat(formData.rent_amount) : null,
+      room_number: formData.room_number || null,
       deposit_amount: formData.deposit_amount ? parseFloat(formData.deposit_amount) : null,
       payment_status: formData.payment_status || null,
       rent_payment_method: formData.rent_payment_method || null,
@@ -206,11 +220,16 @@ export class TenantFormIntegration {
       operator_id: formData.operator_id ? parseInt(formData.operator_id) : null,
       booking_type: formData.booking_type || null,
       special_requests: formData.special_requests?.trim() || null,
-      communication_preferences: formData.communication_preferences || null,
-      payment_reminders_enabled: Boolean(formData.payment_reminders_enabled),
-      has_pets: Boolean(formData.has_pets),
-      has_vehicles: Boolean(formData.has_vehicles),
-      has_renters_insurance: Boolean(formData.has_renters_insurance),
+      communication_preferences: formData.communication_preferences || 'EMAIL',
+      payment_reminders_enabled: formData.payment_reminders_enabled !== undefined ? Boolean(formData.payment_reminders_enabled) : true,
+      last_payment_date: formData.last_payment_date || null,
+      next_payment_date: formData.next_payment_date || null,
+      has_pets: formData.has_pets !== undefined ? Boolean(formData.has_pets) : false,
+      pet_details: formData.pet_details?.trim() || null,
+      has_vehicles: formData.has_vehicles !== undefined ? Boolean(formData.has_vehicles) : false,
+      vehicle_details: formData.vehicle_details?.trim() || null,
+      has_renters_insurance: formData.has_renters_insurance !== undefined ? Boolean(formData.has_renters_insurance) : false,
+      insurance_details: formData.insurance_details?.trim() || null,
       status: formData.status || 'ACTIVE'
     }
 
@@ -276,8 +295,9 @@ export class BuildingFormIntegration {
     if (!data.building_name?.trim()) {
       errors.building_name = 'Building name is required'
     }
-    if (!data.address?.trim()) {
-      errors.address = 'Address is required'
+    // Check for street address (database uses 'street' field)
+    if (!data.street?.trim() && !data.full_address?.trim()) {
+      errors.street = 'Street address is required'
     }
     if (!data.city?.trim()) {
       errors.city = 'City is required'
@@ -285,12 +305,11 @@ export class BuildingFormIntegration {
     if (!data.state?.trim()) {
       errors.state = 'State is required'
     }
-    if (!data.zip_code?.trim()) {
-      errors.zip_code = 'ZIP code is required'
+    // Check for zip code (database uses 'zip' field)
+    if (!data.zip?.trim()) {
+      errors.zip = 'ZIP code is required'
     }
-    if (!data.building_type?.trim()) {
-      errors.building_type = 'Building type is required'
-    }
+    // Note: building_type field doesn't exist in database schema, so we don't validate it
 
     if (data.total_units && (isNaN(data.total_units) || data.total_units < 1)) {
       errors.total_units = 'Total units must be a positive number'
@@ -311,25 +330,61 @@ export class BuildingFormIntegration {
    */
   private static transformBuildingData(formData: any): BuildingInsert {
     return {
+      building_id: formData.building_id || `BLD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate ID if missing
       building_name: formData.building_name.trim(),
-      address: formData.address.trim(),
-      city: formData.city.trim(),
-      state: formData.state.trim(),
-      zip_code: formData.zip_code.trim(),
-      country: formData.country?.trim() || 'United States',
-      total_units: parseInt(formData.total_units) || 0,
-      available_units: parseInt(formData.available_units) || parseInt(formData.total_units) || 0,
-      building_type: formData.building_type,
-      year_built: formData.year_built ? parseInt(formData.year_built) : null,
-      amenities: formData.amenities || null,
-      contact_info: formData.contact_info || null,
-      status: formData.status || 'ACTIVE',
+      
+      // Address fields (match database schema exactly)
+      full_address: formData.full_address?.trim() || null,
+      street: (formData.address || formData.street)?.trim() || null, // Use 'street' field as in database
       area: formData.area?.trim() || null,
-      description: formData.description?.trim() || null,
-      images: formData.images || null,
-      parking_available: Boolean(formData.parking_available),
-      pet_friendly: Boolean(formData.pet_friendly),
-      furnished_options: Boolean(formData.furnished_options),
+      city: formData.city?.trim() || null,
+      state: formData.state?.trim() || null,
+      zip: (formData.zip_code || formData.zip)?.trim() || null, // Use 'zip' field as in database
+      
+      // Basic building info (building_type doesn't exist in database schema)
+      year_built: formData.year_built ? parseInt(formData.year_built) : null,
+      last_renovation: formData.last_renovation ? parseInt(formData.last_renovation) : null,
+      operator_id: formData.operator_id || null,
+      available: Boolean(formData.available ?? true),
+      floors: formData.floors ? parseInt(formData.floors) : null,
+      total_rooms: formData.total_rooms ? parseInt(formData.total_rooms) : null,
+      total_bathrooms: formData.total_bathrooms ? parseInt(formData.total_bathrooms) : null,
+      bathrooms_on_each_floor: formData.bathrooms_on_each_floor ? parseInt(formData.bathrooms_on_each_floor) : null,
+      
+      // Amenities and features
+      common_kitchen: formData.common_kitchen || null,
+      min_lease_term: formData.min_lease_term ? parseInt(formData.min_lease_term) : null,
+      pref_min_lease_term: formData.pref_min_lease_term ? parseInt(formData.pref_min_lease_term) : null,
+      wifi_included: Boolean(formData.wifi_included ?? false),
+      laundry_onsite: Boolean(formData.laundry_onsite ?? false),
+      common_area: formData.common_area?.trim() || null,
+      secure_access: Boolean(formData.secure_access ?? false),
+      bike_storage: Boolean(formData.bike_storage ?? false),
+      rooftop_access: Boolean(formData.rooftop_access ?? false),
+      pet_friendly: formData.pet_friendly || null,
+      cleaning_common_spaces: formData.cleaning_common_spaces || null,
+      utilities_included: Boolean(formData.utilities_included ?? false),
+      fitness_area: Boolean(formData.fitness_area ?? false),
+      work_study_area: Boolean(formData.work_study_area ?? false),
+      social_events: Boolean(formData.social_events ?? false),
+      nearby_conveniences_walk: formData.nearby_conveniences_walk?.trim() || null,
+      nearby_transportation: formData.nearby_transportation?.trim() || null,
+      priority: formData.priority ? parseInt(formData.priority) : null,
+      
+      // Additional info
+      building_rules: formData.building_rules?.trim() || null,
+      amenities_details: formData.amenities_details || null,
+      neighborhood_description: formData.neighborhood_description?.trim() || null,
+      building_description: formData.building_description?.trim() || null,
+      public_transit_info: formData.public_transit_info?.trim() || null,
+      parking_info: formData.parking_info?.trim() || null,
+      security_features: formData.security_features?.trim() || null,
+      disability_access: Boolean(formData.disability_access ?? false),
+      disability_features: formData.disability_features?.trim() || null,
+      building_images: formData.building_images || null,
+      virtual_tour_url: formData.virtual_tour_url?.trim() || null,
+      
+      // Timestamps - let database handle these
       created_at: new Date().toISOString()
     }
   }

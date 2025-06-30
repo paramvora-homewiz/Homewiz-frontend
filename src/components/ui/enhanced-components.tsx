@@ -49,6 +49,7 @@ export function EnhancedCard({
 // Enhanced Input Component
 interface EnhancedInputProps {
   label?: string
+  name?: string
   placeholder?: string
   value: string
   onChange: (value: string) => void
@@ -58,11 +59,13 @@ interface EnhancedInputProps {
   icon?: React.ReactNode
   suggestions?: string[]
   required?: boolean
+  disabled?: boolean
   className?: string
 }
 
 export function EnhancedInput({
   label,
+  name,
   placeholder,
   value,
   onChange,
@@ -72,6 +75,7 @@ export function EnhancedInput({
   icon,
   suggestions = [],
   required = false,
+  disabled = false,
   className = ''
 }: EnhancedInputProps) {
   const [focused, setFocused] = useState(false)
@@ -99,8 +103,10 @@ export function EnhancedInput({
         
         <motion.input
           ref={inputRef}
+          name={name}
           type={type}
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => {
             setFocused(true)
@@ -115,13 +121,15 @@ export function EnhancedInput({
           className={`
             w-full px-4 py-3 ${icon ? 'pl-10' : ''}
             border-2 rounded-lg transition-all duration-200
-            ${focused
-              ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg'
-              : error
-                ? 'border-red-300 ring-4 ring-red-100 shadow-lg'
-                : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+            ${disabled
+              ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
+              : focused
+                ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg'
+                : error
+                  ? 'border-red-300 ring-4 ring-red-100 shadow-lg'
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
             }
-            ${error ? 'bg-red-50' : 'bg-white/90 backdrop-blur-sm'}
+            ${error && !disabled ? 'bg-red-50' : disabled ? 'bg-gray-100' : 'bg-white/90 backdrop-blur-sm'}
             focus:outline-none text-gray-900 placeholder-gray-500
           `}
           whileFocus={{ scale: 1.02 }}
@@ -172,11 +180,13 @@ interface EnhancedSelectProps {
   label?: string
   value: string
   onChange: (value: string) => void
+  onBlur?: () => void
   options: Array<{ value: string; label: string; icon?: React.ReactNode; description?: string }>
   placeholder?: string
   error?: string
   required?: boolean
   searchable?: boolean
+  disabled?: boolean
   className?: string
 }
 
@@ -184,17 +194,20 @@ export function EnhancedSelect({
   label,
   value,
   onChange,
+  onBlur,
   options,
   placeholder = 'Select an option',
   error,
   required = false,
   searchable = false,
+  disabled = false,
   className = ''
 }: EnhancedSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom')
   const selectRef = useRef<HTMLDivElement>(null)
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const filteredOptions = searchable
     ? options.filter(option =>
@@ -230,18 +243,65 @@ export function EnhancedSelect({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    // Only add listener when dropdown is open
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [isOpen])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current)
+      }
     }
   }, [])
 
   // Handle dropdown opening with position calculation
-  const handleToggleDropdown = () => {
+  const handleToggleDropdown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (disabled) return
+
+    // Clear any pending blur timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+      blurTimeoutRef.current = null
+    }
+
     if (!isOpen) {
       calculateDropdownPosition()
     }
     setIsOpen(!isOpen)
+  }
+
+  // Handle blur event - only close if not clicking within dropdown
+  const handleBlur = (e: React.FocusEvent) => {
+    // Clear any existing timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+    }
+
+    // Check if the new focus target is within our dropdown
+    const relatedTarget = e.relatedTarget as HTMLElement
+    if (selectRef.current && relatedTarget && selectRef.current.contains(relatedTarget)) {
+      return // Don't close if focus is moving within our component
+    }
+
+    // Increased timeout to give users more time to interact with dropdown
+    blurTimeoutRef.current = setTimeout(() => {
+      // Double-check that we should still close (user might have clicked back in)
+      if (!selectRef.current?.contains(document.activeElement)) {
+        setIsOpen(false)
+        setSearchTerm('')
+        onBlur?.()
+      }
+      blurTimeoutRef.current = null
+    }, 200)
   }
 
   return (
@@ -255,19 +315,23 @@ export function EnhancedSelect({
       <div className="relative">
         <motion.button
           type="button"
+          disabled={disabled}
           onClick={handleToggleDropdown}
+          onBlur={handleBlur}
           className={`
             w-full px-4 py-3 text-left border-2 rounded-lg transition-all duration-200
-            ${isOpen
-              ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg'
-              : error
-                ? 'border-red-300 shadow-lg'
-                : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+            ${disabled
+              ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
+              : isOpen
+                ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg'
+                : error
+                  ? 'border-red-300 shadow-lg'
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
             }
-            ${error ? 'bg-red-50' : 'bg-white/90 backdrop-blur-sm'}
+            ${error && !disabled ? 'bg-red-50' : disabled ? 'bg-gray-100' : 'bg-white/90 backdrop-blur-sm'}
             focus:outline-none flex items-center justify-between
           `}
-          whileTap={{ scale: 0.98 }}
+          whileTap={disabled ? {} : { scale: 0.98 }}
         >
           <div className="flex items-center gap-2">
             {selectedOption?.icon}
@@ -294,6 +358,8 @@ export function EnhancedSelect({
               style={{
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
               }}
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseUp={(e) => e.preventDefault()}
             >
               {searchable && (
                 <div className="p-3 border-b border-gray-100 bg-gray-50/50">
@@ -304,6 +370,7 @@ export function EnhancedSelect({
                       placeholder="Search options..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      onMouseDown={(e) => e.stopPropagation()}
                       className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       autoFocus
                     />
@@ -320,6 +387,10 @@ export function EnhancedSelect({
                   filteredOptions.map((option) => (
                   <motion.div
                     key={option.value}
+                    onMouseDown={(e) => {
+                      // Prevent blur event from firing when clicking on option
+                      e.preventDefault()
+                    }}
                     onClick={() => {
                       onChange(option.value)
                       setIsOpen(false)
