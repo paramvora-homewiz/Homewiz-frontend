@@ -438,10 +438,18 @@ export async function uploadRoomImages(
   roomId: string,
   files: File[]
 ): Promise<FileUploadResult[]> {
+  console.log(`🔄 uploadRoomImages called with:`, {
+    buildingId,
+    roomId,
+    filesCount: files.length,
+    fileNames: files.map(f => f.name)
+  })
+
   // Validate files before upload
   const validation = validateMultipleFiles(files, 'BUILDING_IMAGES')
 
   if (!validation.isValid) {
+    console.warn(`⚠️ File validation failed:`, validation.errors)
     // Return error results for invalid files
     const results: FileUploadResult[] = []
 
@@ -455,6 +463,7 @@ export async function uploadRoomImages(
 
     // Upload valid files if any
     if (validation.validFiles.length > 0) {
+      console.log(`📤 Uploading ${validation.validFiles.length} valid files...`)
       const validResults = await uploadMultipleFiles(validation.validFiles, 'BUILDING_IMAGES', `buildings/${buildingId}/rooms/${roomId}/images`)
       results.push(...validResults)
     }
@@ -462,6 +471,7 @@ export async function uploadRoomImages(
     return results
   }
 
+  console.log(`✅ All ${files.length} files are valid, uploading...`)
   return uploadMultipleFiles(files, 'BUILDING_IMAGES', `buildings/${buildingId}/rooms/${roomId}/images`)
 }
 
