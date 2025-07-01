@@ -8,54 +8,33 @@ import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
 import { getBackNavigationUrl } from '@/lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
-// Using form integration instead of direct database service
+import { databaseService } from '@/lib/supabase/database'
+import { transformRoomDataForBackend } from '@/lib/backend-sync'
 
 function RoomFormContent() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const { buildings } = useFormData()
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: RoomFormData) => {
     setIsLoading(true)
     try {
-      console.log('🚀 Room page: Using form integration for submission:', data)
-      console.log('🔍 Room page: Detailed form data analysis:', {
-        hasRoomPhotos: !!data.room_photos,
-        roomPhotosLength: data.room_photos?.length || 0,
-        roomPhotosType: typeof data.room_photos,
-        roomPhotosConstructor: data.room_photos?.constructor?.name,
-        hasBuildingId: !!data.building_id,
-        buildingId: data.building_id,
-        roomPhotosArray: data.room_photos,
-        allKeys: Object.keys(data),
-        fullDataObject: data
-      })
+      console.log('Submitting room to Supabase:', data)
 
-      // Debug each file if they exist
-      if (data.room_photos && data.room_photos.length > 0) {
-        console.log('🔍 Room page: Individual file analysis:')
-        data.room_photos.forEach((file, index) => {
-          console.log(`Room page File ${index + 1}:`, {
-            name: file?.name,
-            type: file?.type,
-            size: file?.size,
-            lastModified: file?.lastModified,
-            isFile: file instanceof File,
-            isBlob: file instanceof Blob,
-            constructor: file?.constructor?.name,
-            hasArrayBuffer: typeof file?.arrayBuffer === 'function',
-            fileObject: file
-          })
-        })
+      // Transform data for database
+      const transformedData = transformRoomDataForBackend(data)
+
+      // Generate room_id if not present
+      if (!transformedData.room_id) {
+        transformedData.room_id = `ROOM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       }
 
-      // Use the same form integration that the dashboard uses
-      const { RoomFormIntegration } = await import('@/lib/supabase/form-integration')
-      const result = await RoomFormIntegration.submitRoom(data)
+      // Save room to Supabase database
+      const result = await databaseService.rooms.create(transformedData)
 
       if (result.success) {
-        console.log('✅ Room page: Form integration submission successful:', result.data)
-        
+        console.log('✅ Room created successfully:', result.data)
+
         // Show enhanced success message
         showFormSuccessMessage('room', 'saved')
 
@@ -64,11 +43,8 @@ function RoomFormContent() {
 
         // Use push to navigate to forms dashboard
         router.push('/forms')
-
-        // Return the created room data
-        return result.data
       } else {
-        throw new Error(result.error || 'Failed to create room')
+        throw new Error(result.error?.message || 'Failed to create room')
       }
 
     } catch (error) {

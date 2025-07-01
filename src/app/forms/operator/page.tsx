@@ -5,7 +5,7 @@ import { FormDataProvider } from '../../../components/forms/FormDataProvider'
 import { OperatorFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { apiService } from '../../../services/apiService'
+import { createOperator } from '../../../lib/api-client'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getForwardNavigationUrl, getBackNavigationUrl } from '../../../lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '../../../lib/error-handler'
@@ -20,7 +20,7 @@ export default function OperatorFormPage() {
       console.log('Submitting operator:', data)
 
       // Make actual API call to save the operator
-      const response = await apiService.createOperator(data)
+      const response = await createOperator(data)
 
       // Handle different response formats
       const isSuccess = response?.success !== undefined ? response.success : true

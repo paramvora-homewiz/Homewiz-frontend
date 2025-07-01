@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EnhancedCard } from '@/components/ui/enhanced-components'
-import { apiService } from '../../services/apiService'
+import { getOperators, getBuildings, getRooms, getLeads } from '../../lib/api-client'
 import { dataExportService, ExportData, ExportOptions } from '../../services/dataExportService'
 import { databaseLogger } from '../../services/databaseLogger'
 import {
@@ -49,10 +49,10 @@ export default function DataExportPanel({ className = '' }: DataExportPanelProps
     setLoading(true)
     try {
       const [operators, buildings, rooms, leads] = await Promise.all([
-        apiService.getOperators(),
-        apiService.getBuildings(),
-        apiService.getRooms(),
-        apiService.getLeads()
+        getOperators(),
+        getBuildings(),
+        getRooms(),
+        getLeads()
       ])
 
       const exportData: ExportData = {
