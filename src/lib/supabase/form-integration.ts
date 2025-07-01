@@ -12,7 +12,6 @@
 import { databaseService } from './database'
 import { errorHandler, handleDatabaseError } from './error-handler'
 import { realtimeManager } from './realtime'
-import { transformBuildingDataForBackend, transformRoomDataForBackend } from '../backend-sync'
 import {
   TenantInsert, TenantUpdate,
   BuildingInsert, BuildingUpdate,
@@ -293,49 +292,31 @@ export class BuildingFormIntegration {
   private static validateBuildingData(data: any): { isValid: boolean; errors: Record<string, string> } {
     const errors: Record<string, string> = {}
 
-    // Required field validation
     if (!data.building_name?.trim()) {
       errors.building_name = 'Building name is required'
     }
+    // Check for street address (database uses 'street' field)
+    if (!data.street?.trim() && !data.full_address?.trim()) {
+      errors.street = 'Street address is required'
+    }
+    if (!data.city?.trim()) {
+      errors.city = 'City is required'
+    }
+    if (!data.state?.trim()) {
+      errors.state = 'State is required'
+    }
+    // Check for zip code (database uses 'zip' field)
+    if (!data.zip?.trim()) {
+      errors.zip = 'ZIP code is required'
+    }
+    // Note: building_type field doesn't exist in database schema, so we don't validate it
 
-    // Address validation - flexible since only building_name is truly required in backend
-    // But we want to encourage proper address data for usability
-    if (!data.street?.trim() && !data.address?.trim() && !data.full_address?.trim()) {
-      errors.street = 'Street address is recommended'
+    if (data.total_units && (isNaN(data.total_units) || data.total_units < 1)) {
+      errors.total_units = 'Total units must be a positive number'
     }
 
-    // Numeric field validation
-    if (data.floors && (isNaN(data.floors) || data.floors < 1)) {
-      errors.floors = 'Building must have at least 1 floor'
-    }
-
-    if (data.total_rooms && (isNaN(data.total_rooms) || data.total_rooms < 1)) {
-      errors.total_rooms = 'Building must have at least 1 room'
-    }
-
-    if (data.total_bathrooms && (isNaN(data.total_bathrooms) || data.total_bathrooms < 0)) {
-      errors.total_bathrooms = 'Total bathrooms cannot be negative'
-    }
-
-    if (data.year_built && (isNaN(data.year_built) || data.year_built < 1800 || data.year_built > new Date().getFullYear() + 5)) {
+    if (data.year_built && (isNaN(data.year_built) || data.year_built < 1800 || data.year_built > new Date().getFullYear())) {
       errors.year_built = 'Please enter a valid year'
-    }
-
-    if (data.last_renovation && (isNaN(data.last_renovation) || data.last_renovation < 1800 || data.last_renovation > new Date().getFullYear() + 5)) {
-      errors.last_renovation = 'Please enter a valid renovation year'
-    }
-
-    if (data.min_lease_term && (isNaN(data.min_lease_term) || data.min_lease_term < 1)) {
-      errors.min_lease_term = 'Minimum lease term must be at least 1 month'
-    }
-
-    if (data.pref_min_lease_term && (isNaN(data.pref_min_lease_term) || data.pref_min_lease_term < 1)) {
-      errors.pref_min_lease_term = 'Preferred minimum lease term must be at least 1 month'
-    }
-
-    // Validate operator_id if provided
-    if (data.operator_id && (isNaN(data.operator_id) || data.operator_id < 1)) {
-      errors.operator_id = 'Please select a valid operator'
     }
 
     return {
@@ -345,11 +326,67 @@ export class BuildingFormIntegration {
   }
 
   /**
-   * Transform building form data using backend-sync transformation
+   * Transform building form data
    */
   private static transformBuildingData(formData: any): BuildingInsert {
-    // Use the centralized transformation function from backend-sync
-    return transformBuildingDataForBackend(formData) as BuildingInsert
+    return {
+      building_id: formData.building_id || `BLD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate ID if missing
+      building_name: formData.building_name.trim(),
+      
+      // Address fields (match database schema exactly)
+      full_address: formData.full_address?.trim() || null,
+      street: (formData.address || formData.street)?.trim() || null, // Use 'street' field as in database
+      area: formData.area?.trim() || null,
+      city: formData.city?.trim() || null,
+      state: formData.state?.trim() || null,
+      zip: (formData.zip_code || formData.zip)?.trim() || null, // Use 'zip' field as in database
+      
+      // Basic building info (building_type doesn't exist in database schema)
+      year_built: formData.year_built ? parseInt(formData.year_built) : null,
+      last_renovation: formData.last_renovation ? parseInt(formData.last_renovation) : null,
+      operator_id: formData.operator_id || null,
+      available: Boolean(formData.available ?? true),
+      floors: formData.floors ? parseInt(formData.floors) : null,
+      total_rooms: formData.total_rooms ? parseInt(formData.total_rooms) : null,
+      total_bathrooms: formData.total_bathrooms ? parseInt(formData.total_bathrooms) : null,
+      bathrooms_on_each_floor: formData.bathrooms_on_each_floor ? parseInt(formData.bathrooms_on_each_floor) : null,
+      
+      // Amenities and features
+      common_kitchen: formData.common_kitchen || null,
+      min_lease_term: formData.min_lease_term ? parseInt(formData.min_lease_term) : null,
+      pref_min_lease_term: formData.pref_min_lease_term ? parseInt(formData.pref_min_lease_term) : null,
+      wifi_included: Boolean(formData.wifi_included ?? false),
+      laundry_onsite: Boolean(formData.laundry_onsite ?? false),
+      common_area: formData.common_area?.trim() || null,
+      secure_access: Boolean(formData.secure_access ?? false),
+      bike_storage: Boolean(formData.bike_storage ?? false),
+      rooftop_access: Boolean(formData.rooftop_access ?? false),
+      pet_friendly: formData.pet_friendly || null,
+      cleaning_common_spaces: formData.cleaning_common_spaces || null,
+      utilities_included: Boolean(formData.utilities_included ?? false),
+      fitness_area: Boolean(formData.fitness_area ?? false),
+      work_study_area: Boolean(formData.work_study_area ?? false),
+      social_events: Boolean(formData.social_events ?? false),
+      nearby_conveniences_walk: formData.nearby_conveniences_walk?.trim() || null,
+      nearby_transportation: formData.nearby_transportation?.trim() || null,
+      priority: formData.priority ? parseInt(formData.priority) : null,
+      
+      // Additional info
+      building_rules: formData.building_rules?.trim() || null,
+      amenities_details: formData.amenities_details || null,
+      neighborhood_description: formData.neighborhood_description?.trim() || null,
+      building_description: formData.building_description?.trim() || null,
+      public_transit_info: formData.public_transit_info?.trim() || null,
+      parking_info: formData.parking_info?.trim() || null,
+      security_features: formData.security_features?.trim() || null,
+      disability_access: Boolean(formData.disability_access ?? false),
+      disability_features: formData.disability_features?.trim() || null,
+      building_images: formData.building_images || null,
+      virtual_tour_url: formData.virtual_tour_url?.trim() || null,
+      
+      // Timestamps - let database handle these
+      created_at: new Date().toISOString()
+    }
   }
 }
 
@@ -371,112 +408,10 @@ export class RoomFormIntegration {
         }
       }
 
-      // Extract room_photos before transformation (they're not part of the database schema)
-      const roomPhotos = formData.room_photos
-      console.log('🔍 Room photos extracted from form integration:', {
-        hasRoomPhotos: !!roomPhotos,
-        roomPhotosLength: roomPhotos?.length || 0,
-        roomPhotosType: typeof roomPhotos,
-        roomPhotosConstructor: roomPhotos?.constructor?.name,
-        hasBuildingId: !!formData.building_id,
-        buildingId: formData.building_id,
-        roomPhotosArray: roomPhotos,
-        fullFormData: formData
-      })
-
-      // Debug each file individually if they exist
-      if (roomPhotos && roomPhotos.length > 0) {
-        console.log('🔍 Individual file analysis:')
-        roomPhotos.forEach((file, index) => {
-          console.log(`File ${index + 1}:`, {
-            name: file?.name,
-            type: file?.type,
-            size: file?.size,
-            lastModified: file?.lastModified,
-            isFile: file instanceof File,
-            isBlob: file instanceof Blob,
-            constructor: file?.constructor?.name,
-            hasArrayBuffer: typeof file?.arrayBuffer === 'function',
-            fileObject: file
-          })
-        })
-      }
-
       const roomData: RoomInsert = this.transformRoomData(formData)
       const result = await databaseService.rooms.create(roomData)
 
       if (result.success) {
-        const createdRoom = result.data
-        console.log('✅ Room created successfully in form integration:', createdRoom)
-
-        // Handle room image uploads if any images were provided
-        if (roomPhotos && roomPhotos.length > 0 && formData.building_id) {
-          try {
-            console.log(`🚀 Starting room image upload process from form integration...`)
-            console.log(`📸 Uploading ${roomPhotos.length} room images for room ${createdRoom.room_id}`)
-            console.log(`🏢 Building ID: ${formData.building_id}`)
-
-            // Import the upload function
-            const { uploadRoomImages } = await import('./storage')
-
-            // Upload images to Supabase Storage
-            const uploadResults = await uploadRoomImages(formData.building_id, createdRoom.room_id, roomPhotos)
-
-            // Analyze results
-            const successfulUploads = uploadResults.filter(result => result.success)
-            const failedUploads = uploadResults.filter(result => !result.success)
-
-            console.log(`📊 Upload results: ${successfulUploads.length} successful, ${failedUploads.length} failed`)
-
-            if (successfulUploads.length > 0) {
-              // Extract image URLs from successful uploads
-              const imageUrls = successfulUploads.map(result => result.url).filter(Boolean)
-              
-              console.log(`🔗 Image URLs to save:`, imageUrls)
-
-              if (imageUrls.length > 0) {
-                try {
-                  // Update room record in database with image URLs
-                  console.log(`💾 Updating room ${createdRoom.room_id} database record with ${imageUrls.length} image URLs...`)
-
-                  // Import the improved database update function
-                  const { updateRoomWithImages } = await import('./room-database-fix')
-                  
-                  const updateResult = await updateRoomWithImages(createdRoom.room_id, imageUrls)
-
-                  if (updateResult.success) {
-                    console.log('✅ Room database record updated successfully with image URLs')
-                    console.log(`🎉 Complete success: Room created and ${imageUrls.length} images uploaded and saved`)
-                  } else {
-                    console.error('❌ Failed to update room database record:', updateResult.error)
-                    console.error('🔍 Room exists in database:', updateResult.roomExists)
-                    // Don't fail the entire operation if image URL update fails
-                  }
-                } catch (updateError) {
-                  console.error('❌ Exception while updating room database record:', updateError)
-                  // Don't fail the entire operation if image URL update fails
-                }
-              }
-            }
-
-            // Log any upload failures for debugging
-            if (failedUploads.length > 0) {
-              console.error(`❌ Failed uploads (${failedUploads.length}):`, failedUploads.map(f => ({
-                fileName: f.fileName,
-                error: f.error
-              })))
-            }
-
-          } catch (imageError) {
-            console.error('❌ Critical error during image upload process:', imageError)
-            // Don't fail the entire room creation if image upload fails
-          }
-        } else if (roomPhotos && roomPhotos.length > 0) {
-          console.warn('⚠️ Room photos provided but missing building_id - cannot upload images')
-        } else {
-          console.log('ℹ️ No room photos to upload')
-        }
-
         return {
           success: true,
           data: result.data,
@@ -553,13 +488,8 @@ export class RoomFormIntegration {
       errors.building_id = 'Building selection is required'
     }
 
-    // Private room rent is required in backend schema
-    if (formData.private_room_rent === undefined || formData.private_room_rent === null || formData.private_room_rent === '') {
-      errors.private_room_rent = 'Private room rent is required'
-    }
-
     // Validate numeric fields
-    if (formData.private_room_rent !== undefined && formData.private_room_rent !== null && formData.private_room_rent !== '' && (isNaN(formData.private_room_rent) || formData.private_room_rent < 0)) {
+    if (formData.private_room_rent && (isNaN(formData.private_room_rent) || formData.private_room_rent < 0)) {
       errors.private_room_rent = 'Private room rent must be a valid positive number'
     }
 
@@ -575,18 +505,6 @@ export class RoomFormIntegration {
       errors.maximum_people_in_room = 'Maximum people must be at least 1'
     }
 
-    if (formData.floor_number && (isNaN(formData.floor_number) || formData.floor_number < 1)) {
-      errors.floor_number = 'Floor number must be at least 1'
-    }
-
-    if (formData.sq_footage && (isNaN(formData.sq_footage) || formData.sq_footage < 1)) {
-      errors.sq_footage = 'Square footage must be at least 1'
-    }
-
-    // Remove the active_tenants vs maximum_people_in_room validation as it's not required
-    // This validation was causing unnecessary errors when users set active tenants
-    // The business logic doesn't require this constraint to be enforced at form level
-
     return {
       isValid: Object.keys(errors).length === 0,
       errors
@@ -594,19 +512,62 @@ export class RoomFormIntegration {
   }
 
   /**
-   * Transform room form data using backend-sync transformation
+   * Transform room form data to database format
    */
   private static transformRoomData(formData: any, isUpdate = false): RoomInsert | RoomUpdate {
-    // Use the centralized transformation function from backend-sync
-    const transformedData = transformRoomDataForBackend(formData)
-    
-    if (isUpdate) {
-      // For updates, remove room_id from the data
-      const { room_id, ...updateData } = transformedData
-      return updateData as RoomUpdate
+    const baseData = {
+      room_number: formData.room_number?.trim(),
+      building_id: formData.building_id?.trim(),
+      ready_to_rent: formData.ready_to_rent !== undefined ? Boolean(formData.ready_to_rent) : true,
+      status: formData.status || 'AVAILABLE',
+      booked_from: formData.booked_from || null,
+      booked_till: formData.booked_till || null,
+      active_tenants: formData.active_tenants ? parseInt(formData.active_tenants) : 0,
+      maximum_people_in_room: formData.maximum_people_in_room ? parseInt(formData.maximum_people_in_room) : 1,
+      available_from: formData.available_from || null,
+      private_room_rent: formData.private_room_rent ? parseFloat(formData.private_room_rent) : null,
+      shared_room_rent_2: formData.shared_room_rent_2 ? parseFloat(formData.shared_room_rent_2) : null,
+      bed_count: formData.bed_count ? parseInt(formData.bed_count) : 1,
+      bed_type: formData.bed_type?.trim() || null,
+      bed_size: formData.bed_size?.trim() || null,
+      bathroom_type: formData.bathroom_type?.trim() || null,
+      sq_footage: formData.sq_footage ? parseInt(formData.sq_footage) : null, // Integer in database
+      view: formData.view?.trim() || null,
+      noise_level: formData.noise_level?.trim() || null,
+      sunlight: formData.sunlight?.trim() || null,
+      furnished: formData.furnished !== undefined ? Boolean(formData.furnished) : false,
+      furniture_details: formData.furniture_details?.trim() || null,
+      last_renovation_date: formData.last_renovation_date || null,
+      public_notes: formData.public_notes?.trim() || null,
+      internal_notes: formData.internal_notes?.trim() || null,
+      virtual_tour_url: formData.virtual_tour_url?.trim() || null,
+      additional_features: formData.additional_features?.trim() || null,
+      room_images: formData.room_images || null,
+      // Additional fields from database schema
+      floor_number: formData.floor_number ? parseInt(formData.floor_number) : null,
+      current_booking_types: formData.current_booking_types?.trim() || null,
+      last_check: formData.last_check || null,
+      last_check_by: formData.last_check_by ? parseInt(formData.last_check_by) : null,
+      mini_fridge: formData.mini_fridge !== undefined ? Boolean(formData.mini_fridge) : false,
+      sink: formData.sink !== undefined ? Boolean(formData.sink) : false,
+      bedding_provided: formData.bedding_provided !== undefined ? Boolean(formData.bedding_provided) : false,
+      work_desk: formData.work_desk !== undefined ? Boolean(formData.work_desk) : false,
+      work_chair: formData.work_chair !== undefined ? Boolean(formData.work_chair) : false,
+      heating: formData.heating !== undefined ? Boolean(formData.heating) : false,
+      air_conditioning: formData.air_conditioning !== undefined ? Boolean(formData.air_conditioning) : false,
+      cable_tv: formData.cable_tv !== undefined ? Boolean(formData.cable_tv) : false,
+      room_storage: formData.room_storage?.trim() || null
     }
-    
-    return transformedData as RoomInsert
+
+    if (!isUpdate) {
+      // For new rooms, include room_id
+      return {
+        room_id: formData.room_id || `ROOM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...baseData
+      } as RoomInsert
+    }
+
+    return baseData as RoomUpdate
   }
 }
 

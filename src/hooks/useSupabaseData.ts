@@ -9,7 +9,7 @@
  * - Optimistic updates
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { databaseService } from '../lib/supabase/database'
 import { realtimeManager, RealtimeEvent } from '../lib/supabase/realtime'
 import { errorHandler } from '../lib/supabase/error-handler'
@@ -52,7 +52,13 @@ function useSupabaseData<T>(
   tableName: 'buildings' | 'rooms' | 'tenants' | 'operators' | 'leads',
   options: UseSupabaseDataOptions = {}
 ): UseSupabaseDataReturn<T> {
-  const opts = { ...defaultOptions, ...options }
+  const opts = React.useMemo(() => ({ ...defaultOptions, ...options }), [
+    options.enableRealtime,
+    options.enableCaching,
+    options.refetchOnWindowFocus,
+    options.retryOnError,
+    options.maxRetries
+  ])
   
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
@@ -121,7 +127,7 @@ function useSupabaseData<T>(
         setLoading(false)
       }
     }
-  }, [tableName, getService, opts.retryOnError, opts.maxRetries])
+  }, [tableName, getService, opts])
 
   // Handle real-time events
   const handleRealtimeEvent = useCallback((event: RealtimeEvent<T>) => {
@@ -166,7 +172,7 @@ function useSupabaseData<T>(
     } catch (err) {
       console.warn(`Failed to setup real-time subscription for ${tableName}:`, err)
     }
-  }, [tableName, opts.enableRealtime, handleRealtimeEvent])
+  }, [tableName, opts, handleRealtimeEvent])
 
   // Cleanup real-time subscription
   const cleanupRealtime = useCallback(() => {
@@ -197,7 +203,7 @@ function useSupabaseData<T>(
       setError(enhancedError.userMessage)
       return false
     }
-  }, [tableName, getService, opts.enableRealtime])
+  }, [tableName, getService, opts])
 
   // Update item
   const update = useCallback(async (id: string | number, item: any): Promise<boolean> => {
@@ -224,7 +230,7 @@ function useSupabaseData<T>(
       setError(enhancedError.userMessage)
       return false
     }
-  }, [tableName, getService, opts.enableRealtime])
+  }, [tableName, getService, opts])
 
   // Remove item
   const remove = useCallback(async (id: string | number): Promise<boolean> => {
@@ -249,7 +255,7 @@ function useSupabaseData<T>(
       setError(enhancedError.userMessage)
       return false
     }
-  }, [tableName, getService, opts.enableRealtime])
+  }, [tableName, getService, opts])
 
   // Clear error
   const clearError = useCallback(() => {
@@ -291,7 +297,7 @@ function useSupabaseData<T>(
         window.removeEventListener('focus', handleFocus)
       }
     }
-  }, [fetchData, setupRealtime, cleanupRealtime, opts.refetchOnWindowFocus])
+  }, [fetchData, setupRealtime, cleanupRealtime, opts])
 
   return {
     data,

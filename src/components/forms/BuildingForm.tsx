@@ -536,7 +536,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       
       // Step 2: Upload images to Supabase and update building if any
       if (mediaFiles && mediaFiles.length > 0) {
-        console.log(`📸 Step 2: Processing ${mediaFiles.length} media files...`)
+        console.log(`📸 Step 2: Uploading ${mediaFiles.length} images to Supabase...`)
 
         try {
           // Import upload functions
@@ -544,51 +544,35 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
           const uploadedImageUrls: string[] = []
 
-          // Collect URLs from files that were already uploaded immediately
-          const alreadyUploadedFiles = mediaFiles.filter(file => file.url)
-          alreadyUploadedFiles.forEach(file => {
-            uploadedImageUrls.push(file.url!)
-            console.log(`✅ Using already uploaded file: ${file.name} -> ${file.url}`)
-          })
+          // Upload images
+          const imageFiles = mediaFiles.filter(file => file.type.startsWith('image/'))
+          if (imageFiles.length > 0) {
+            console.log(`📸 Uploading ${imageFiles.length} images...`)
+            const imageResults = await uploadBuildingImages(buildingId, imageFiles.map(f => f.file))
 
-          // Upload only files that haven't been uploaded yet
-          const filesToUpload = mediaFiles.filter(file => !file.url)
-
-          if (filesToUpload.length > 0) {
-            console.log(`📸 Uploading ${filesToUpload.length} new files...`)
-
-            // Upload images
-            const imageFiles = filesToUpload.filter(file => file.type.startsWith('image/'))
-            if (imageFiles.length > 0) {
-              console.log(`📸 Uploading ${imageFiles.length} new images...`)
-              const imageResults = await uploadBuildingImages(buildingId, imageFiles.map(f => f.file))
-
-              // Collect successful uploads
-              imageResults.forEach((result, index) => {
-                if (result.success && result.url) {
-                  uploadedImageUrls.push(result.url)
-                  console.log(`✅ New image ${index + 1} uploaded: ${result.url}`)
-                } else {
-                  console.error(`❌ New image ${index + 1} upload failed:`, result.error)
-                }
-              })
-            }
-
-            // Upload videos (if any)
-            const videoFiles = filesToUpload.filter(file => file.type.startsWith('video/'))
-            for (const videoFile of videoFiles) {
-              console.log(`🎥 Uploading new video: ${videoFile.name}`)
-              const videoResult = await uploadBuildingVideo(buildingId, videoFile.file)
-
-              if (videoResult.success && videoResult.url) {
-                uploadedImageUrls.push(videoResult.url) // Videos go in the same URL array
-                console.log(`✅ New video uploaded: ${videoResult.url}`)
+            // Collect successful uploads
+            imageResults.forEach((result, index) => {
+              if (result.success && result.url) {
+                uploadedImageUrls.push(result.url)
+                console.log(`✅ Image ${index + 1} uploaded: ${result.url}`)
               } else {
-                console.error(`❌ New video upload failed:`, videoResult.error)
+                console.error(`❌ Image ${index + 1} upload failed:`, result.error)
               }
+            })
+          }
+
+          // Upload videos (if any)
+          const videoFiles = mediaFiles.filter(file => file.type.startsWith('video/'))
+          for (const videoFile of videoFiles) {
+            console.log(`🎥 Uploading video: ${videoFile.name}`)
+            const videoResult = await uploadBuildingVideo(buildingId, videoFile.file)
+
+            if (videoResult.success && videoResult.url) {
+              uploadedImageUrls.push(videoResult.url) // Videos go in the same URL array
+              console.log(`✅ Video uploaded: ${videoResult.url}`)
+            } else {
+              console.error(`❌ Video upload failed:`, videoResult.error)
             }
-          } else {
-            console.log('📸 All files were already uploaded immediately')
           }
 
           // Update building with uploaded image URLs
@@ -667,7 +651,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Building Name <span className="text-red-500">*</span>
+                  Building Name *
                 </label>
                 <div className="relative">
                   <Input
@@ -822,7 +806,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Address <span className="text-red-500">*</span>
+                Full Address *
               </label>
               <AddressAutocomplete
                 value={formData.full_address || ''}
@@ -838,7 +822,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address <span className="text-red-500">*</span>
+                  Street Address *
                 </label>
                 <Input
                   value={formData.address || formData.street || ''}
@@ -887,7 +871,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  City <span className="text-red-500">*</span>
+                  City *
                 </label>
                 <Input
                   value={formData.city || ''}
@@ -901,7 +885,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State/Province <span className="text-red-500">*</span>
+                  State/Province *
                 </label>
                 <Input
                   value={formData.state || ''}
@@ -915,7 +899,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ZIP/Postal Code <span className="text-red-500">*</span>
+                  ZIP/Postal Code *
                 </label>
                 <Input
                   value={formData.zip_code || formData.zip || ''}
@@ -1357,7 +1341,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               onFilesChange={setMediaFiles}
               onValidationErrors={setFileValidationErrors}
               buildingId={formData.building_id}
-              uploadImmediately={!!initialData?.building_id} // Only upload immediately if building already exists (editing mode)
+              uploadImmediately={!!formData.building_id} // Only upload immediately if building already exists (editing mode)
             />
           </div>
         )

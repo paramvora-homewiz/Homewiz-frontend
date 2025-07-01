@@ -13,7 +13,7 @@ import TenantForm from './TenantForm'
 import LeadForm from './LeadForm'
 import { FormDataProvider, useFormData } from './FormDataProvider'
 import { OperatorFormData, BuildingFormData, RoomFormData, TenantFormData, LeadFormData } from '@/types'
-import { apiService } from '../../services/apiService'
+import { createOperator, createBuilding, createRoom, createTenant, createLead } from '../../lib/api-client'
 import { formIntegration } from '../../lib/supabase/form-integration'
 import config from '../../lib/config'
 import DatabaseLogsPanel from '../dashboard/DatabaseLogsPanel'
@@ -163,26 +163,26 @@ function FormsDashboardContent() {
         console.log('🔧 Backend disabled check:', backendDisabled)
         switch (formType) {
           case 'operator':
-            result = await apiService.createOperator(data)
+            result = await createOperator(data)
             await formData.refreshOperators()
             break
           case 'building':
-            result = await apiService.createBuilding(data)
+            result = await createBuilding(data)
             await formData.refreshBuildings()
             break
           case 'room':
-            result = await apiService.createRoom(data)
+            result = await createRoom(data)
             await formData.refreshRooms()
             break
           case 'tenant':
-            result = await apiService.createTenant(data)
+            result = await createTenant(data)
             await Promise.all([
               formData.refreshRooms(),
               formData.refreshBuildings()
             ])
             break
           case 'lead':
-            result = await apiService.createLead(data)
+            result = await createLead(data)
             await formData.refreshRooms()
             break
         }

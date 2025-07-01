@@ -120,9 +120,10 @@ src/
 │   ├── data-collection.ts # Analytics and data collection
 │   └── error-handler.ts   # Centralized error handling
 ├── services/              # External service integrations
-│   ├── apiService.ts      # Enhanced API service
 │   ├── imageUploadService.ts # Image upload handling
-│   └── notificationService.ts # User notifications
+│   ├── notificationService.ts # User notifications
+│   ├── dataExportService.ts # Data export functionality
+│   └── databaseLogger.ts  # Database operation logging
 ├── types/                 # TypeScript type definitions
 │   └── index.ts           # Centralized type exports
 ├── utils/                 # Utility functions
@@ -147,6 +148,9 @@ This codebase has been recently optimized and cleaned up with the following impr
 - ✅ **Test Organization**: All test files moved to centralized `tests/` directory with proper structure
 - ✅ **Development Pages**: Test and debug pages moved to `src/app/dev/` (excluded from production)
 - ✅ **Import Cleanup**: Removed unused imports across all components and utilities
+- ✅ **API Service Consolidation**: Removed deprecated API service files and consolidated to `lib/api-client.ts`
+- ✅ **Legacy Code Removal**: Eliminated duplicate and deprecated service files
+- ✅ **Import Path Updates**: Updated all import paths to use the consolidated API client
 - ✅ **Data Provider Consolidation**: Merged `FormDataProvider` and `SimpleFormDataProvider` into configurable unified provider
 
 ### Documentation & Comments

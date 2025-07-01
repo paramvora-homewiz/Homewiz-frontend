@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EnhancedCard } from '@/components/ui/enhanced-components'
-import { apiService } from '../../services/apiService'
+import { getOperators, getBuildings, getRooms, getLeads } from '../../lib/api-client'
 import {
   BarChart,
   Bar,
@@ -79,10 +79,10 @@ export default function AdvancedAnalyticsDashboard() {
     setLoading(true)
     try {
       const [operators, buildings, rooms, leads] = await Promise.all([
-        apiService.getOperators(),
-        apiService.getBuildings(),
-        apiService.getRooms(),
-        apiService.getLeads()
+        getOperators(),
+        getBuildings(),
+        getRooms(),
+        getLeads()
       ])
 
       setData({
