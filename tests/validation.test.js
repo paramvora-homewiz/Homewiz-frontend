@@ -3,7 +3,7 @@
  */
 
 // Import validation functions
-const { validateTenantFormData, transformTenantDataForBackend } = require('./lib/backend-sync')
+const { validateTenantFormData, transformTenantDataForBackend } = require('../src/lib/backend-sync')
 
 // Test data scenarios
 const testCases = [

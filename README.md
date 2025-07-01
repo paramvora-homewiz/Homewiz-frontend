@@ -81,22 +81,91 @@ npm run dev
 ```
 src/
 ├── app/                    # Next.js 15 App Router pages
-│   ├── forms/             # Form-specific pages
-│   ├── demo/              # Demo application
-│   └── layout.tsx         # Root layout
+│   ├── forms/             # Form-specific pages (building, room, tenant, lead, operator)
+│   ├── sign-in/           # Authentication pages
+│   ├── sign-up/           # User registration
+│   ├── unauthorized/      # Access control page
+│   ├── dev/               # Development & test pages (excluded from production)
+│   │   ├── debug/         # Debug utilities
+│   │   ├── test-*/        # Test pages for development
+│   │   └── README.md      # Development pages documentation
+│   └── layout.tsx         # Root layout with auth providers
 ├── components/            # React components
-│   ├── forms/             # Form components
+│   ├── forms/             # Form components with unified data providers
+│   │   ├── RoomForm.tsx   # Multi-step room creation (with templates)
+│   │   ├── BuildingForm.tsx # Building management
+│   │   ├── TenantForm.tsx # Tenant management
+│   │   ├── FormDataProvider.tsx # Unified data provider (replaces SimpleFormDataProvider)
+│   │   └── index.ts       # Centralized component exports
 │   ├── ui/                # Reusable UI components
-│   ├── auth/              # Authentication components
-│   └── dashboard/         # Dashboard components
+│   ├── auth/              # Authentication components (Clerk integration)
+│   ├── dashboard/         # Dashboard components with analytics
+│   ├── analytics/         # Advanced analytics dashboard
+│   ├── mobile/            # Mobile-optimized components
+│   └── providers/         # Context providers and global state
 ├── hooks/                 # Custom React hooks
-├── lib/                   # Utility libraries
-│   ├── supabase/          # Supabase integration
-│   └── form-validation.ts # Form validation logic
-├── services/              # API services
+│   ├── useAutoSave.ts     # Auto-save functionality
+│   ├── useFormTemplates.ts # Form template management
+│   ├── useSmartValidation.ts # Intelligent validation
+│   └── useMobileOptimization.ts # Mobile-specific optimizations
+├── lib/                   # Utility libraries and business logic
+│   ├── supabase/          # Supabase integration with error handling
+│   │   ├── client.ts      # Supabase client configuration
+│   │   ├── storage.ts     # File upload management
+│   │   ├── database.ts    # Database operations
+│   │   └── form-integration.ts # Form-specific integrations
+│   ├── api-client.ts      # Unified API client with retry logic
+│   ├── backend-sync.ts    # Data transformation & validation
+│   ├── form-validation.ts # Comprehensive form validation
+│   ├── data-collection.ts # Analytics and data collection
+│   └── error-handler.ts   # Centralized error handling
+├── services/              # External service integrations
+│   ├── apiService.ts      # Enhanced API service
+│   ├── imageUploadService.ts # Image upload handling
+│   └── notificationService.ts # User notifications
 ├── types/                 # TypeScript type definitions
-└── utils/                 # Utility functions
+│   └── index.ts           # Centralized type exports
+├── utils/                 # Utility functions
+│   ├── fileUpload.ts      # File handling utilities
+│   └── connectionChecker.ts # Network status monitoring
+└── styles/                # Global styles and design system
+    ├── design-system.css  # Design system variables
+    └── professional-light-theme.css # Professional theme
+tests/                     # Centralized test directory
+├── unit/                  # Unit tests
+├── integration/           # Integration tests
+├── components/            # Component tests
+├── validation.test.js     # Form validation test suite
+└── README.md              # Testing documentation
 ```
+
+## 🧹 Recent Code Cleanup & Improvements
+
+This codebase has been recently optimized and cleaned up with the following improvements:
+
+### Code Organization
+- ✅ **Test Organization**: All test files moved to centralized `tests/` directory with proper structure
+- ✅ **Development Pages**: Test and debug pages moved to `src/app/dev/` (excluded from production)
+- ✅ **Import Cleanup**: Removed unused imports across all components and utilities
+- ✅ **Data Provider Consolidation**: Merged `FormDataProvider` and `SimpleFormDataProvider` into configurable unified provider
+
+### Documentation & Comments
+- ✅ **Business Logic Documentation**: Added comprehensive comments to complex functions
+- ✅ **API Client Documentation**: Detailed comments on retry logic and error handling
+- ✅ **Data Transformation Documentation**: Explained field mapping and business rules
+- ✅ **Form Validation Documentation**: Documented validation rules and error handling
+
+### Code Quality Improvements
+- ✅ **Standardized Import Organization**: Consistent import ordering and grouping
+- ✅ **Component Cleanup**: Removed redundant components and consolidated similar functionality
+- ✅ **Type Safety**: Enhanced TypeScript definitions and error handling
+- ✅ **Error Handling**: Improved error messages and user feedback
+
+### Project Structure Enhancements
+- ✅ **Centralized Exports**: All form components properly exported through index files
+- ✅ **Development Workflow**: Clear separation between production and development code
+- ✅ **Test Infrastructure**: Proper test directory structure with documentation
+- ✅ **Build Optimization**: Removed development artifacts from production builds
 
 ## ✨ Features
 

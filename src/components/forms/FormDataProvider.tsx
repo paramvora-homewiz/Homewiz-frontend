@@ -67,9 +67,34 @@ const FormDataContext = createContext<FormDataContextType | undefined>(undefined
 
 interface FormDataProviderProps {
   children: ReactNode
+  /**
+   * Configuration options for data loading
+   * - loadOperators: Whether to load operators data (default: true)
+   * - loadBuildings: Whether to load buildings data (default: true) 
+   * - loadRooms: Whether to load rooms data (default: true)
+   * - useMockData: Force use of mock data instead of API/Supabase (default: false)
+   * - autoRefresh: Enable automatic data refresh (default: false)
+   */
+  config?: {
+    loadOperators?: boolean
+    loadBuildings?: boolean
+    loadRooms?: boolean
+    useMockData?: boolean
+    autoRefresh?: boolean
+  }
 }
 
-export function FormDataProvider({ children }: FormDataProviderProps) {
+export function FormDataProvider({ children, config: providerConfig }: FormDataProviderProps) {
+  // Default configuration
+  const defaultConfig = {
+    loadOperators: true,
+    loadBuildings: true,
+    loadRooms: true,
+    useMockData: false,
+    autoRefresh: false
+  }
+  
+  const finalConfig = { ...defaultConfig, ...providerConfig }
   // State for operators
   const [operators, setOperators] = useState<Operator[]>([])
   const [operatorsLoading, setOperatorsLoading] = useState(false)
@@ -479,12 +504,20 @@ export function FormDataProvider({ children }: FormDataProviderProps) {
 
   // Refresh all data
   const refreshAll = React.useCallback(async () => {
-    await Promise.all([
-      refreshOperators(),
-      refreshBuildings(),
-      refreshRooms()
-    ])
-  }, [refreshOperators, refreshBuildings, refreshRooms])
+    const promises: Promise<void>[] = []
+    
+    if (finalConfig.loadOperators) {
+      promises.push(refreshOperators())
+    }
+    if (finalConfig.loadBuildings) {
+      promises.push(refreshBuildings())
+    }
+    if (finalConfig.loadRooms) {
+      promises.push(refreshRooms())
+    }
+    
+    await Promise.all(promises)
+  }, [refreshOperators, refreshBuildings, refreshRooms, finalConfig])
 
   // Helper methods for filtered data
   const getOperatorsByType = React.useCallback((type: string): Operator[] => {
@@ -627,6 +660,24 @@ export function FormDataLoader({
   }
 
   return <>{children}</>
+}
+
+// Compatibility exports for SimpleFormDataProvider
+export function SimpleFormDataProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <FormDataProvider config={{ loadOperators: false, loadRooms: false, loadBuildings: true }}>
+      {children}
+    </FormDataProvider>
+  )
+}
+
+export function useSimpleFormData() {
+  const context = useFormData()
+  return {
+    buildings: context.buildings,
+    buildingsLoading: context.buildingsLoading,
+    buildingsError: context.buildingsError
+  }
 }
 
 // Smart select component that handles foreign key relationships

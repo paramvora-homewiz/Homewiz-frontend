@@ -23,7 +23,10 @@
       "Bash(npm run lint)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(timeout 30 npm run build:force)"
     ],
     "deny": []
   }
