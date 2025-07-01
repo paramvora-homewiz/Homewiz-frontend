@@ -272,14 +272,18 @@ export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'upd
   noise_level?: string
   sunlight?: string
   furnished?: boolean
-  furniture_details?: string
   last_renovation_date?: string
-  public_notes?: string
-  internal_notes?: string
   virtual_tour_url?: string
   available_from?: string
   additional_features?: string
   room_photos?: File[]
+  // New fields added based on best practices
+  room_access_type?: 'KEY' | 'KEYCARD' | 'DIGITAL' | 'CODE'
+  internet_speed?: number
+  room_condition_score?: number
+  cleaning_frequency?: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'ON_REQUEST'
+  utilities_meter_id?: string
+  last_cleaning_date?: string
 }
 
 // Tenant Form Interface - Maps to tenants table

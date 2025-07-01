@@ -23,11 +23,7 @@ export const metadata: Metadata = {
   keywords: "rental, housing, apartment, application",
   authors: [{ name: "HomeWiz Team" }],
   robots: config.isProduction ? "index, follow" : "noindex, nofollow",
-};
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
+  viewport: "width=device-width, initial-scale=1",
   themeColor: "#ffffff",
 };
 

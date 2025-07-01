@@ -5,71 +5,44 @@
 
 // Backend Enum Values (Must match backend exactly)
 export const BACKEND_ENUMS = {
-  // Operator related enums
-  OPERATOR_TYPES: ['LEASING_AGENT', 'MAINTENANCE', 'BUILDING_MANAGER', 'ADMIN'] as const,
-  OPERATOR_ROLES: ['Property Manager', 'Assistant Manager', 'Maintenance', 'Leasing Agent'] as const,
-  NOTIFICATION_PREFERENCES: ['EMAIL', 'SMS', 'BOTH', 'NONE'] as const,
-  
-  // Room related enums
-  ROOM_STATUS: ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'] as const,
+  OPERATOR_TYPES: ['LEASING_AGENT', 'BUILDING_MANAGER', 'ADMIN', 'MAINTENANCE'] as const,
   BATHROOM_TYPES: ['Private', 'En-Suite', 'Shared'] as const,
-  BED_SIZES: ['Twin', 'Full', 'Queen', 'King'] as const,
-  BED_TYPES: ['Single', 'Platform', 'Bunk'] as const,
-  ROOM_VIEWS: ['Street', 'City', 'Bay', 'Garden', 'Courtyard'] as const,
-  ROOM_STORAGE: ['Built-in Closet', 'Walk-in Closet', 'Wardrobe'] as const,
-  NOISE_LEVELS: ['QUIET', 'MODERATE', 'LIVELY'] as const,
-  SUNLIGHT_LEVELS: ['BRIGHT', 'MODERATE', 'LOW'] as const,
-  
-  // Building related enums
-  PET_FRIENDLY_OPTIONS: ['Yes', 'No', 'Small Pets', 'Cats Only', 'All Pets'] as const,
-  COMMON_KITCHEN_OPTIONS: ['None', 'Basic', 'Full', 'Premium'] as const,
-  CLEANING_SCHEDULES: [
-    'Daily cleaning service',
-    'Weekly professional cleaning',
-    'Bi-weekly cleaning service',
-    'Monthly deep cleaning',
-    'Tenant responsibility with supplies provided',
-    'Tenant responsibility - own supplies'
-  ] as const,
-  
-  // Tenant related enums
-  TENANT_STATUS: ['ACTIVE', 'INACTIVE', 'PENDING', 'EXPIRED'] as const,
-  BOOKING_TYPES: ['LEASE', 'CORPORATE', 'STUDENT'] as const,
-  TENANT_NATIONALITY: ['US-CITIZEN', 'PERMANENT-RESIDENT', 'F1-VISA', 'H1B-VISA', 'OTHER'] as const,
-  PAYMENT_STATUS: ['CURRENT', 'LATE', 'PENDING'] as const,
-  COMMUNICATION_PREFERENCES: ['EMAIL', 'SMS', 'BOTH'] as const,
-  ACCOUNT_STATUS: ['ACTIVE', 'INACTIVE', 'PENDING'] as const,
-  EMERGENCY_CONTACT_RELATIONS: ['Parent', 'Sibling', 'Spouse', 'Friend', 'Other'] as const,
-  
-  // Lead related enums
-  LEAD_STATUS: [
-    'EXPLORING', 'SHOWING_SCHEDULED', 'APPLICATION_STARTED', 'APPLICATION_SUBMITTED', 
-    'BACKGROUND_CHECK', 'LEASE_REQUESTED', 'APPROVED', 'LEASE_SIGNED', 
-    'MOVED_IN', 'REJECTED', 'DECLINED'
-  ] as const,
-  VISA_STATUS: ['US-CITIZEN', 'PERMANENT-RESIDENT', 'F1-VISA', 'H1B-VISA', 'OTHER'] as const,
-  LEAD_SOURCES: ['WEBSITE', 'REFERRAL', 'ADVERTISEMENT', 'SOCIAL_MEDIA'] as const,
-  PREFERRED_COMMUNICATION: ['EMAIL', 'SMS', 'PHONE'] as const,
+  BED_SIZES: ['Twin', 'Full', 'Queen'] as const,
+  BED_TYPES: ['Single', 'Platform'] as const,
+  ROOM_VIEWS: ['Street', 'City', 'Bay', 'Garden'] as const,
+  ROOM_STATUS: ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'] as const,
+  LEAD_STATUS: ['EXPLORING', 'INTERESTED', 'SCHEDULED_VIEWING', 'APPLICATION_SUBMITTED', 'APPROVED', 'REJECTED', 'CONVERTED'] as const,
+  VISA_STATUS: ['US-CITIZEN', 'F1-VISA', 'H1B-VISA'] as const,
+  TENANT_STATUS: ['ACTIVE', 'INACTIVE', 'PENDING', 'TERMINATED'] as const,
+  PAYMENT_STATUS: ['CURRENT', 'PENDING', 'PAID', 'PARTIAL', 'OVERDUE'] as const,
+  BOOKING_TYPES: ['LEASE', 'SHORT_TERM', 'MONTH_TO_MONTH', 'CORPORATE'] as const,
+  ROOM_ACCESS_TYPES: ['KEY', 'KEYCARD', 'DIGITAL', 'CODE'] as const,
+  CLEANING_FREQUENCY: ['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'ON_REQUEST'] as const,
 } as const
 
 // Required Fields Mapping (Backend requirements)
 export const REQUIRED_FIELDS = {
   OPERATOR: ['name', 'email'] as const,
-  BUILDING: ['building_id', 'building_name'] as const, // Only these are truly required in backend
+  BUILDING: ['building_id', 'building_name', 'street', 'city', 'state', 'zip'] as const,
   ROOM: [
-    'room_id',
     'room_number',
     'building_id',
     'private_room_rent'
   ] as const,
   TENANT: [
-    'tenant_id',
     'tenant_name',
+    'room_id', 
+    'room_number',
+    'lease_start_date',
+    'lease_end_date', 
+    'operator_id',
+    'booking_type',
+    'tenant_nationality',
     'tenant_email',
-    'room_id',
-    'building_id'
+    'building_id',
+    'deposit_amount'
   ] as const,
-  LEAD: ['lead_id', 'email', 'status'] as const,
+  LEAD: ['email'] as const,
 } as const
 
 /**
@@ -100,6 +73,7 @@ export const REQUIRED_FIELDS = {
  */
 export function transformTenantDataForBackend(frontendData: any) {
   return {
+    tenant_id: frontendData.tenant_id || `TENANT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     // Combine firstName + lastName → tenant_name with proper whitespace handling
     tenant_name: frontendData.firstName && frontendData.lastName 
       ? `${frontendData.firstName.trim()} ${frontendData.lastName.trim()}`
@@ -131,122 +105,91 @@ export function transformTenantDataForBackend(frontendData: any) {
   }
 }
 
-// Transform lead data to match backend structure
+// Transform lead data with JSON serialization
 export function transformLeadDataForBackend(frontendData: any) {
   return {
-    lead_id: frontendData.lead_id || generateLeadId(),
-    email: frontendData.email?.trim().toLowerCase(),
+    lead_id: frontendData.lead_id || `LEAD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    email: frontendData.email,
     status: frontendData.status || 'EXPLORING',
-    interaction_count: frontendData.interaction_count ? parseInt(frontendData.interaction_count) : 0,
-    lead_score: frontendData.lead_score ? parseInt(frontendData.lead_score) : 0,
+    interaction_count: frontendData.interaction_count || 0,
     
     // Serialize arrays to JSON strings (backend stores as Text)
     rooms_interested: frontendData.rooms_interested 
-      ? (Array.isArray(frontendData.rooms_interested)
-          ? JSON.stringify(frontendData.rooms_interested)
-          : frontendData.rooms_interested)
+      ? JSON.stringify(frontendData.rooms_interested) 
       : null,
     showing_dates: frontendData.showing_dates 
-      ? (Array.isArray(frontendData.showing_dates)
-          ? JSON.stringify(frontendData.showing_dates)
-          : frontendData.showing_dates)
+      ? JSON.stringify(frontendData.showing_dates) 
       : null,
       
-    selected_room_id: frontendData.selected_room_id?.trim() || null,
-    planned_move_in: frontendData.planned_move_in || frontendData.preferred_move_in_date || null,
-    planned_move_out: frontendData.planned_move_out || null,
-    preferred_move_in_date: frontendData.preferred_move_in_date || null,
-    preferred_lease_term: frontendData.preferred_lease_term ? parseInt(frontendData.preferred_lease_term) : null,
-    visa_status: frontendData.visa_status?.trim() || null,
-    notes: frontendData.notes?.trim() || null,
-    additional_preferences: frontendData.additional_preferences?.trim() || null,
-    budget_min: frontendData.budget_min ? parseFloat(frontendData.budget_min) : null,
-    budget_max: frontendData.budget_max ? parseFloat(frontendData.budget_max) : null,
-    lead_source: frontendData.lead_source?.trim() || null,
-    preferred_communication: frontendData.preferred_communication || 'EMAIL',
-    last_contacted: frontendData.last_contacted || null,
-    next_follow_up: frontendData.next_follow_up || null,
-    created_at: new Date().toISOString()
+    selected_room_id: frontendData.selected_room_id,
+    planned_move_in: frontendData.preferred_move_in_date || frontendData.planned_move_in,
+    planned_move_out: frontendData.planned_move_out,
+    visa_status: frontendData.visa_status,
   }
 }
 
 // Transform building data to match backend structure
+// Updated to work with existing backend data types (UUID, boolean, etc.)
 export function transformBuildingDataForBackend(frontendData: any) {
   return {
     building_id: String(frontendData.building_id || generateBuildingId()),
-    building_name: frontendData.building_name?.trim(),
+    building_name: frontendData.building_name,
 
-    // Address fields (exact backend schema mapping)
-    full_address: frontendData.full_address?.trim() ||
-      [frontendData.street || frontendData.address, frontendData.area, frontendData.city, frontendData.state, frontendData.zip || frontendData.zip_code]
-        .filter(Boolean).join(', ') || null,
-    street: (frontendData.street || frontendData.address)?.trim() || null,
-    area: frontendData.area?.trim() || null,
-    city: frontendData.city?.trim() || null,
-    state: frontendData.state?.trim() || null,
-    zip: (frontendData.zip || frontendData.zip_code)?.trim() || null,
+    // Address consolidation
+    full_address: frontendData.full_address ||
+      [frontendData.street, frontendData.area, frontendData.city, frontendData.state, frontendData.zip]
+        .filter(Boolean).join(', '),
 
-    // Foreign keys
-    operator_id: frontendData.operator_id ? parseInt(frontendData.operator_id) : null,
+    // Individual address fields (match database schema)
+    street: frontendData.address || frontendData.street,
+    area: frontendData.area,
+    city: frontendData.city,
+    state: frontendData.state,
+    zip: frontendData.zip_code || frontendData.zip,
 
-    // Basic properties
-    available: frontendData.available !== undefined ? Boolean(frontendData.available) : true,
-    floors: frontendData.floors ? parseInt(frontendData.floors) : null,
-    total_rooms: frontendData.total_rooms ? parseInt(frontendData.total_rooms) : null,
-    total_bathrooms: frontendData.total_bathrooms ? parseInt(frontendData.total_bathrooms) : null,
-    bathrooms_on_each_floor: frontendData.bathrooms_on_each_floor ? parseInt(frontendData.bathrooms_on_each_floor) : null,
-    priority: frontendData.priority ? parseInt(frontendData.priority) : null,
+    // Basic building info (remove building_type as it doesn't exist in database)
+    year_built: frontendData.year_built,
+    last_renovation: frontendData.last_renovation,
+    operator_id: frontendData.operator_id,
+    available: frontendData.available ?? true,
+    floors: frontendData.floors,
+    total_rooms: frontendData.total_rooms,
+    total_bathrooms: frontendData.total_bathrooms,
+    bathrooms_on_each_floor: frontendData.bathrooms_on_each_floor,
 
-    // Lease terms
-    min_lease_term: frontendData.min_lease_term ? parseInt(frontendData.min_lease_term) : null,
-    pref_min_lease_term: frontendData.pref_min_lease_term ? parseInt(frontendData.pref_min_lease_term) : null,
+    // Amenities and features
+    common_kitchen: frontendData.common_kitchen,
+    min_lease_term: frontendData.min_lease_term,
+    pref_min_lease_term: frontendData.pref_min_lease_term,
+    wifi_included: frontendData.wifi_included ?? true,
+    laundry_onsite: frontendData.laundry_onsite ?? true,
+    common_area: frontendData.common_area,
+    secure_access: frontendData.secure_access ?? false,
+    bike_storage: frontendData.bike_storage ?? false,
+    rooftop_access: frontendData.rooftop_access ?? false,
 
-    // Amenities (all boolean, default false)
-    wifi_included: Boolean(frontendData.wifi_included ?? false),
-    laundry_onsite: Boolean(frontendData.laundry_onsite ?? false),
-    secure_access: Boolean(frontendData.secure_access ?? false),
-    bike_storage: Boolean(frontendData.bike_storage ?? false),
-    rooftop_access: Boolean(frontendData.rooftop_access ?? false),
-    utilities_included: Boolean(frontendData.utilities_included ?? false),
-    fitness_area: Boolean(frontendData.fitness_area ?? false),
-    work_study_area: Boolean(frontendData.work_study_area ?? false),
-    social_events: Boolean(frontendData.social_events ?? false),
-    disability_access: Boolean(frontendData.disability_access ?? false),
+    // Convert pet_friendly to string for new backend (database stores as String)
+    pet_friendly: typeof frontendData.pet_friendly === 'boolean' 
+      ? (frontendData.pet_friendly ? "Yes" : "No")
+      : (frontendData.pet_friendly || "No"),
 
-    // Text fields
-    common_kitchen: frontendData.common_kitchen?.trim() || null,
-    common_area: frontendData.common_area?.trim() || null,
-    pet_friendly: frontendData.pet_friendly?.trim() || null,
-    cleaning_common_spaces: frontendData.cleaning_common_spaces?.trim() || null,
-    nearby_conveniences_walk: frontendData.nearby_conveniences_walk?.trim() || null,
-    nearby_transportation: frontendData.nearby_transportation?.trim() || null,
-    building_rules: frontendData.building_rules?.trim() || null,
-    amenities_details: frontendData.amenities_details?.trim() || null,
-    neighborhood_description: frontendData.neighborhood_description?.trim() || null,
-    building_description: frontendData.building_description?.trim() || null,
-    public_transit_info: frontendData.public_transit_info?.trim() || null,
-    parking_info: frontendData.parking_info?.trim() || null,
-    security_features: frontendData.security_features?.trim() || null,
-    disability_features: frontendData.disability_features?.trim() || null,
+    cleaning_common_spaces: frontendData.cleaning_common_spaces,
+    utilities_included: frontendData.utilities_included ?? false,
+    fitness_area: frontendData.fitness_area ?? false,
+    work_study_area: frontendData.work_study_area ?? false,
+    social_events: frontendData.social_events ?? false,
+    nearby_conveniences_walk: frontendData.nearby_conveniences_walk,
+    nearby_transportation: frontendData.nearby_transportation,
+    priority: frontendData.priority || 0,
 
-    // Media fields - backend expects JSON array as string
-    building_images: frontendData.building_images 
-      ? (Array.isArray(frontendData.building_images) 
-          ? JSON.stringify(frontendData.building_images)
-          : frontendData.building_images)
-      : (frontendData.images 
-          ? (Array.isArray(frontendData.images)
-              ? JSON.stringify(frontendData.images)
-              : frontendData.images)
-          : null),
-    virtual_tour_url: frontendData.virtual_tour_url?.trim() || frontendData.video_url?.trim() || null,
+    // Media fields - convert to format backend expects
+    building_images: Array.isArray(frontendData.images)
+      ? frontendData.images.join(',')  // Convert array to comma-separated string
+      : (frontendData.images || frontendData.building_images || ''),
+    virtual_tour_url: frontendData.video_url || frontendData.virtual_tour_url,
 
-    // Years
-    year_built: frontendData.year_built ? parseInt(frontendData.year_built) : null,
-    last_renovation: frontendData.last_renovation ? parseInt(frontendData.last_renovation) : null,
-
-    // Timestamps - let database handle these
-    created_at: new Date().toISOString()
+    // Additional fields
+    amenities_details: frontendData.amenities_details,
   }
 }
 
@@ -493,39 +436,13 @@ export function validateBuildingFormData(data: any): ValidationResult {
   const backendData = transformBuildingDataForBackend(data)
   const missingRequired = validateRequiredFields(backendData, 'BUILDING')
   
-  // Validate required fields
-  if (!backendData.building_name?.trim()) {
-    errors.building_name = 'Building name is required'
-  }
-  
   // Validate numeric fields
-  if (backendData.floors && (isNaN(backendData.floors) || backendData.floors < 1)) {
+  if (backendData.floors && backendData.floors < 1) {
     errors.floors = 'Building must have at least 1 floor'
   }
   
-  if (backendData.total_rooms && (isNaN(backendData.total_rooms) || backendData.total_rooms < 1)) {
+  if (backendData.total_rooms && backendData.total_rooms < 1) {
     errors.total_rooms = 'Building must have at least 1 room'
-  }
-  
-  if (backendData.total_bathrooms && (isNaN(backendData.total_bathrooms) || backendData.total_bathrooms < 0)) {
-    errors.total_bathrooms = 'Total bathrooms cannot be negative'
-  }
-  
-  if (backendData.year_built && (isNaN(backendData.year_built) || backendData.year_built < 1800 || backendData.year_built > new Date().getFullYear() + 5)) {
-    errors.year_built = 'Please enter a valid year'
-  }
-  
-  // Validate enum values
-  if (backendData.pet_friendly && !validateEnum(backendData.pet_friendly, 'PET_FRIENDLY_OPTIONS')) {
-    errors.pet_friendly = 'Invalid pet policy selection'
-  }
-  
-  if (backendData.common_kitchen && !validateEnum(backendData.common_kitchen, 'COMMON_KITCHEN_OPTIONS')) {
-    errors.common_kitchen = 'Invalid common kitchen option'
-  }
-  
-  if (backendData.cleaning_common_spaces && !validateEnum(backendData.cleaning_common_spaces, 'CLEANING_SCHEDULES')) {
-    errors.cleaning_common_spaces = 'Invalid cleaning schedule'
   }
   
   return {
@@ -537,39 +454,16 @@ export function validateBuildingFormData(data: any): ValidationResult {
 
 export function validateOperatorFormData(data: any): ValidationResult {
   const errors: Record<string, string> = {}
-  const backendData = transformOperatorDataForBackend(data)
-  const missingRequired = validateRequiredFields(backendData, 'OPERATOR')
+  const missingRequired = validateRequiredFields(data, 'OPERATOR')
   
-  // Validate required fields
-  if (!backendData.name?.trim()) {
-    errors.name = 'Name is required'
-  }
-  
-  if (!backendData.email?.trim()) {
-    errors.email = 'Email is required'
-  }
-  
-  // Validate email format
-  if (backendData.email && !validateEmailFormat(backendData.email)) {
+  // Validate email
+  if (data.email && !validateEmailFormat(data.email)) {
     errors.email = 'Invalid email format'
   }
   
-  // Validate phone format if provided
-  if (backendData.phone && !validatePhoneFormat(backendData.phone)) {
-    errors.phone = 'Invalid phone number format'
-  }
-  
-  // Validate enum values
-  if (backendData.operator_type && !validateEnum(backendData.operator_type, 'OPERATOR_TYPES')) {
+  // Validate operator type
+  if (data.operator_type && !validateEnum(data.operator_type, 'OPERATOR_TYPES')) {
     errors.operator_type = 'Invalid operator type'
-  }
-  
-  if (backendData.role && !validateEnum(backendData.role, 'OPERATOR_ROLES')) {
-    errors.role = 'Invalid role selection'
-  }
-  
-  if (backendData.notification_preferences && !validateEnum(backendData.notification_preferences, 'NOTIFICATION_PREFERENCES')) {
-    errors.notification_preferences = 'Invalid notification preference'
   }
   
   return {
@@ -584,12 +478,7 @@ export function validateLeadFormData(data: any): ValidationResult {
   const backendData = transformLeadDataForBackend(data)
   const missingRequired = validateRequiredFields(backendData, 'LEAD')
   
-  // Validate required fields
-  if (!backendData.email?.trim()) {
-    errors.email = 'Email is required'
-  }
-  
-  // Validate email format
+  // Validate email
   if (backendData.email && !validateEmailFormat(backendData.email)) {
     errors.email = 'Invalid email format'
   }
@@ -601,39 +490,6 @@ export function validateLeadFormData(data: any): ValidationResult {
   
   if (backendData.visa_status && !validateEnum(backendData.visa_status, 'VISA_STATUS')) {
     errors.visa_status = 'Invalid visa status'
-  }
-  
-  if (backendData.lead_source && !validateEnum(backendData.lead_source, 'LEAD_SOURCES')) {
-    errors.lead_source = 'Invalid lead source'
-  }
-  
-  if (backendData.preferred_communication && !validateEnum(backendData.preferred_communication, 'PREFERRED_COMMUNICATION')) {
-    errors.preferred_communication = 'Invalid communication preference'
-  }
-  
-  // Validate numeric fields
-  if (backendData.lead_score !== undefined && (isNaN(backendData.lead_score) || backendData.lead_score < 0 || backendData.lead_score > 100)) {
-    errors.lead_score = 'Lead score must be between 0 and 100'
-  }
-  
-  if (backendData.interaction_count !== undefined && (isNaN(backendData.interaction_count) || backendData.interaction_count < 0)) {
-    errors.interaction_count = 'Interaction count cannot be negative'
-  }
-  
-  if (backendData.preferred_lease_term && (isNaN(backendData.preferred_lease_term) || backendData.preferred_lease_term < 1)) {
-    errors.preferred_lease_term = 'Lease term must be at least 1 month'
-  }
-  
-  if (backendData.budget_min && (isNaN(backendData.budget_min) || backendData.budget_min < 0)) {
-    errors.budget_min = 'Minimum budget cannot be negative'
-  }
-  
-  if (backendData.budget_max && (isNaN(backendData.budget_max) || backendData.budget_max < 0)) {
-    errors.budget_max = 'Maximum budget cannot be negative'
-  }
-  
-  if (backendData.budget_min && backendData.budget_max && backendData.budget_min > backendData.budget_max) {
-    errors.budget_max = 'Maximum budget must be greater than minimum budget'
   }
   
   return {
@@ -669,25 +525,7 @@ export function validateRoomFormData(data: any): ValidationResult {
   // Check for missing required fields based on backend schema
   const missingRequired = validateRequiredFields(backendData, 'ROOM')
   
-  // Core required field validation - these fields are essential for room creation
-  if (!backendData.room_number?.trim()) {
-    errors.room_number = 'Room number is required'
-  }
-  
-  if (!backendData.building_id?.trim()) {
-    errors.building_id = 'Building selection is required'
-  }
-  
-  // Financial validation - rent amount is required for pricing calculations
-  if (backendData.private_room_rent === undefined || backendData.private_room_rent === null) {
-    errors.private_room_rent = 'Private room rent is required'
-  }
-  
   // Validate enum values
-  if (backendData.status && !validateEnum(backendData.status, 'ROOM_STATUS')) {
-    errors.status = 'Invalid room status'
-  }
-  
   if (backendData.bathroom_type && !validateEnum(backendData.bathroom_type, 'BATHROOM_TYPES')) {
     errors.bathroom_type = 'Invalid bathroom type'
   }
@@ -704,41 +542,53 @@ export function validateRoomFormData(data: any): ValidationResult {
     errors.view = 'Invalid room view'
   }
   
-  if (backendData.room_storage && !validateEnum(backendData.room_storage, 'ROOM_STORAGE')) {
-    errors.room_storage = 'Invalid room storage option'
-  }
-  
-  if (backendData.noise_level && !validateEnum(backendData.noise_level, 'NOISE_LEVELS')) {
-    errors.noise_level = 'Invalid noise level'
-  }
-  
-  if (backendData.sunlight && !validateEnum(backendData.sunlight, 'SUNLIGHT_LEVELS')) {
-    errors.sunlight = 'Invalid sunlight level'
+  if (backendData.status && !validateEnum(backendData.status, 'ROOM_STATUS')) {
+    errors.status = 'Invalid room status'
   }
   
   // Validate numeric fields
-  if (backendData.floor_number && (isNaN(backendData.floor_number) || backendData.floor_number < 1)) {
+  if (backendData.floor_number && backendData.floor_number < 1) {
     errors.floor_number = 'Floor number must be at least 1'
   }
   
-  if (backendData.bed_count && (isNaN(backendData.bed_count) || backendData.bed_count < 1)) {
+  if (backendData.bed_count && backendData.bed_count < 1) {
     errors.bed_count = 'Bed count must be at least 1'
   }
   
-  if (backendData.maximum_people_in_room && (isNaN(backendData.maximum_people_in_room) || backendData.maximum_people_in_room < 1)) {
+  if (backendData.maximum_people_in_room && backendData.maximum_people_in_room < 1) {
     errors.maximum_people_in_room = 'Maximum people must be at least 1'
   }
   
-  if (backendData.private_room_rent !== null && (isNaN(backendData.private_room_rent) || backendData.private_room_rent < 0)) {
-    errors.private_room_rent = 'Room rent must be a positive number'
+  if (backendData.private_room_rent && backendData.private_room_rent < 0) {
+    errors.private_room_rent = 'Room rent cannot be negative'
   }
   
-  if (backendData.shared_room_rent_2 && (isNaN(backendData.shared_room_rent_2) || backendData.shared_room_rent_2 < 0)) {
-    errors.shared_room_rent_2 = 'Shared room rent must be a positive number'
+  // Validate new fields
+  if (backendData.room_access_type && !validateEnum(backendData.room_access_type, 'ROOM_ACCESS_TYPES')) {
+    errors.room_access_type = 'Invalid room access type'
   }
   
-  if (backendData.sq_footage && (isNaN(backendData.sq_footage) || backendData.sq_footage < 1)) {
-    errors.sq_footage = 'Square footage must be at least 1'
+  if (backendData.cleaning_frequency && !validateEnum(backendData.cleaning_frequency, 'CLEANING_FREQUENCY')) {
+    errors.cleaning_frequency = 'Invalid cleaning frequency'
+  }
+  
+  if (backendData.room_condition_score !== undefined && backendData.room_condition_score !== null) {
+    const score = Number(backendData.room_condition_score)
+    if (isNaN(score) || score < 1 || score > 10) {
+      errors.room_condition_score = 'Room condition score must be between 1 and 10'
+    }
+  }
+  
+  if (backendData.internet_speed !== undefined && backendData.internet_speed !== null) {
+    const speed = Number(backendData.internet_speed)
+    if (isNaN(speed) || speed < 0) {
+      errors.internet_speed = 'Internet speed must be a positive number'
+    }
+  }
+  
+  // Validate date format for last_cleaning_date
+  if (backendData.last_cleaning_date && !validateDateFormat(backendData.last_cleaning_date)) {
+    errors.last_cleaning_date = 'Invalid date format (use YYYY-MM-DD)'
   }
   
   return {
@@ -751,20 +601,14 @@ export function validateRoomFormData(data: any): ValidationResult {
 // Transform operator data to match backend structure
 export function transformOperatorDataForBackend(frontendData: any) {
   return {
-    name: frontendData.name?.trim(),
-    email: frontendData.email?.trim().toLowerCase(),
-    phone: frontendData.phone?.trim() || null,
-    role: frontendData.role?.trim() || null,
-    active: frontendData.active !== undefined ? Boolean(frontendData.active) : true,
+    name: frontendData.name,
+    email: frontendData.email,
+    phone: frontendData.phone,
+    role: frontendData.role,
+    active: frontendData.active ?? true,
     date_joined: frontendData.date_joined || new Date().toISOString().split('T')[0],
-    last_active: frontendData.last_active || null,
-    operator_type: frontendData.operator_type || 'LEASING_AGENT',
-    permissions: frontendData.permissions || null,
-    notification_preferences: frontendData.notification_preferences || 'EMAIL',
-    working_hours: frontendData.working_hours || null,
-    emergency_contact: Boolean(frontendData.emergency_contact ?? false),
-    calendar_sync_enabled: Boolean(frontendData.calendar_sync_enabled ?? false),
-    calendar_external_id: frontendData.calendar_external_id || null
+    last_active: frontendData.last_active,
+    operator_type: frontendData.operator_type || 'LEASING_AGENT'
   }
 }
 
@@ -772,69 +616,63 @@ export function transformOperatorDataForBackend(frontendData: any) {
 export function transformRoomDataForBackend(frontendData: any) {
   return {
     room_id: frontendData.room_id || generateRoomId(),
-    room_number: frontendData.room_number?.trim(),
-    building_id: frontendData.building_id?.trim(),
+    room_number: frontendData.room_number,
+    building_id: frontendData.building_id,
 
     // Status and availability
-    ready_to_rent: frontendData.ready_to_rent !== undefined ? Boolean(frontendData.ready_to_rent) : true,
+    ready_to_rent: frontendData.ready_to_rent ?? true,
     status: frontendData.status || 'AVAILABLE',
     booked_from: frontendData.booked_from || null,
     booked_till: frontendData.booked_till || null,
+    active_tenants: frontendData.active_tenants || 0,
+    maximum_people_in_room: frontendData.maximum_people_in_room || 1,
     available_from: frontendData.available_from || null,
-    active_tenants: frontendData.active_tenants ? parseInt(frontendData.active_tenants) : 0,
-    maximum_people_in_room: frontendData.maximum_people_in_room ? parseInt(frontendData.maximum_people_in_room) : null,
 
-    // Pricing (private_room_rent is required)
-    private_room_rent: frontendData.private_room_rent ? parseFloat(frontendData.private_room_rent) : 0,
-    shared_room_rent_2: frontendData.shared_room_rent_2 ? parseFloat(frontendData.shared_room_rent_2) : null,
+    // Pricing
+    private_room_rent: frontendData.private_room_rent || 0,
+    shared_room_rent_2: frontendData.shared_room_rent_2 || null,
 
-    // Physical properties
-    floor_number: frontendData.floor_number ? parseInt(frontendData.floor_number) : null,
-    bed_count: frontendData.bed_count ? parseInt(frontendData.bed_count) : null,
-    sq_footage: frontendData.sq_footage ? parseInt(frontendData.sq_footage) : null,
+    // Room specifications
+    room_type: frontendData.room_type || 'Standard',
+    floor_number: frontendData.floor_number || 1,
+    bed_count: frontendData.bed_count || 1,
+    bathroom_type: frontendData.bathroom_type || 'Shared',
+    bed_size: frontendData.bed_size || 'Twin',
+    bed_type: frontendData.bed_type || 'Single',
+    view: frontendData.view || 'Street',
+    sq_footage: frontendData.sq_footage || null,
+    room_storage: frontendData.room_storage || 'Built-in Closet',
 
-    // Room features
-    bathroom_type: frontendData.bathroom_type?.trim() || null,
-    bed_size: frontendData.bed_size?.trim() || null,
-    bed_type: frontendData.bed_type?.trim() || null,
-    view: frontendData.view?.trim() || null,
-    room_storage: frontendData.room_storage?.trim() || null,
-    noise_level: frontendData.noise_level?.trim() || null,
-    sunlight: frontendData.sunlight?.trim() || null,
+    // Environment and features
+    noise_level: frontendData.noise_level || null,
+    sunlight: frontendData.sunlight || null,
+    furnished: frontendData.furnished ?? false,
+    additional_features: frontendData.additional_features || null,
+    virtual_tour_url: frontendData.virtual_tour_url || null,
 
-    // Amenities (all boolean, default false)
-    mini_fridge: Boolean(frontendData.mini_fridge ?? false),
-    sink: Boolean(frontendData.sink ?? false),
-    bedding_provided: Boolean(frontendData.bedding_provided ?? false),
-    work_desk: Boolean(frontendData.work_desk ?? false),
-    work_chair: Boolean(frontendData.work_chair ?? false),
-    heating: Boolean(frontendData.heating ?? false),
-    air_conditioning: Boolean(frontendData.air_conditioning ?? false),
-    cable_tv: Boolean(frontendData.cable_tv ?? false),
-    furnished: Boolean(frontendData.furnished ?? false),
-
-    // Additional fields
-    current_booking_types: frontendData.current_booking_types?.trim() || null,
-    furniture_details: frontendData.furniture_details?.trim() || null,
-    public_notes: frontendData.public_notes?.trim() || null,
-    internal_notes: frontendData.internal_notes?.trim() || null,
-    additional_features: frontendData.additional_features?.trim() || null,
-
-    // Inspection & maintenance
+    // Maintenance tracking
     last_check: frontendData.last_check || null,
-    last_check_by: frontendData.last_check_by ? parseInt(frontendData.last_check_by) : null,
+    last_check_by: frontendData.last_check_by || null,
     last_renovation_date: frontendData.last_renovation_date || null,
+    current_booking_types: frontendData.current_booking_types || null,
 
-    // Media - backend expects JSON array as string
-    room_images: frontendData.room_images 
-      ? (Array.isArray(frontendData.room_images) 
-          ? JSON.stringify(frontendData.room_images)
-          : frontendData.room_images)
-      : (frontendData.images 
-          ? (Array.isArray(frontendData.images)
-              ? JSON.stringify(frontendData.images)
-              : frontendData.images)
-          : null),
-    virtual_tour_url: frontendData.virtual_tour_url?.trim() || null
+
+    // Amenities (boolean fields)
+    mini_fridge: frontendData.mini_fridge ?? false,
+    sink: frontendData.sink ?? false,
+    bedding_provided: frontendData.bedding_provided ?? false,
+    work_desk: frontendData.work_desk ?? false,
+    work_chair: frontendData.work_chair ?? false,
+    heating: frontendData.heating ?? false,
+    air_conditioning: frontendData.air_conditioning ?? false,
+    cable_tv: frontendData.cable_tv ?? false,
+
+    // New fields added based on best practices
+    room_access_type: frontendData.room_access_type || 'KEY',
+    internet_speed: frontendData.internet_speed || null,
+    room_condition_score: frontendData.room_condition_score || null,
+    cleaning_frequency: frontendData.cleaning_frequency || 'WEEKLY',
+    utilities_meter_id: frontendData.utilities_meter_id || null,
+    last_cleaning_date: frontendData.last_cleaning_date || null
   }
 }

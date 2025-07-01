@@ -6,7 +6,6 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EnhancedCard } from '@/components/ui/enhanced-components'
-import { apiService } from '../../services/apiService'
 import { databaseLogger, LogEntry } from '../../services/databaseLogger'
 import {
   Database,

@@ -1,8 +1,8 @@
 /**
  * Supabase Database Types for HomeWiz
  * 
- * Updated types to match exact backend schema
- * These types are aligned with the actual database structure
+ * Auto-generated types for type-safe database operations
+ * These types should be updated when the database schema changes
  */
 
 export type Json =
@@ -20,292 +20,146 @@ export interface Database {
         Row: {
           building_id: string
           building_name: string
-          full_address: string | null
-          street: string | null
-          area: string | null
-          city: string | null
-          state: string | null
-          zip: string | null
-          operator_id: number | null
-          available: boolean
-          floors: number | null
-          total_rooms: number | null
-          total_bathrooms: number | null
-          bathrooms_on_each_floor: number | null
-          priority: number | null
-          min_lease_term: number | null
-          pref_min_lease_term: number | null
-          wifi_included: boolean
-          laundry_onsite: boolean
-          secure_access: boolean
-          bike_storage: boolean
-          rooftop_access: boolean
-          utilities_included: boolean
-          fitness_area: boolean
-          work_study_area: boolean
-          social_events: boolean
-          disability_access: boolean
-          common_kitchen: string | null
-          common_area: string | null
-          pet_friendly: string | null
-          cleaning_common_spaces: string | null
-          nearby_conveniences_walk: string | null
-          nearby_transportation: string | null
-          building_rules: string | null
-          amenities_details: string | null
-          neighborhood_description: string | null
-          building_description: string | null
-          public_transit_info: string | null
-          parking_info: string | null
-          security_features: string | null
-          disability_features: string | null
-          building_images: string | null
-          virtual_tour_url: string | null
-          created_at: string
-          last_modified: string
+          address: string
+          city: string
+          state: string
+          zip_code: string
+          country: string
+          total_units: number
+          available_units: number
+          building_type: string
           year_built: number | null
-          last_renovation: number | null
+          amenities: Json | null
+          contact_info: Json | null
+          created_at: string
+          updated_at: string
+          status: string
+          area: string | null
+          description: string | null
+          images: Json | null
+          parking_available: boolean
+          pet_friendly: boolean
+          furnished_options: boolean
         }
         Insert: {
           building_id?: string
           building_name: string
-          full_address?: string | null
-          street?: string | null
-          area?: string | null
-          city?: string | null
-          state?: string | null
-          zip?: string | null
-          operator_id?: number | null
-          available?: boolean
-          floors?: number | null
-          total_rooms?: number | null
-          total_bathrooms?: number | null
-          bathrooms_on_each_floor?: number | null
-          priority?: number | null
-          min_lease_term?: number | null
-          pref_min_lease_term?: number | null
-          wifi_included?: boolean
-          laundry_onsite?: boolean
-          secure_access?: boolean
-          bike_storage?: boolean
-          rooftop_access?: boolean
-          utilities_included?: boolean
-          fitness_area?: boolean
-          work_study_area?: boolean
-          social_events?: boolean
-          disability_access?: boolean
-          common_kitchen?: string | null
-          common_area?: string | null
-          pet_friendly?: string | null
-          cleaning_common_spaces?: string | null
-          nearby_conveniences_walk?: string | null
-          nearby_transportation?: string | null
-          building_rules?: string | null
-          amenities_details?: string | null
-          neighborhood_description?: string | null
-          building_description?: string | null
-          public_transit_info?: string | null
-          parking_info?: string | null
-          security_features?: string | null
-          disability_features?: string | null
-          building_images?: string | null
-          virtual_tour_url?: string | null
-          created_at?: string
-          last_modified?: string
+          address: string
+          city: string
+          state: string
+          zip_code: string
+          country?: string
+          total_units: number
+          available_units?: number
+          building_type: string
           year_built?: number | null
-          last_renovation?: number | null
+          amenities?: Json | null
+          contact_info?: Json | null
+          created_at?: string
+          updated_at?: string
+          status?: string
+          area?: string | null
+          description?: string | null
+          images?: Json | null
+          parking_available?: boolean
+          pet_friendly?: boolean
+          furnished_options?: boolean
         }
         Update: {
           building_id?: string
           building_name?: string
-          full_address?: string | null
-          street?: string | null
-          area?: string | null
-          city?: string | null
-          state?: string | null
-          zip?: string | null
-          operator_id?: number | null
-          available?: boolean
-          floors?: number | null
-          total_rooms?: number | null
-          total_bathrooms?: number | null
-          bathrooms_on_each_floor?: number | null
-          priority?: number | null
-          min_lease_term?: number | null
-          pref_min_lease_term?: number | null
-          wifi_included?: boolean
-          laundry_onsite?: boolean
-          secure_access?: boolean
-          bike_storage?: boolean
-          rooftop_access?: boolean
-          utilities_included?: boolean
-          fitness_area?: boolean
-          work_study_area?: boolean
-          social_events?: boolean
-          disability_access?: boolean
-          common_kitchen?: string | null
-          common_area?: string | null
-          pet_friendly?: string | null
-          cleaning_common_spaces?: string | null
-          nearby_conveniences_walk?: string | null
-          nearby_transportation?: string | null
-          building_rules?: string | null
-          amenities_details?: string | null
-          neighborhood_description?: string | null
-          building_description?: string | null
-          public_transit_info?: string | null
-          parking_info?: string | null
-          security_features?: string | null
-          disability_features?: string | null
-          building_images?: string | null
-          virtual_tour_url?: string | null
-          created_at?: string
-          last_modified?: string
+          address?: string
+          city?: string
+          state?: string
+          zip_code?: string
+          country?: string
+          total_units?: number
+          available_units?: number
+          building_type?: string
           year_built?: number | null
-          last_renovation?: number | null
+          amenities?: Json | null
+          contact_info?: Json | null
+          created_at?: string
+          updated_at?: string
+          status?: string
+          area?: string | null
+          description?: string | null
+          images?: Json | null
+          parking_available?: boolean
+          pet_friendly?: boolean
+          furnished_options?: boolean
         }
-        Relationships: [
-          {
-            foreignKeyName: "buildings_operator_id_fkey"
-            columns: ["operator_id"]
-            isOneToOne: false
-            referencedRelation: "operators"
-            referencedColumns: ["operator_id"]
-          }
-        ]
+        Relationships: []
       }
       rooms: {
         Row: {
           room_id: string
-          room_number: string
           building_id: string
-          ready_to_rent: boolean
-          status: string
-          booked_from: string | null
-          booked_till: string | null
-          available_from: string | null
-          active_tenants: number
-          maximum_people_in_room: number | null
-          private_room_rent: number
+          room_number: string
+          room_type: string
+          square_footage: number | null
+          private_room_rent: number | null
           shared_room_rent_2: number | null
+          shared_room_rent_3: number | null
+          shared_room_rent_4: number | null
+          availability_status: string
+          lease_start_date: string | null
+          lease_end_date: string | null
+          amenities: Json | null
+          created_at: string
+          updated_at: string
           floor_number: number | null
-          bed_count: number | null
-          sq_footage: number | null
           bathroom_type: string | null
-          bed_size: string | null
-          bed_type: string | null
-          view: string | null
-          room_storage: string | null
-          noise_level: string | null
-          sunlight: string | null
-          mini_fridge: boolean
-          sink: boolean
-          bedding_provided: boolean
-          work_desk: boolean
-          work_chair: boolean
-          heating: boolean
-          air_conditioning: boolean
-          cable_tv: boolean
           furnished: boolean
-          current_booking_types: string | null
-          furniture_details: string | null
-          public_notes: string | null
-          internal_notes: string | null
-          additional_features: string | null
-          last_check: string | null
-          last_check_by: number | null
-          last_renovation_date: string | null
-          room_images: string | null
-          virtual_tour_url: string | null
-          last_modified: string
+          utilities_included: Json | null
+          images: Json | null
+          description: string | null
         }
         Insert: {
           room_id?: string
-          room_number: string
           building_id: string
-          ready_to_rent?: boolean
-          status?: string
-          booked_from?: string | null
-          booked_till?: string | null
-          available_from?: string | null
-          active_tenants?: number
-          maximum_people_in_room?: number | null
-          private_room_rent: number
+          room_number: string
+          room_type: string
+          square_footage?: number | null
+          private_room_rent?: number | null
           shared_room_rent_2?: number | null
+          shared_room_rent_3?: number | null
+          shared_room_rent_4?: number | null
+          availability_status?: string
+          lease_start_date?: string | null
+          lease_end_date?: string | null
+          amenities?: Json | null
+          created_at?: string
+          updated_at?: string
           floor_number?: number | null
-          bed_count?: number | null
-          sq_footage?: number | null
           bathroom_type?: string | null
-          bed_size?: string | null
-          bed_type?: string | null
-          view?: string | null
-          room_storage?: string | null
-          noise_level?: string | null
-          sunlight?: string | null
-          mini_fridge?: boolean
-          sink?: boolean
-          bedding_provided?: boolean
-          work_desk?: boolean
-          work_chair?: boolean
-          heating?: boolean
-          air_conditioning?: boolean
-          cable_tv?: boolean
           furnished?: boolean
-          current_booking_types?: string | null
-          furniture_details?: string | null
-          public_notes?: string | null
-          internal_notes?: string | null
-          additional_features?: string | null
-          last_check?: string | null
-          last_check_by?: number | null
-          last_renovation_date?: string | null
-          room_images?: string | null
-          virtual_tour_url?: string | null
-          last_modified?: string
+          utilities_included?: Json | null
+          images?: Json | null
+          description?: string | null
         }
         Update: {
           room_id?: string
-          room_number?: string
           building_id?: string
-          ready_to_rent?: boolean
-          status?: string
-          booked_from?: string | null
-          booked_till?: string | null
-          available_from?: string | null
-          active_tenants?: number
-          maximum_people_in_room?: number | null
-          private_room_rent?: number
+          room_number?: string
+          room_type?: string
+          square_footage?: number | null
+          private_room_rent?: number | null
           shared_room_rent_2?: number | null
+          shared_room_rent_3?: number | null
+          shared_room_rent_4?: number | null
+          availability_status?: string
+          lease_start_date?: string | null
+          lease_end_date?: string | null
+          amenities?: Json | null
+          created_at?: string
+          updated_at?: string
           floor_number?: number | null
-          bed_count?: number | null
-          sq_footage?: number | null
           bathroom_type?: string | null
-          bed_size?: string | null
-          bed_type?: string | null
-          view?: string | null
-          room_storage?: string | null
-          noise_level?: string | null
-          sunlight?: string | null
-          mini_fridge?: boolean
-          sink?: boolean
-          bedding_provided?: boolean
-          work_desk?: boolean
-          work_chair?: boolean
-          heating?: boolean
-          air_conditioning?: boolean
-          cable_tv?: boolean
           furnished?: boolean
-          current_booking_types?: string | null
-          furniture_details?: string | null
-          public_notes?: string | null
-          internal_notes?: string | null
-          additional_features?: string | null
-          last_check?: string | null
-          last_check_by?: number | null
-          last_renovation_date?: string | null
-          room_images?: string | null
-          virtual_tour_url?: string | null
-          last_modified?: string
+          utilities_included?: Json | null
+          images?: Json | null
+          description?: string | null
         }
         Relationships: [
           {
@@ -314,13 +168,6 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "buildings"
             referencedColumns: ["building_id"]
-          },
-          {
-            foreignKeyName: "rooms_last_check_by_fkey"
-            columns: ["last_check_by"]
-            isOneToOne: false
-            referencedRelation: "operators"
-            referencedColumns: ["operator_id"]
           }
         ]
       }
@@ -473,7 +320,7 @@ export interface Database {
           calendar_external_id: string | null
         }
         Insert: {
-          operator_id?: number
+          operator_id?: number  // Auto-generated, but optional in TypeScript
           name: string
           email: string
           phone?: string | null
@@ -512,85 +359,61 @@ export interface Database {
         Row: {
           lead_id: string
           email: string
+          first_name: string | null
+          last_name: string | null
+          phone: string | null
           status: string
-          interaction_count: number
-          lead_score: number
-          rooms_interested: string | null
-          selected_room_id: string | null
-          showing_dates: string | null
-          planned_move_in: string | null
-          planned_move_out: string | null
-          preferred_move_in_date: string | null
-          preferred_lease_term: number | null
-          visa_status: string | null
-          notes: string | null
-          additional_preferences: string | null
-          budget_min: number | null
-          budget_max: number | null
-          lead_source: string | null
-          preferred_communication: string
-          last_contacted: string | null
-          next_follow_up: string | null
+          source: string | null
           created_at: string
-          last_modified: string
+          updated_at: string
+          notes: string | null
+          assigned_operator_id: number | null
+          interested_buildings: Json | null
+          budget_range: Json | null
+          move_in_date: string | null
+          preferences: Json | null
         }
         Insert: {
           lead_id?: string
           email: string
+          first_name?: string | null
+          last_name?: string | null
+          phone?: string | null
           status?: string
-          interaction_count?: number
-          lead_score?: number
-          rooms_interested?: string | null
-          selected_room_id?: string | null
-          showing_dates?: string | null
-          planned_move_in?: string | null
-          planned_move_out?: string | null
-          preferred_move_in_date?: string | null
-          preferred_lease_term?: number | null
-          visa_status?: string | null
-          notes?: string | null
-          additional_preferences?: string | null
-          budget_min?: number | null
-          budget_max?: number | null
-          lead_source?: string | null
-          preferred_communication?: string
-          last_contacted?: string | null
-          next_follow_up?: string | null
+          source?: string | null
           created_at?: string
-          last_modified?: string
+          updated_at?: string
+          notes?: string | null
+          assigned_operator_id?: number | null
+          interested_buildings?: Json | null
+          budget_range?: Json | null
+          move_in_date?: string | null
+          preferences?: Json | null
         }
         Update: {
           lead_id?: string
           email?: string
+          first_name?: string | null
+          last_name?: string | null
+          phone?: string | null
           status?: string
-          interaction_count?: number
-          lead_score?: number
-          rooms_interested?: string | null
-          selected_room_id?: string | null
-          showing_dates?: string | null
-          planned_move_in?: string | null
-          planned_move_out?: string | null
-          preferred_move_in_date?: string | null
-          preferred_lease_term?: number | null
-          visa_status?: string | null
-          notes?: string | null
-          additional_preferences?: string | null
-          budget_min?: number | null
-          budget_max?: number | null
-          lead_source?: string | null
-          preferred_communication?: string
-          last_contacted?: string | null
-          next_follow_up?: string | null
+          source?: string | null
           created_at?: string
-          last_modified?: string
+          updated_at?: string
+          notes?: string | null
+          assigned_operator_id?: number | null
+          interested_buildings?: Json | null
+          budget_range?: Json | null
+          move_in_date?: string | null
+          preferences?: Json | null
         }
         Relationships: [
           {
-            foreignKeyName: "leads_selected_room_id_fkey"
-            columns: ["selected_room_id"]
+            foreignKeyName: "leads_assigned_operator_id_fkey"
+            columns: ["assigned_operator_id"]
             isOneToOne: false
-            referencedRelation: "rooms"
-            referencedColumns: ["room_id"]
+            referencedRelation: "operators"
+            referencedColumns: ["operator_id"]
           }
         ]
       }

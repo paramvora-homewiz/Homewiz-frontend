@@ -34,7 +34,8 @@ import {
   Calendar,
   Settings,
   FileText,
-  Wrench
+  Wrench,
+  Camera
 } from 'lucide-react'
 
 // Multi-step form configuration
@@ -174,10 +175,37 @@ const BasicInformationStep = React.memo(({
 
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Building field moved to first position */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Building <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-gray-500 mb-2">Select the building where this room is located</p>
+            <select
+              value={formData.building_id}
+              onChange={(e) => handleInputChange('building_id', e.target.value)}
+              className={`w-full p-3 border rounded-lg transition-colors ${
+                errors.building_id
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+              }`}
+              required
+            >
+              <option value="">Select a building</option>
+              {buildings.map(building => (
+                <option key={building.building_id} value={building.building_id}>
+                  {building.building_name}
+                </option>
+              ))}
+            </select>
+            <InlineValidation message={errors.building_id} type="error" />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Room Number <span className="text-red-500">*</span>
             </label>
+            <p className="text-xs text-gray-500 mb-2">Unique identifier for this room (e.g., 101, A2, Room 1)</p>
             <div className="relative">
               <Input
                 value={formData.room_number}
@@ -209,34 +237,43 @@ const BasicInformationStep = React.memo(({
             </div>
           </div>
 
+          {/* Maximum Tenants moved before Active Tenants */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Building <span className="text-red-500">*</span>
+              Maximum Beds/Occupancy <span className="text-red-500">*</span>
             </label>
-            <select
-              value={formData.building_id}
-              onChange={(e) => handleInputChange('building_id', e.target.value)}
-              className={`w-full p-3 border rounded-lg transition-colors ${
-                errors.building_id
-                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-              }`}
-              required
-            >
-              <option value="">Select a building</option>
-              {buildings.map(building => (
-                <option key={building.building_id} value={building.building_id}>
-                  {building.building_name}
-                </option>
-              ))}
-            </select>
-            <InlineValidation message={errors.building_id} type="error" />
+            <p className="text-xs text-gray-500 mb-2">Maximum number of beds this room can accommodate</p>
+            <Input
+              type="number"
+              value={formData.maximum_people_in_room || ''}
+              onChange={(e) => handleInputChange('maximum_people_in_room', e.target.value ? parseInt(e.target.value) : 1)}
+              placeholder="Number of beds"
+              min="1"
+              className="transition-colors focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Active Tenants
+            </label>
+            <p className="text-xs text-gray-500 mb-2">Current number of tenants occupying this room</p>
+            <Input
+              type="number"
+              value={formData.active_tenants || ''}
+              onChange={(e) => handleInputChange('active_tenants', e.target.value ? parseInt(e.target.value) : 0)}
+              placeholder="Number of current tenants"
+              min="0"
+              max={formData.maximum_people_in_room || undefined}
+              className="transition-colors focus:border-blue-500 focus:ring-blue-500"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Room Status
             </label>
+            <p className="text-xs text-gray-500 mb-2">Current availability status of the room</p>
             <select
               value={formData.status}
               onChange={(e) => handleInputChange('status', e.target.value)}
@@ -252,16 +289,19 @@ const BasicInformationStep = React.memo(({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Active Tenants
+              Room Access Type
             </label>
-            <Input
-              type="number"
-              value={formData.active_tenants || ''}
-              onChange={(e) => handleInputChange('active_tenants', e.target.value ? parseInt(e.target.value) : 0)}
-              placeholder="Number of current tenants"
-              min="0"
-              className="transition-colors focus:border-blue-500 focus:ring-blue-500"
-            />
+            <p className="text-xs text-gray-500 mb-2">How tenants access this room</p>
+            <select
+              value={formData.room_access_type || 'KEY'}
+              onChange={(e) => handleInputChange('room_access_type', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            >
+              <option value="KEY">Traditional Key</option>
+              <option value="KEYCARD">Keycard</option>
+              <option value="DIGITAL">Digital Lock</option>
+              <option value="CODE">Access Code</option>
+            </select>
           </div>
         </div>
 
@@ -276,71 +316,6 @@ const BasicInformationStep = React.memo(({
             <span className="text-sm font-medium text-gray-700">Ready to Rent</span>
             <span className="text-xs text-gray-500">Mark this room as available for new tenants</span>
           </label>
-        </div>
-
-        {/* Room Photos Upload */}
-        <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Room Photos
-          </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => {
-                const files = Array.from(e.target.files || [])
-                console.log('🔍 Room photos selected:', {
-                  filesCount: files.length,
-                  fileDetails: files.map(f => ({
-                    name: f.name,
-                    type: f.type,
-                    size: f.size,
-                    isFile: f instanceof File,
-                    constructor: f.constructor.name
-                  }))
-                })
-                handleInputChange('room_photos', files)
-              }}
-              className="hidden"
-              id="room-photos"
-            />
-            <label htmlFor="room-photos" className="cursor-pointer">
-              <div className="flex flex-col items-center">
-                <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload room photos</span> or drag and drop
-                </p>
-                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB each</p>
-              </div>
-            </label>
-          </div>
-          
-          {/* Display selected photos */}
-          {formData.room_photos && formData.room_photos.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {formData.room_photos.map((file, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={`Room photo ${index + 1}`}
-                    className="w-full h-20 object-cover rounded-lg border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleInputChange('room_photos', (formData.room_photos || []).filter((_, i) => i !== index))
-                    }}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </Card>
     </div>
@@ -396,22 +371,24 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Maximum People
+              Internet Speed (Mbps)
             </label>
+            <p className="text-xs text-gray-500 mb-2">Internet speed available in this room (if WiFi is provided)</p>
             <Input
               type="number"
-              value={formData.maximum_people_in_room || ''}
-              onChange={(e) => handleInputChange('maximum_people_in_room', e.target.value ? parseInt(e.target.value) : 1)}
-              placeholder="e.g., 2"
-              min="1"
+              value={formData.internet_speed || ''}
+              onChange={(e) => handleInputChange('internet_speed', e.target.value ? parseInt(e.target.value) : undefined)}
+              placeholder="e.g., 100"
+              min="0"
               className="transition-colors focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bed Count
+              Number of Beds <span className="text-red-500">*</span>
             </label>
+            <p className="text-xs text-gray-500 mb-2">Total number of beds in this room</p>
             <Input
               type="number"
               value={formData.bed_count || ''}
@@ -585,7 +562,7 @@ const AvailabilityStep = React.memo(({ formData, handleInputChange }: StepProps)
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               🌟 Room Environment
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Noise Level
@@ -618,17 +595,6 @@ const AvailabilityStep = React.memo(({ formData, handleInputChange }: StepProps)
                 </select>
               </div>
 
-              <div className="flex items-center">
-                <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors w-full">
-                  <input
-                    type="checkbox"
-                    checked={formData.furnished || false}
-                    onChange={(e) => handleInputChange('furnished', e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Furnished</span>
-                </label>
-              </div>
             </div>
           </div>
 
@@ -646,29 +612,7 @@ const AvailabilityStep = React.memo(({ formData, handleInputChange }: StepProps)
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Furniture Details
-              </label>
-              <Input
-                value={formData.furniture_details || ''}
-                onChange={(e) => handleInputChange('furniture_details', e.target.value || undefined)}
-                placeholder="Describe furniture included (if furnished)"
-                className="transition-colors focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Additional Features
-              </label>
-              <Input
-                value={formData.additional_features || ''}
-                onChange={(e) => handleInputChange('additional_features', e.target.value || undefined)}
-                placeholder="Any additional features or amenities"
-                className="transition-colors focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
           </div>
         </div>
       </Card>
@@ -723,6 +667,88 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange }: StepProps) =>
           </div>
         </div>
       </Card>
+
+      {/* Room Photos Upload Section */}
+      <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 mt-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Camera className="w-5 h-5" />
+            Room Photos
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Upload photos of this room. Images will be saved to the building's room folder.
+          </p>
+          
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+            <div className="mb-4">
+              <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="room-photos-upload" className="cursor-pointer">
+                <span className="text-blue-600 hover:text-blue-500 font-medium">
+                  Click to upload room photos
+                </span>
+                <span className="text-gray-500"> or drag and drop</span>
+              </label>
+              <input
+                id="room-photos-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  const files = e.target.files
+                  if (files) {
+                    const fileArray = Array.from(files)
+                    handleInputChange('room_photos', fileArray)
+                  }
+                }}
+                className="hidden"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Supported formats: JPEG, PNG, WebP, GIF up to 10MB each
+            </p>
+          </div>
+
+          {/* Display selected photos */}
+          {formData.room_photos && formData.room_photos.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-md font-medium text-gray-900 mb-3">
+                Selected Photos ({formData.room_photos.length})
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {(formData.room_photos || []).map((file, index) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Room photo ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPhotos = formData.room_photos.filter((_, i) => i !== index)
+                        handleInputChange('room_photos', newPhotos)
+                      }}
+                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 rounded-b-lg">
+                      <p className="text-xs truncate">{file.name}</p>
+                      <p className="text-xs text-gray-300">
+                        {(file.size / 1024 / 1024).toFixed(1)}MB
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   ));
 
@@ -750,8 +776,9 @@ const MaintenanceStep = React.memo(({ formData, handleInputChange }: StepProps) 
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Check By (Staff ID)
+                  Who did the last maintenance? (Staff ID)
                 </label>
+                <p className="text-xs text-gray-500 mb-2">ID of the staff member who performed the last maintenance</p>
                 <Input
                   type="number"
                   value={formData.last_check_by || ''}
@@ -778,30 +805,66 @@ const MaintenanceStep = React.memo(({ formData, handleInputChange }: StepProps) 
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Notes & Comments
+              Room Condition & Utilities
             </h3>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Public Notes
+                  Room Condition Score
                 </label>
-                <textarea
-                  value={formData.public_notes || ''}
-                  onChange={(e) => handleInputChange('public_notes', e.target.value || undefined)}
-                  placeholder="Notes visible to tenants and public"
-                  className="w-full p-3 border border-gray-300 rounded-lg h-24 resize-none transition-colors focus:border-blue-500 focus:ring-blue-500"
+                <p className="text-xs text-gray-500 mb-2">Overall condition rating (1-10, 10 being excellent)</p>
+                <Input
+                  type="number"
+                  value={formData.room_condition_score || ''}
+                  onChange={(e) => handleInputChange('room_condition_score', e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="1-10"
+                  min="1"
+                  max="10"
+                  className="transition-colors focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Internal Notes
+                  Cleaning Frequency
                 </label>
-                <textarea
-                  value={formData.internal_notes || ''}
-                  onChange={(e) => handleInputChange('internal_notes', e.target.value || undefined)}
-                  placeholder="Internal notes for staff only"
-                  className="w-full p-3 border border-gray-300 rounded-lg h-24 resize-none transition-colors focus:border-blue-500 focus:ring-blue-500"
+                <p className="text-xs text-gray-500 mb-2">How often is this room professionally cleaned</p>
+                <select
+                  value={formData.cleaning_frequency || 'WEEKLY'}
+                  onChange={(e) => handleInputChange('cleaning_frequency', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                >
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="BIWEEKLY">Bi-weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="ON_REQUEST">On Request</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Utilities Meter ID
+                </label>
+                <p className="text-xs text-gray-500 mb-2">Unique identifier for utilities metering (if applicable)</p>
+                <Input
+                  value={formData.utilities_meter_id || ''}
+                  onChange={(e) => handleInputChange('utilities_meter_id', e.target.value || undefined)}
+                  placeholder="e.g., ELEC-101-A"
+                  className="transition-colors focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Cleaning Date
+                </label>
+                <p className="text-xs text-gray-500 mb-2">When was this room last professionally cleaned</p>
+                <Input
+                  type="date"
+                  value={formData.last_cleaning_date || ''}
+                  onChange={(e) => handleInputChange('last_cleaning_date', e.target.value || undefined)}
+                  className="transition-colors focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -930,14 +993,18 @@ function RoomForm({
     noise_level: undefined,
     sunlight: undefined,
     furnished: false,
-    furniture_details: undefined,
     last_renovation_date: undefined,
-    public_notes: undefined,
-    internal_notes: undefined,
     virtual_tour_url: undefined,
     available_from: undefined,
     additional_features: undefined,
     room_photos: [], // Add room photos array
+    // New fields
+    room_access_type: 'KEY',
+    internet_speed: undefined,
+    room_condition_score: undefined,
+    cleaning_frequency: 'WEEKLY',
+    utilities_meter_id: undefined,
+    last_cleaning_date: undefined,
     ...initialData
   })
 
@@ -1005,6 +1072,76 @@ function RoomForm({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isFirstStep, isLastStep, goToPreviousStep, goToNextStep])
+
+  // Building selection pre-population logic
+  React.useEffect(() => {
+    if (formData.building_id && buildings.length > 0) {
+      const selectedBuilding = buildings.find(b => b.building_id === formData.building_id)
+      
+      if (selectedBuilding) {
+        console.log('🏢 Building selected:', selectedBuilding.building_name)
+        console.log('🔄 Pre-populating room amenities from building data...')
+        
+        // Pre-populate amenities based on building features
+        const updates: Partial<RoomFormData> = {}
+        
+        // Check building amenities and pre-populate room amenities accordingly
+        if (selectedBuilding.amenities && Array.isArray(selectedBuilding.amenities)) {
+          // Convert building amenities to room-specific features
+          if (selectedBuilding.amenities.includes('WiFi')) {
+            // Building has WiFi, assume rooms also have good internet
+          }
+          
+          if (selectedBuilding.amenities.includes('Fitness Center') || selectedBuilding.amenities.includes('Gym')) {
+            // Building has fitness facilities
+          }
+          
+          if (selectedBuilding.amenities.includes('Study Areas') || selectedBuilding.amenities.includes('Work Areas')) {
+            updates.work_desk = true
+            updates.work_chair = true
+          }
+          
+          if (selectedBuilding.amenities.includes('Air Conditioning')) {
+            updates.air_conditioning = true
+          }
+          
+          if (selectedBuilding.amenities.includes('Heating')) {
+            updates.heating = true
+          }
+          
+          if (selectedBuilding.amenities.includes('Cable TV')) {
+            updates.cable_tv = true
+          }
+        }
+        
+        // Check specific building features from BuildingFormData
+        const buildingData = selectedBuilding as any // Cast to access BuildingFormData fields
+        
+        if (buildingData.wifi_included === true) {
+          // Building includes WiFi
+        }
+        
+        if (buildingData.work_study_area === true) {
+          updates.work_desk = true
+          updates.work_chair = true
+        }
+        
+        if (buildingData.utilities_included === true) {
+          updates.heating = true
+          updates.air_conditioning = true
+        }
+        
+        // Only update if we have actual changes to make
+        if (Object.keys(updates).length > 0) {
+          console.log('📝 Applying building-based pre-population:', updates)
+          setFormData(prev => ({ 
+            ...prev, 
+            ...updates 
+          }))
+        }
+      }
+    }
+  }, [formData.building_id, buildings])
 
   const handleInputChange = useCallback((field: keyof RoomFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -1186,30 +1323,72 @@ function RoomForm({
       // Step 2: Transform frontend form data to backend database format
       const transformedData = transformRoomDataForBackend(formData)
 
-      // Include room photos in the transformed data so the parent handler can process them
-      if (formData.room_photos && formData.room_photos.length > 0) {
-        console.log(`📸 Including ${formData.room_photos.length} room photos for upload`)
-        console.log('🔍 Room photos details at submission:', {
-          photosCount: formData.room_photos.length,
-          photosData: formData.room_photos.map(f => ({
-            name: f.name,
-            type: f.type,
-            size: f.size,
-            isFile: f instanceof File,
-            constructor: f.constructor.name,
-            lastModified: f.lastModified
-          }))
-        })
-        ;(transformedData as any).room_photos = formData.room_photos
-      } else {
-        console.log('🔍 No room photos to include:', {
-          hasRoomPhotos: !!formData.room_photos,
-          roomPhotosLength: formData.room_photos?.length || 0
-        })
-      }
+      // Store room photos for upload after room creation
+      const roomPhotos = formData.room_photos && formData.room_photos.length > 0 ? formData.room_photos : null
 
-      // Submit room data (parent handler will take care of image uploads)
-      await onSubmit(transformedData)
+      // Submit room data first (without images)
+      const createdRoom = await onSubmit(transformedData)
+
+      // Upload room images after room creation if we have photos and room was created successfully
+      if (roomPhotos && formData.building_id && createdRoom?.room_id) {
+        try {
+          console.log(`📸 Uploading ${roomPhotos.length} room images for created room ${createdRoom.room_id}...`)
+
+          // Use Supabase storage to upload images
+          const uploadResults = await uploadRoomImages(formData.building_id, createdRoom.room_id, roomPhotos)
+
+          // Check if any uploads were successful
+          const successfulUploads = uploadResults.filter(result => result.success)
+          const failedUploads = uploadResults.filter(result => !result.success)
+
+          if (successfulUploads.length > 0) {
+            console.log(`✅ Successfully uploaded ${successfulUploads.length} room images`)
+            console.log('📸 Upload results:', successfulUploads)
+
+            // Extract image URLs from successful uploads
+            const imageUrls = successfulUploads.map(result => result.url).filter(Boolean)
+
+            if (imageUrls.length > 0) {
+              try {
+                // Update room record in database with image URLs
+                console.log(`🔗 Updating room ${createdRoom.room_id} with ${imageUrls.length} image URLs...`)
+
+                // Import database service dynamically to avoid circular dependencies
+                const { databaseService } = await import('@/lib/supabase/database')
+
+                const updateResult = await databaseService.rooms.update(createdRoom.room_id, {
+                  room_images: JSON.stringify(imageUrls)
+                })
+
+                if (updateResult.success) {
+                  console.log(`✅ Room database record updated with ${imageUrls.length} image URLs`)
+
+                  if (failedUploads.length > 0) {
+                    showInfoMessage(`${successfulUploads.length} images uploaded and saved successfully, ${failedUploads.length} failed.`)
+                  } else {
+                    showSuccessMessage('All room images uploaded and saved successfully!')
+                  }
+                } else {
+                  console.error('❌ Failed to update room record with image URLs:', updateResult.error)
+                  showInfoMessage(`${successfulUploads.length} images uploaded to storage, but failed to save URLs to database.`)
+                }
+              } catch (dbError) {
+                console.error('❌ Error updating room record with image URLs:', dbError)
+                showInfoMessage(`${successfulUploads.length} images uploaded to storage, but failed to save URLs to database.`)
+              }
+            }
+          } else {
+            console.error('❌ All room image uploads failed:', failedUploads)
+            showInfoMessage('Room created successfully, but images could not be uploaded.')
+          }
+        } catch (error) {
+          console.error('❌ Error uploading room images:', error)
+          showInfoMessage('Room created successfully, but images could not be uploaded.')
+        }
+      } else if (roomPhotos && !formData.building_id) {
+        console.warn('⚠️ Cannot upload room images: missing building_id')
+        showInfoMessage('Room created successfully, but images could not be uploaded (missing building ID).')
+      }
 
       // Save to recent submissions after successful submit
       const previewText = generatePreviewText(formData)
@@ -1377,7 +1556,7 @@ function RoomForm({
             if (e.key === 'Enter') {
               const target = e.target as HTMLElement
               // Only allow submission if Enter is pressed on the submit button
-              if (target.type !== 'submit' && target.tagName !== 'BUTTON') {
+              if ((target as any).type !== 'submit' && target.tagName !== 'BUTTON') {
                 e.preventDefault()
                 e.stopPropagation()
               }

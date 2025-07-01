@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { apiService } from '../../services/apiService'
+import { getBuildings, getRooms, getOperators } from '../../lib/api-client'
 import { databaseService } from '../../lib/supabase/database'
 import { isSupabaseAvailable } from '../../lib/supabase/client'
 import config from '../../lib/config'
@@ -84,6 +84,22 @@ interface FormDataProviderProps {
   }
 }
 
+/**
+ * FormDataProvider - Centralized Data Management for Form Components
+ * 
+ * This provider manages data loading, caching, and state for all form components in the application.
+ * It handles both Supabase and backend API fallbacks with intelligent error handling and retry logic.
+ * 
+ * Features:
+ * - Smart data source selection (Supabase preferred, API fallback)
+ * - Configurable data loading (operators, buildings, rooms)
+ * - Real-time data refresh capabilities
+ * - Error handling with graceful degradation to demo data
+ * - Performance optimization with loading state management
+ * 
+ * @param children - Child components that will have access to form data context
+ * @param config - Configuration object to control which data is loaded and how
+ */
 export function FormDataProvider({ children, config: providerConfig }: FormDataProviderProps) {
   // Default configuration
   const defaultConfig = {
@@ -94,7 +110,7 @@ export function FormDataProvider({ children, config: providerConfig }: FormDataP
     autoRefresh: false
   }
   
-  const finalConfig = { ...defaultConfig, ...providerConfig }
+  const finalConfig = React.useMemo(() => ({ ...defaultConfig, ...providerConfig }), [providerConfig])
   // State for operators
   const [operators, setOperators] = useState<Operator[]>([])
   const [operatorsLoading, setOperatorsLoading] = useState(false)
@@ -274,7 +290,17 @@ export function FormDataProvider({ children, config: providerConfig }: FormDataP
     }))
   }
 
-  // Fetch operators from API or Supabase
+  /**
+   * Intelligent operator data fetching with multi-source fallback
+   * 
+   * Implements a smart data fetching strategy:
+   * 1. Try Supabase first if enabled or backend is disabled
+   * 2. Fall back to backend API if Supabase fails
+   * 3. Transform data to ensure consistent frontend format
+   * 4. Return mock data as last resort
+   * 
+   * @returns Promise<Operator[]> - Array of operator objects in frontend format
+   */
   const fetchOperators = async (): Promise<Operator[]> => {
     // Use Supabase if backend is disabled or if Supabase is available and backend is not preferred
     if (config.api.disabled || (isSupabaseAvailable() && !config.api.preferCloud)) {
@@ -297,7 +323,7 @@ export function FormDataProvider({ children, config: providerConfig }: FormDataP
       // Try backend API only if not disabled
       try {
         console.log('🔄 Fetching operators from API...')
-        const data = await apiService.getOperators()
+        const data = await getOperators()
         console.log('✅ Operators fetched from backend:', data.length, 'operators')
 
         // Transform backend data to frontend format
@@ -354,7 +380,7 @@ export function FormDataProvider({ children, config: providerConfig }: FormDataP
       // Try backend API only if not disabled
       try {
         console.log('🔄 Fetching buildings from API...')
-        const data = await apiService.getBuildings()
+        const data = await getBuildings()
         console.log('✅ Buildings fetched:', data.length, 'buildings')
         return data
       } catch (error) {
@@ -400,7 +426,7 @@ export function FormDataProvider({ children, config: providerConfig }: FormDataP
       // Try backend API only if not disabled
       try {
         console.log('🔄 Fetching rooms from API...')
-        const data = await apiService.getRooms()
+        const data = await getRooms()
         console.log('✅ Rooms fetched:', data.length, 'rooms')
         return data
       } catch (error) {
