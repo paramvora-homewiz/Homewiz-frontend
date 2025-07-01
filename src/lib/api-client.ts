@@ -5,10 +5,10 @@
  * retry logic, caching, and data synchronization capabilities.
  */
 
-import { z } from 'zod'
 import config from './config'
 import { collectApiCall, collectError } from './data-collection'
 import { BackendFormData } from './data-collection'
+import { transformBackendDataForFrontend } from './backend-sync'
 
 // API Response Types
 export interface ApiResponse<T = any> {
@@ -110,7 +110,34 @@ export class ApiClient {
   }
 
   /**
-   * Make API request with retry logic and error handling
+   * Core API request method with comprehensive retry logic, caching, and error handling
+   * 
+   * This method implements sophisticated request management including:
+   * 
+   * Performance Features:
+   * - Request deduplication: Prevents duplicate simultaneous requests
+   * - Response caching: Caches GET requests for specified TTL
+   * - Request queuing: Manages concurrent request limits
+   * 
+   * Reliability Features:
+   * - Exponential backoff retry logic for transient failures
+   * - Timeout handling with configurable limits
+   * - Error classification for appropriate retry behavior
+   * - Request cancellation support via AbortController
+   * 
+   * Monitoring & Analytics:
+   * - Request timing and performance tracking
+   * - Error logging and categorization
+   * - Success/failure metrics collection
+   * 
+   * @param requestConfig Configuration object containing request parameters
+   * @returns Promise resolving to ApiResponse with typed data
+   * 
+   * Business Logic:
+   * - Cache-first approach for GET requests when caching enabled
+   * - Request deduplication based on method + URL + data combination
+   * - Automatic retry for 5xx errors and network timeouts (not 4xx client errors)
+   * - Response validation against expected data structure when enabled
    */
   async request<T = any>(requestConfig: RequestConfig): Promise<ApiResponse<T>> {
     const {
@@ -126,13 +153,15 @@ export class ApiClient {
     } = requestConfig
 
     const url = `${this.baseUrl}${endpoint}`
+    // Create unique cache key combining method, URL, and request data
     const cacheKey = `${method}:${url}:${JSON.stringify(data)}`
     const startTime = Date.now()
 
-    // Check cache for GET requests
+    // Cache-first strategy: Check cache for GET requests when caching is enabled
     if (method === 'GET' && cache) {
       const cached = this.getFromCache(cacheKey)
       if (cached) {
+        // Log cache hit for monitoring
         collectApiCall(endpoint, method, 200, Date.now() - startTime)
         return {
           success: true,
@@ -142,7 +171,8 @@ export class ApiClient {
       }
     }
 
-    // Check if same request is already in progress
+    // Request deduplication: Prevent duplicate simultaneous requests
+    // This is critical for preventing race conditions and reducing server load
     if (this.requestQueue.has(cacheKey)) {
       return this.requestQueue.get(cacheKey)!
     }
@@ -418,6 +448,110 @@ export const getRooms = async (buildingId?: string): Promise<ApiResponse> => {
     cache: true,
     cacheTtl: 300000, // 5 minutes
   })
+}
+
+// Enhanced API methods from apiService.ts integration
+export const getOperators = async (): Promise<ApiResponse> => {
+  return apiClient.get('/operators', {
+    cache: true,
+    cacheTtl: 600000, // 10 minutes
+  })
+}
+
+export const getTenants = async (): Promise<ApiResponse> => {
+  return apiClient.get('/tenants', {
+    cache: true,
+    cacheTtl: 300000, // 5 minutes
+  })
+}
+
+export const getLeads = async (): Promise<ApiResponse> => {
+  return apiClient.get('/leads', {
+    cache: true,
+    cacheTtl: 300000, // 5 minutes
+  })
+}
+
+// Create operations with enhanced error handling
+export const createBuilding = async (data: any): Promise<ApiResponse> => {
+  try {
+    const response = await apiClient.post('/buildings', data, {
+      validateResponse: true,
+      retries: 2,
+    })
+    // Transform backend data for frontend consumption if needed
+    if (response.success && response.data) {
+      response.data = transformBackendDataForFrontend(response.data, 'building')
+    }
+    return response
+  } catch (error) {
+    collectError(error as Error, { context: 'createBuilding', data })
+    throw error
+  }
+}
+
+export const createRoom = async (data: any): Promise<ApiResponse> => {
+  try {
+    const response = await apiClient.post('/rooms', data, {
+      validateResponse: true,
+      retries: 2,
+    })
+    if (response.success && response.data) {
+      response.data = transformBackendDataForFrontend(response.data, 'room')
+    }
+    return response
+  } catch (error) {
+    collectError(error as Error, { context: 'createRoom', data })
+    throw error
+  }
+}
+
+export const createTenant = async (data: any): Promise<ApiResponse> => {
+  try {
+    const response = await apiClient.post('/tenants', data, {
+      validateResponse: true,
+      retries: 2,
+    })
+    if (response.success && response.data) {
+      response.data = transformBackendDataForFrontend(response.data, 'tenant')
+    }
+    return response
+  } catch (error) {
+    collectError(error as Error, { context: 'createTenant', data })
+    throw error
+  }
+}
+
+export const createLead = async (data: any): Promise<ApiResponse> => {
+  try {
+    const response = await apiClient.post('/leads', data, {
+      validateResponse: true,
+      retries: 2,
+    })
+    if (response.success && response.data) {
+      response.data = transformBackendDataForFrontend(response.data, 'lead')
+    }
+    return response
+  } catch (error) {
+    collectError(error as Error, { context: 'createLead', data })
+    throw error
+  }
+}
+
+export const createOperator = async (data: any): Promise<ApiResponse> => {
+  try {
+    const response = await apiClient.post('/operators', data, {
+      validateResponse: true,
+      retries: 2,
+    })
+    if (response.success && response.data) {
+      response.data = transformBackendDataForFrontend(response.data, 'operator')
+    }
+    return response
+  } catch (error) {
+    collectError(error as Error, { context: 'createOperator', data })
+    throw error
+  }
 }
 
 // Types are already exported above

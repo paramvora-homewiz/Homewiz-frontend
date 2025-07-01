@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import SimpleRoomForm from '@/components/forms/SimpleRoomForm'
+import { SimpleRoomForm } from '@/components/forms'
 
 export default function TestSimpleFormPage() {
   const [isLoading, setIsLoading] = useState(false)
