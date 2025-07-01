@@ -188,6 +188,21 @@ export function transformBuildingDataForBackend(frontendData: any) {
       : (frontendData.images || frontendData.building_images || ''),
     virtual_tour_url: frontendData.video_url || frontendData.virtual_tour_url,
 
+    // Categorized media - convert to JSON strings for backend storage
+    categorized_images: frontendData.categorized_media ? JSON.stringify({
+      outside: frontendData.categorized_media.outside?.map(f => f.url || f.name) || [],
+      common_areas: frontendData.categorized_media.common_areas?.map(f => f.url || f.name) || [],
+      amenities: frontendData.categorized_media.amenities?.map(f => f.url || f.name) || [],
+      kitchen_bathrooms: frontendData.categorized_media.kitchen_bathrooms?.map(f => f.url || f.name) || []
+    }) : null,
+    categorized_videos: frontendData.categorized_media ? JSON.stringify(
+      frontendData.categorized_media.videos?.map(f => ({
+        name: f.name,
+        url: f.url || f.name,
+        metadata: f.metadata
+      })) || []
+    ) : null,
+
     // Additional fields
     amenities_details: frontendData.amenities_details,
   }
@@ -436,6 +451,40 @@ export function validateBuildingFormData(data: any): ValidationResult {
   const backendData = transformBuildingDataForBackend(data)
   const missingRequired = validateRequiredFields(backendData, 'BUILDING')
   
+  // Map backend field names back to frontend field names for better error display
+  const frontendMissingRequired = missingRequired.map(field => {
+    switch (field) {
+      case 'street': return !data.address && !data.street ? 'address' : null
+      case 'zip': return !data.zip_code && !data.zip ? 'zip_code' : null
+      default: return field
+    }
+  }).filter(Boolean)
+  
+  // Add frontend-specific validation errors
+  if (!data.building_name?.trim()) {
+    errors.building_name = 'Building name is required'
+  }
+  
+  if (!data.address?.trim() && !data.street?.trim()) {
+    errors.address = 'Address is required'
+  }
+  
+  if (!data.city?.trim()) {
+    errors.city = 'City is required'
+  }
+  
+  if (!data.state?.trim()) {
+    errors.state = 'State is required'
+  }
+  
+  if (!data.zip_code?.trim() && !data.zip?.trim()) {
+    errors.zip_code = 'ZIP code is required'
+  }
+  
+  if (!data.operator_id) {
+    errors.operator_id = 'Operator selection is required'
+  }
+  
   // Validate numeric fields
   if (backendData.floors && backendData.floors < 1) {
     errors.floors = 'Building must have at least 1 floor'
@@ -446,9 +495,9 @@ export function validateBuildingFormData(data: any): ValidationResult {
   }
   
   return {
-    isValid: missingRequired.length === 0 && Object.keys(errors).length === 0,
+    isValid: frontendMissingRequired.length === 0 && Object.keys(errors).length === 0,
     errors,
-    missingRequired
+    missingRequired: frontendMissingRequired
   }
 }
 

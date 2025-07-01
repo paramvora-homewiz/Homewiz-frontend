@@ -53,6 +53,7 @@ interface BuildingFormProps {
 
 const PET_FRIENDLY_OPTIONS = [
   { value: 'NO_PETS', label: 'No Pets Allowed', icon: '🚫' },
+  { value: 'ESA_ONLY', label: 'Only ESA Allowed', icon: '🐕‍🦺' },
   { value: 'CATS_ONLY', label: 'Cats Only', icon: '🐱' },
   { value: 'DOGS_ONLY', label: 'Dogs Only', icon: '🐕' },
   { value: 'CATS_AND_DOGS', label: 'Cats & Dogs', icon: '🐱🐕' },
@@ -73,19 +74,6 @@ const BUILDING_NAME_SUGGESTIONS = [
   'Parkside Manor', 'Heritage Square', 'Maple Grove Apartments', 'Skyline Residences'
 ]
 
-const NEIGHBORHOOD_SUGGESTIONS = [
-  'Downtown', 'Midtown', 'Uptown', 'Financial District', 'Arts District',
-  'University Area', 'Historic District', 'Waterfront', 'Business District',
-  'Shopping District', 'Entertainment District', 'Residential Area'
-]
-
-const BUILDING_DESCRIPTION_TEMPLATES = [
-  'Modern apartment building with contemporary amenities and convenient location.',
-  'Historic building renovated with modern conveniences while maintaining original charm.',
-  'Student-friendly housing with study areas and social spaces.',
-  'Professional housing for working adults with business amenities.',
-  'Family-oriented building with child-friendly facilities and safety features.'
-]
 
 const LEASE_TERM_OPTIONS = [
   { value: 6, label: '6 months' },
@@ -104,15 +92,24 @@ const CLEANING_SCHEDULE_OPTIONS = [
   'Tenant responsibility - own supplies'
 ]
 
+const NEIGHBORHOOD_SUGGESTIONS = [
+  'University District', 'Downtown Core', 'Arts District', 'Financial District',
+  'Historic Downtown', 'Tech Corridor', 'Shopping District', 'Waterfront',
+  'Uptown', 'Midtown', 'Old Town', 'Business District'
+]
+
 const COMMON_CONVENIENCES = [
-  'Grocery stores', 'Restaurants', 'Banks', 'Pharmacies', 'Coffee shops',
-  'Shopping centers', 'Parks', 'Gyms', 'Libraries', 'Post office'
+  'Grocery stores', 'Restaurants', 'Coffee shops', 'Banks/ATMs',
+  'Pharmacies', 'Post office', 'Gym/Fitness center', 'Shopping mall',
+  'Libraries', 'Parks', 'Entertainment venues', 'Medical facilities'
 ]
 
 const TRANSPORTATION_OPTIONS = [
-  'Bus stop (2 min walk)', 'Subway station (5 min walk)', 'Light rail (10 min walk)',
-  'Bike sharing station', 'Taxi/Uber pickup point', 'Airport shuttle stop'
+  'Bus stop', 'Subway/Metro station', 'Light rail', 'Train station',
+  'Bike lanes', 'Car sharing', 'Taxi stand', 'Uber/Lyft pickup',
+  'Airport shuttle', 'Ferry terminal', 'Highway access', 'Parking garage'
 ]
+
 
 export default function BuildingForm({ initialData, onSubmit, onCancel, isLoading, operators = [] }: BuildingFormProps) {
   const { getSmartDefaults, saveToHistory } = useFormSmartDefaults('building')
@@ -200,6 +197,21 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     initialData?.media_files || []
   )
 
+  // Categorized media state for new upload system
+  const [categorizedMedia, setCategorizedMedia] = useState<{
+    outside: MediaFile[]
+    common_areas: MediaFile[]
+    amenities: MediaFile[]
+    kitchen_bathrooms: MediaFile[]
+    videos: MediaFile[]
+  }>({
+    outside: [],
+    common_areas: [],
+    amenities: [],
+    kitchen_bathrooms: [],
+    videos: []
+  })
+
   const steps = [
     { id: 'basic', title: 'Basic Information', icon: <Building className="w-5 h-5" /> },
     { id: 'location', title: 'Location & Address', icon: <MapPin className="w-5 h-5" /> },
@@ -247,7 +259,26 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
   // Use comprehensive backend validation
   const validateAllFields = (): ValidationResult => {
-    return validateBuildingFormData(formData)
+    // Create the data object that will be sent to backend
+    const dataForValidation = {
+      ...formData,
+      amenities_details: JSON.stringify(amenitiesDetails),
+      categorized_media: categorizedMedia
+    }
+    
+    const result = validateBuildingFormData(dataForValidation)
+    
+    // Debug specific validation issues
+    if (!result.isValid || result.missingRequired.length > 0) {
+      console.log('🔍 Validation Details:', {
+        formData: dataForValidation,
+        transformedData: transformBuildingDataForBackend(dataForValidation),
+        missingRequired: result.missingRequired,
+        errors: result.errors
+      })
+    }
+    
+    return result
   }
 
   // Real-time validation only for touched fields
@@ -424,6 +455,137 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     }))
   }
 
+  // Categorized media handlers
+  const handleCategorizedImageUpload = (e: React.ChangeEvent<HTMLInputElement>, category: keyof typeof categorizedMedia) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Create MediaFile objects with category tagging
+    const mediaFilePromises = files.map(async (file) => {
+      return new Promise<MediaFile>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          resolve({
+            id: `${category}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            file: file,
+            preview: reader.result as string,
+            category: 'building_image',
+            metadata: { category, tag: category }
+          })
+        }
+        reader.readAsDataURL(file)
+      })
+    })
+
+    Promise.all(mediaFilePromises).then((newFiles) => {
+      if (category === 'videos') return // Videos handled separately
+      
+      setCategorizedMedia(prev => ({
+        ...prev,
+        [category]: [...prev[category], ...newFiles]
+      }))
+    })
+  }
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Limit to 3 videos total
+    const currentVideoCount = categorizedMedia.videos.length
+    const availableSlots = 3 - currentVideoCount
+    const filesToProcess = files.slice(0, availableSlots)
+
+    const mediaFilePromises = filesToProcess.map(async (file) => {
+      return new Promise<MediaFile>((resolve) => {
+        resolve({
+          id: `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          file: file,
+          preview: '', // Videos don't need preview URLs
+          category: 'building_video',
+          metadata: { category: 'videos', tag: 'video' }
+        })
+      })
+    })
+
+    Promise.all(mediaFilePromises).then((newFiles) => {
+      setCategorizedMedia(prev => ({
+        ...prev,
+        videos: [...prev.videos, ...newFiles]
+      }))
+    })
+  }
+
+  const removeMedia = (category: keyof typeof categorizedMedia, fileId: string) => {
+    setCategorizedMedia(prev => ({
+      ...prev,
+      [category]: prev[category].filter(file => file.id !== fileId)
+    }))
+  }
+
+  const renderImagePreview = (category: keyof typeof categorizedMedia) => {
+    if (category === 'videos') return null
+
+    const images = categorizedMedia[category]
+    if (images.length === 0) return null
+
+    return (
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        {images.map((file) => (
+          <div key={file.id} className="relative">
+            <img
+              src={file.preview}
+              alt={file.name}
+              className="w-full h-20 object-cover rounded border"
+            />
+            <button
+              type="button"
+              onClick={() => removeMedia(category, file.id)}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+            >
+              <X className="w-3 h-3" />
+            </button>
+            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
+              {file.name}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const renderVideoPreview = () => {
+    const videos = categorizedMedia.videos
+    if (videos.length === 0) return null
+
+    return (
+      <div className="mt-4 space-y-2">
+        {videos.map((file) => (
+          <div key={file.id} className="flex items-center justify-between bg-gray-50 p-3 rounded border">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium">{file.name}</span>
+              <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => removeMedia('videos', file.id)}
+              className="text-red-500 hover:text-red-700"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -437,6 +599,14 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     // Comprehensive validation using backend-sync utilities
     const validationResult = validateAllFields()
     
+    // Debug logging
+    console.log('🔍 Validation Debug:', {
+      isValid: validationResult.isValid,
+      errors: validationResult.errors,
+      missingRequired: validationResult.missingRequired,
+      formData: formData
+    })
+    
     // Set form errors
     setErrors(validationResult.errors)
 
@@ -447,6 +617,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     // Show missing required fields error
     if (validationResult.missingRequired.length > 0) {
       const missingFieldNames = validationResult.missingRequired.join(', ')
+      console.error('❌ Missing required fields:', missingFieldNames)
       import('@/lib/error-handler').then(({ showWarningMessage }) => {
         showWarningMessage(
           'Required Fields Missing',
@@ -457,14 +628,30 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       return
     }
 
-    // Show validation errors
+    // Show validation errors with specific field information
     if (!validationResult.isValid) {
-      const errorMessages = Object.values(validationResult.errors).join('\n')
+      const errorMessages = Object.entries(validationResult.errors).map(([field, error]) => 
+        `${field}: ${error}`
+      ).join('\n')
+      console.error('❌ Validation errors:', validationResult.errors)
+      
+      // Find which step contains the error fields
+      const errorFields = Object.keys(validationResult.errors)
+      let errorStep = 'unknown'
+      
+      if (errorFields.some(field => ['building_name', 'operator_id'].includes(field))) {
+        errorStep = 'Basic Information'
+      } else if (errorFields.some(field => ['address', 'city', 'state', 'zip_code'].includes(field))) {
+        errorStep = 'Location & Address'
+      } else if (errorFields.some(field => ['floors', 'total_rooms'].includes(field))) {
+        errorStep = 'Building Specs'
+      }
+      
       import('@/lib/error-handler').then(({ showWarningMessage }) => {
         showWarningMessage(
-          'Validation Errors',
-          `Please fix the following errors:\n${errorMessages}`,
-          { duration: 8000 }
+          'Form Validation Error',
+          `Please fix ${Object.keys(validationResult.errors).length} error(s) in ${errorStep}:\n${errorMessages}`,
+          { duration: 10000 }
         )
       })
       return
@@ -490,7 +677,8 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       const backendData = transformBuildingDataForBackend({
         ...formData,
         amenities_details: JSON.stringify(amenitiesDetails),
-        media_files: mediaFiles
+        media_files: mediaFiles,
+        categorized_media: categorizedMedia
       })
       
       console.log('🔍 Form data before transform:', formData)
@@ -510,19 +698,20 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       const buildingResponse = await onSubmit(backendData)
       
       // Check if submission was successful
-      if (!buildingResponse || !buildingResponse.success) {
-        console.error('❌ Building submission failed:', buildingResponse)
+      const response = buildingResponse as any
+      if (!response || !response.success) {
+        console.error('❌ Building submission failed:', response)
         
         // Handle validation errors
-        if (buildingResponse?.validationErrors) {
-          setErrors(buildingResponse.validationErrors)
-          console.error('Validation errors:', buildingResponse.validationErrors)
+        if (response?.validationErrors) {
+          setErrors(response.validationErrors)
+          console.error('Validation errors:', response.validationErrors)
           return // Stop here - don't proceed with image upload
         }
         
         // Handle other errors
-        if (buildingResponse?.error) {
-          console.error('Submission error:', buildingResponse.error)
+        if (response?.error) {
+          console.error('Submission error:', response.error)
           return // Stop here
         }
         
@@ -531,47 +720,129 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       }
       
       // Extract building_id from successful response
-      const buildingId = buildingResponse.data?.building_id || backendData.building_id
+      const buildingId = response.data?.building_id || backendData.building_id
       console.log(`✅ Building created successfully with ID: ${buildingId}`)
       
-      // Step 2: Upload images to Supabase and update building if any
-      if (mediaFiles && mediaFiles.length > 0) {
-        console.log(`📸 Step 2: Uploading ${mediaFiles.length} images to Supabase...`)
+      // Step 2: Upload categorized media to Supabase
+      const hasMedia = Object.values(categorizedMedia).some(arr => arr.length > 0)
+      if (hasMedia) {
+        console.log(`📸 Step 2: Uploading categorized media to Supabase...`)
 
         try {
           // Import upload functions
           const { uploadBuildingImages, uploadBuildingVideo } = await import('@/lib/supabase/storage')
 
           const uploadedImageUrls: string[] = []
-
-          // Upload images
-          const imageFiles = mediaFiles.filter(file => file.type.startsWith('image/'))
-          if (imageFiles.length > 0) {
-            console.log(`📸 Uploading ${imageFiles.length} images...`)
-            const imageResults = await uploadBuildingImages(buildingId, imageFiles.map(f => f.file))
-
-            // Collect successful uploads
-            imageResults.forEach((result, index) => {
-              if (result.success && result.url) {
-                uploadedImageUrls.push(result.url)
-                console.log(`✅ Image ${index + 1} uploaded: ${result.url}`)
-              } else {
-                console.error(`❌ Image ${index + 1} upload failed:`, result.error)
-              }
-            })
+          const categorizedUrls: Record<string, string[]> = {
+            outside: [],
+            common_areas: [],
+            amenities: [],
+            kitchen_bathrooms: [],
+            videos: []
           }
 
-          // Upload videos (if any)
-          const videoFiles = mediaFiles.filter(file => file.type.startsWith('video/'))
-          for (const videoFile of videoFiles) {
-            console.log(`🎥 Uploading video: ${videoFile.name}`)
-            const videoResult = await uploadBuildingVideo(buildingId, videoFile.file)
+          // Import metadata utilities
+          const { generateStoragePath, createImageMetadata } = await import('@/lib/supabase/image-metadata')
+          const imageMetadataArray: any[] = []
 
-            if (videoResult.success && videoResult.url) {
-              uploadedImageUrls.push(videoResult.url) // Videos go in the same URL array
-              console.log(`✅ Video uploaded: ${videoResult.url}`)
-            } else {
-              console.error(`❌ Video upload failed:`, videoResult.error)
+          // Upload images by category with proper folder structure
+          for (const [category, files] of Object.entries(categorizedMedia)) {
+            if (category === 'videos') continue // Handle videos separately
+            
+            const categoryFiles = files as MediaFile[]
+            if (categoryFiles.length > 0) {
+              console.log(`📸 Uploading ${categoryFiles.length} ${category} images...`)
+              
+              // Create files with categorized storage paths
+              const filesWithPaths = categoryFiles.map((f, index) => {
+                const storagePath = generateStoragePath(buildingId, category, f.file.name)
+                return {
+                  file: f.file,
+                  storagePath,
+                  originalMetadata: f,
+                  sortOrder: index
+                }
+              })
+              
+              // Upload with custom paths
+              const uploadPromises = filesWithPaths.map(async ({ file, storagePath, originalMetadata, sortOrder }) => {
+                const { uploadFile } = await import('@/lib/supabase/storage')
+                const result = await uploadFile({
+                  bucket: 'BUILDING_IMAGES',
+                  path: storagePath,
+                  file,
+                  metadata: {
+                    category,
+                    building_id: buildingId,
+                    original_name: file.name,
+                    uploaded_at: new Date().toISOString()
+                  }
+                })
+                
+                if (result.success && result.url) {
+                  // Create detailed metadata
+                  const imageMetadata = createImageMetadata(
+                    buildingId,
+                    category as any,
+                    file,
+                    storagePath,
+                    result.url,
+                    sortOrder
+                  )
+                  imageMetadataArray.push(imageMetadata)
+                  uploadedImageUrls.push(result.url)
+                  categorizedUrls[category].push(result.url)
+                  console.log(`✅ ${category} image uploaded: ${result.url}`)
+                } else {
+                  console.error(`❌ ${category} image upload failed:`, result.error)
+                }
+                
+                return result
+              })
+              
+              await Promise.all(uploadPromises)
+            }
+          }
+
+          // Upload videos with metadata
+          const videoMetadataArray: any[] = []
+          if (categorizedMedia.videos.length > 0) {
+            console.log(`🎥 Uploading ${categorizedMedia.videos.length} videos...`)
+            
+            const { createVideoMetadata } = await import('@/lib/supabase/image-metadata')
+            
+            for (const [index, videoFile] of categorizedMedia.videos.entries()) {
+              const storagePath = generateStoragePath(buildingId, 'videos', videoFile.file.name)
+              
+              const { uploadFile } = await import('@/lib/supabase/storage')
+              const videoResult = await uploadFile({
+                bucket: 'BUILDING_IMAGES',
+                path: storagePath,
+                file: videoFile.file,
+                metadata: {
+                  category: 'video',
+                  building_id: buildingId,
+                  original_name: videoFile.file.name,
+                  uploaded_at: new Date().toISOString(),
+                  sort_order: index
+                }
+              })
+
+              if (videoResult.success && videoResult.url) {
+                const videoMetadata = createVideoMetadata(
+                  buildingId,
+                  videoFile.file,
+                  storagePath,
+                  videoResult.url,
+                  index
+                )
+                videoMetadataArray.push(videoMetadata)
+                uploadedImageUrls.push(videoResult.url)
+                categorizedUrls.videos.push(videoResult.url)
+                console.log(`✅ Video uploaded: ${videoResult.url}`)
+              } else {
+                console.error(`❌ Video upload failed:`, videoResult.error)
+              }
             }
           }
 
@@ -582,10 +853,10 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             // Import the database service to update building with image URLs
             const { databaseService } = await import('@/lib/supabase/database')
 
-            // Update building with Supabase image URLs
+            // Update building with just the image URLs - categories are embedded in paths!
             const updateResponse = await databaseService.buildings.update(buildingId, {
-              building_images: uploadedImageUrls
-            })
+              building_images: uploadedImageUrls // Category info is in the URL path!
+            } as any)
 
             if (updateResponse.success) {
               console.log('✅ Building updated with Supabase image URLs:', updateResponse.data)
@@ -607,6 +878,44 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               }
             })
           })
+        }
+      } else if (mediaFiles && mediaFiles.length > 0) {
+        // Fallback to legacy mediaFiles if no categorized media
+        console.log(`📸 Step 2 (Legacy): Uploading ${mediaFiles.length} files to Supabase...`)
+        
+        try {
+          const { uploadBuildingImages, uploadBuildingVideo } = await import('@/lib/supabase/storage')
+          const uploadedImageUrls: string[] = []
+
+          // Upload images
+          const imageFiles = mediaFiles.filter(file => file.type.startsWith('image/'))
+          if (imageFiles.length > 0) {
+            const imageResults = await uploadBuildingImages(buildingId, imageFiles.map(f => f.file))
+            imageResults.forEach((result) => {
+              if (result.success && result.url) {
+                uploadedImageUrls.push(result.url)
+              }
+            })
+          }
+
+          // Upload videos
+          const videoFiles = mediaFiles.filter(file => file.type.startsWith('video/'))
+          for (const videoFile of videoFiles) {
+            const videoResult = await uploadBuildingVideo(buildingId, videoFile.file)
+            if (videoResult.success && videoResult.url) {
+              uploadedImageUrls.push(videoResult.url)
+            }
+          }
+
+          // Update building with URLs
+          if (uploadedImageUrls.length > 0) {
+            const { databaseService } = await import('@/lib/supabase/database')
+            await databaseService.buildings.update(buildingId, {
+              building_images: uploadedImageUrls
+            } as any)
+          }
+        } catch (error) {
+          console.error('Failed to upload legacy media files:', error)
         }
       } else {
         console.log('📄 No images to upload - building creation complete')
@@ -651,7 +960,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Building Name *
+                  Building Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Input
@@ -659,7 +968,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                     onChange={(e) => handleInputChange('building_name', e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Enter building name or select from suggestions"
-                    className={errors.building_name ? 'border-red-500' : ''}
+                    className={errors.building_name ? 'border-red-500 bg-red-50' : ''}
                     list="building-names"
                   />
                   <datalist id="building-names">
@@ -667,8 +976,13 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                       <option key={name} value={name} />
                     ))}
                   </datalist>
+                  {errors.building_name && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                      <span className="text-red-500">⚠</span>
+                      {errors.building_name}
+                    </p>
+                  )}
                 </div>
-                {errors.building_name && <p className="text-red-500 text-sm mt-1">{errors.building_name}</p>}
 
                 {/* Quick selection buttons */}
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -687,12 +1001,14 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Building Manager
+                  Building Manager <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.operator_id?.toString() || ''}
                   onChange={(e) => handleInputChange('operator_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className={`w-full p-2 border rounded-md ${
+                    errors.operator_id ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                 >
                   <option value="">Select a manager</option>
                   {operators.filter(op => op.operator_type === 'BUILDING_MANAGER' || op.operator_type === 'ADMIN').map(operator => (
@@ -701,6 +1017,12 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                     </option>
                   ))}
                 </select>
+                {errors.operator_id && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.operator_id}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -767,37 +1089,6 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               </label>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Building Description
-              </label>
-
-              {/* Template selection */}
-              <div className="mb-2">
-                <label className="text-xs text-gray-500 mb-1 block">Quick Templates:</label>
-                <div className="flex flex-wrap gap-2">
-                  {BUILDING_DESCRIPTION_TEMPLATES.map((template, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleInputChange('building_description', template)}
-                      className="px-2 py-1 text-xs bg-gray-50 text-gray-700 rounded hover:bg-gray-100 transition-colors"
-                    >
-                      Template {index + 1}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <textarea
-                value={formData.building_description || ''}
-                onChange={(e) => handleInputChange('building_description', e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Describe the building, its character, and what makes it special..."
-                className="w-full p-3 border border-gray-300 rounded-md"
-                rows={4}
-              />
-            </div>
           </div>
         )
 
@@ -806,7 +1097,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Address *
+                Full Address <span className="text-red-500">*</span>
               </label>
               <AddressAutocomplete
                 value={formData.full_address || ''}
@@ -822,7 +1113,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address *
+                  Street Address <span className="text-red-500">*</span>
                 </label>
                 <Input
                   value={formData.address || formData.street || ''}
@@ -832,9 +1123,14 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder="123 Main Street"
-                  className={errors.street || errors.address ? 'border-red-500' : ''}
+                  className={errors.street || errors.address ? 'border-red-500 bg-red-50' : ''}
                 />
-                {(errors.street || errors.address) && <p className="text-red-500 text-sm mt-1">{errors.street || errors.address}</p>}
+                {(errors.street || errors.address) && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.street || errors.address}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -871,35 +1167,45 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  City *
+                  City <span className="text-red-500">*</span>
                 </label>
                 <Input
                   value={formData.city || ''}
                   onChange={(e) => handleInputChange('city', e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="City name"
-                  className={errors.city ? 'border-red-500' : ''}
+                  className={errors.city ? 'border-red-500 bg-red-50' : ''}
                 />
-                {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+                {errors.city && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.city}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State/Province *
+                  State/Province <span className="text-red-500">*</span>
                 </label>
                 <Input
                   value={formData.state || ''}
                   onChange={(e) => handleInputChange('state', e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="State or province"
-                  className={errors.state ? 'border-red-500' : ''}
+                  className={errors.state ? 'border-red-500 bg-red-50' : ''}
                 />
-                {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state}</p>}
+                {errors.state && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.state}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ZIP/Postal Code *
+                  ZIP/Postal Code <span className="text-red-500">*</span>
                 </label>
                 <Input
                   value={formData.zip_code || formData.zip || ''}
@@ -909,9 +1215,14 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder="12345"
-                  className={errors.zip || errors.zip_code ? 'border-red-500' : ''}
+                  className={errors.zip || errors.zip_code ? 'border-red-500 bg-red-50' : ''}
                 />
-                {(errors.zip || errors.zip_code) && <p className="text-red-500 text-sm mt-1">{errors.zip || errors.zip_code}</p>}
+                {(errors.zip || errors.zip_code) && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <span className="text-red-500">⚠</span>
+                    {errors.zip || errors.zip_code}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -931,19 +1242,6 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Neighborhood Description
-              </label>
-              <textarea
-                value={formData.neighborhood_description || ''}
-                onChange={(e) => handleInputChange('neighborhood_description', e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Describe the neighborhood, local attractions, safety, etc..."
-                className="w-full p-3 border border-gray-300 rounded-md"
-                rows={3}
-              />
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1019,19 +1317,6 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Public Transit Information
-              </label>
-              <textarea
-                value={formData.public_transit_info || ''}
-                onChange={(e) => handleInputChange('public_transit_info', e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Detailed public transportation information..."
-                className="w-full p-3 border border-gray-300 rounded-md"
-                rows={3}
-              />
-            </div>
           </div>
         )
 
@@ -1271,32 +1556,93 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               )}
             </AnimatePresence>
 
+            {/* Security Features - Structured Boolean Options */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 Security Features
               </label>
-              <textarea
-                value={formData.security_features || ''}
-                onChange={(e) => handleInputChange('security_features', e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Security cameras, keycard access, security guard, etc..."
-                className="w-full p-3 border border-gray-300 rounded-md"
-                rows={3}
-              />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[
+                  { key: 'security_cameras', label: 'Security Cameras', icon: '📹' },
+                  { key: 'keycard_access', label: 'Keycard Access', icon: '🗝️' },
+                  { key: 'security_guard', label: 'Security Guard', icon: '👮' },
+                  { key: 'gated_community', label: 'Gated Community', icon: '🚪' },
+                  { key: 'intercom_system', label: 'Intercom System', icon: '📞' },
+                  { key: 'building_alarm', label: 'Building Alarm', icon: '🚨' }
+                ].map((feature) => (
+                  <label
+                    key={feature.key}
+                    className={`
+                      flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all duration-200
+                      ${formData[feature.key as keyof BuildingFormData]
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData[feature.key as keyof BuildingFormData] as boolean || false}
+                      onChange={(e) => handleInputChange(feature.key as keyof BuildingFormData, e.target.checked)}
+                      className="rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-lg">{feature.icon}</span>
+                    <span className="text-sm font-medium text-gray-900">{feature.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
+            {/* Parking - Boolean with additional options */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Parking Information
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Parking Available
               </label>
-              <textarea
-                value={formData.parking_info || ''}
-                onChange={(e) => handleInputChange('parking_info', e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Available parking spaces, costs, restrictions..."
-                className="w-full p-3 border border-gray-300 rounded-md"
-                rows={3}
-              />
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={formData.parking_available || false}
+                    onChange={(e) => handleInputChange('parking_available', e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-lg">🅿️</span>
+                  <span className="text-sm font-medium text-gray-900">Parking Available</span>
+                </label>
+                
+                {formData.parking_available && (
+                  <div className="ml-6 grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      { key: 'covered_parking', label: 'Covered Parking', icon: '🏠' },
+                      { key: 'garage_parking', label: 'Garage Parking', icon: '🚗' },
+                      { key: 'street_parking', label: 'Street Parking', icon: '🛣️' },
+                      { key: 'visitor_parking', label: 'Visitor Parking', icon: '👥' },
+                      { key: 'handicap_parking', label: 'Handicap Accessible', icon: '♿' },
+                      { key: 'electric_charging', label: 'EV Charging', icon: '⚡' }
+                    ].map((option) => (
+                      <label
+                        key={option.key}
+                        className={`
+                          flex items-center gap-2 p-2 border rounded-md cursor-pointer transition-all
+                          ${formData[option.key as keyof BuildingFormData]
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                          }
+                        `}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData[option.key as keyof BuildingFormData] as boolean || false}
+                          onChange={(e) => handleInputChange(option.key as keyof BuildingFormData, e.target.checked)}
+                          className="rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm">{option.icon}</span>
+                        <span className="text-xs font-medium">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )
@@ -1304,18 +1650,11 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       case 'policies':
         return (
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Building Rules & Policies
-              </label>
-              <textarea
-                value={formData.building_rules || ''}
-                onChange={(e) => handleInputChange('building_rules', e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Quiet hours, guest policies, smoking rules, etc..."
-                className="w-full p-3 border border-gray-300 rounded-md"
-                rows={6}
-              />
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+              <div className="text-green-800 font-medium">Building Rules & Policies</div>
+              <div className="text-green-700 text-sm mt-1">
+                This form now focuses on structured data for AI processing. Building rules and policies are managed separately in the property management system.
+              </div>
             </div>
           </div>
         )
@@ -1323,26 +1662,150 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       case 'media':
         return (
           <div className="space-y-6">
-
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-2 text-blue-800">
                 <Camera className="w-5 h-5" />
-                <h3 className="font-semibold">Final Step: Upload Media Files</h3>
+                <h3 className="font-semibold">Final Step: Upload Categorized Media</h3>
               </div>
               <p className="text-blue-700 text-sm mt-1">
-                Add photos and videos of your building. You can upload multiple files or add a virtual tour link.
-                Click "Create Building" when you're done to save everything to the database.
+                Upload images by category and videos (max 3). Categories help AI agents understand building features better.
               </p>
             </div>
-            <MediaUploadSection
-              virtualTourUrl={formData.virtual_tour_url}
-              uploadedFiles={mediaFiles}
-              onVirtualTourUrlChange={(url) => handleInputChange('virtual_tour_url', url)}
-              onFilesChange={setMediaFiles}
-              onValidationErrors={setFileValidationErrors}
-              buildingId={formData.building_id}
-              uploadImmediately={!!formData.building_id} // Only upload immediately if building already exists (editing mode)
-            />
+
+            {/* Image Upload Categories */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Outside Building Images */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Building className="w-4 h-4" />
+                  Outside Building
+                </h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleCategorizedImageUpload(e, 'outside')}
+                    className="hidden"
+                    id="outside-images"
+                  />
+                  <label htmlFor="outside-images" className="cursor-pointer">
+                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Upload exterior photos</p>
+                  </label>
+                </div>
+                {renderImagePreview('outside')}
+              </div>
+
+              {/* Common Areas Images */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Common Areas
+                </h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleCategorizedImageUpload(e, 'common_areas')}
+                    className="hidden"
+                    id="common-images"
+                  />
+                  <label htmlFor="common-images" className="cursor-pointer">
+                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Upload common space photos</p>
+                  </label>
+                </div>
+                {renderImagePreview('common_areas')}
+              </div>
+
+              {/* Amenity-Specific Images */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4" />
+                  Amenities
+                </h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleCategorizedImageUpload(e, 'amenities')}
+                    className="hidden"
+                    id="amenity-images"
+                  />
+                  <label htmlFor="amenity-images" className="cursor-pointer">
+                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Upload gym, rooftop, etc.</p>
+                  </label>
+                </div>
+                {renderImagePreview('amenities')}
+              </div>
+
+              {/* Common Kitchen/Bathrooms */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Home className="w-4 h-4" />
+                  Kitchen & Bathrooms
+                </h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleCategorizedImageUpload(e, 'kitchen_bathrooms')}
+                    className="hidden"
+                    id="kitchen-images"
+                  />
+                  <label htmlFor="kitchen-images" className="cursor-pointer">
+                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Upload shared facilities</p>
+                  </label>
+                </div>
+                {renderImagePreview('kitchen_bathrooms')}
+              </div>
+            </div>
+
+            {/* Video Upload Section */}
+            <div className="mt-8">
+              <h4 className="font-medium text-gray-900 flex items-center gap-2 mb-4">
+                <FileText className="w-4 h-4" />
+                Videos (Maximum 3)
+              </h4>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept="video/*"
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                  id="video-upload"
+                  disabled={categorizedMedia.videos.length >= 3}
+                />
+                <label htmlFor="video-upload" className={`cursor-pointer ${categorizedMedia.videos.length >= 3 ? 'opacity-50' : ''}`}>
+                  <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">
+                    {categorizedMedia.videos.length >= 3 ? 'Maximum 3 videos reached' : `Upload videos (${categorizedMedia.videos.length}/3)`}
+                  </p>
+                </label>
+              </div>
+              {renderVideoPreview()}
+            </div>
+
+            {/* Virtual Tour URL */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Virtual Tour URL (Optional)
+              </label>
+              <Input
+                type="url"
+                value={formData.virtual_tour_url || ''}
+                onChange={(e) => handleInputChange('virtual_tour_url', e.target.value)}
+                placeholder="https://example.com/virtual-tour"
+                className="w-full"
+              />
+            </div>
           </div>
         )
 

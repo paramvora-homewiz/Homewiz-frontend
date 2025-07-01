@@ -198,8 +198,18 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
   priority?: number
   property_manager?: number
   available: boolean
+  // Parking options (new structured boolean system)
+  parking_available?: boolean
+  covered_parking?: boolean
+  garage_parking?: boolean
+  street_parking?: boolean
+  visitor_parking?: boolean
+  handicap_parking?: boolean
+  electric_charging?: boolean
   // Media files for upload
   media_files?: MediaFile[]
+  // New categorized media structure
+  categorized_media?: CategorizedMediaFiles
 }
 
 // ============================================================================
@@ -474,6 +484,19 @@ export interface MediaFile {
   preview: string
   category: 'building_image' | 'building_video'
   url?: string // Supabase storage URL if uploaded
+  metadata?: {
+    category: string
+    tag: string
+    [key: string]: any
+  }
+}
+
+export interface CategorizedMediaFiles {
+  outside: MediaFile[]
+  common_areas: MediaFile[]
+  amenities: MediaFile[]
+  kitchen_bathrooms: MediaFile[]
+  videos: MediaFile[]
 }
 
 // FileCategory is already defined above

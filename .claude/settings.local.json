@@ -13,7 +13,11 @@
       "Bash(npm run build:*)",
       "Bash(timeout 30s npm run dev:*)",
       "Bash(pkill:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }
