@@ -1,497 +1,87 @@
 /**
- * Enhanced API Service with Database Logging
- * Handles all API calls and logs database operations
+ * API Service - Unified Client Proxy
+ * 
+ * This file now serves as a proxy to the unified API client for backward compatibility.
+ * All functionality has been consolidated into lib/api-client.ts for better maintainability.
+ * 
+ * @deprecated Use lib/api-client.ts for new development
  */
 
-import { databaseLogger, logDataAdded, logDataUpdated, logDataDeleted, logDatabaseError } from './databaseLogger'
-import config, { getActiveApiUrl } from '../lib/config'
-import { transformBackendDataForFrontend } from '../lib/backend-sync'
+// Re-export everything from the unified API client
+export * from '../lib/api-client'
 
-const API_BASE_URL = config.api.baseUrl
+// For components expecting the old apiService class interface
+import { 
+  getBuildings as unifiedGetBuildings,
+  getRooms as unifiedGetRooms,
+  getOperators as unifiedGetOperators,
+  getTenants as unifiedGetTenants,
+  getLeads as unifiedGetLeads,
+  createBuilding as unifiedCreateBuilding,
+  createRoom as unifiedCreateRoom,
+  createTenant as unifiedCreateTenant,
+  createLead as unifiedCreateLead,
+  createOperator as unifiedCreateOperator,
+  ApiResponse
+} from '../lib/api-client'
 
-export interface ApiResponse<T> {
-  data: T
-  success: boolean
-  message?: string
-}
-
-class ApiService {
-  private baseUrl: string
-  private activeUrl: string | null = null
-
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl
+// Legacy class interface for backward compatibility
+export class ApiService {
+  async getBuildings(): Promise<ApiResponse> {
+    return unifiedGetBuildings()
   }
 
-  private async getBaseUrl(): Promise<string> {
-    if (!this.activeUrl) {
-      this.activeUrl = await getActiveApiUrl()
-    }
-    return this.activeUrl || this.baseUrl
+  async getRooms(buildingId?: string): Promise<ApiResponse> {
+    return unifiedGetRooms(buildingId)
   }
 
-  public resetConnection(): void {
-    this.activeUrl = null
+  async getOperators(): Promise<ApiResponse> {
+    return unifiedGetOperators()
   }
 
-  /**
-   * Generic API call with logging
-   */
-  private async apiCall<T>(
-    endpoint: string,
-    options: RequestInit = {},
-    operation?: { type: 'INSERT' | 'UPDATE' | 'DELETE', table: string, data?: any, id?: string | number }
-  ): Promise<T> {
-    // If backend is disabled, throw a specific error
-    if (config.api.disabled) {
-      throw new Error('Backend is disabled for this deployment. Using demo data only.')
-    }
-
-    const baseUrl = await this.getBaseUrl()
-    const url = `${baseUrl}${endpoint}`
-
-    try {
-      console.log(`🌐 API Call: ${options.method || 'GET'} ${endpoint}`)
-      
-      // Prepare headers - avoid custom headers that trigger CORS preflight
-      const headers: Record<string, string> = {}
-
-      // For simple requests, only set Content-Type for POST/PUT with JSON body
-      if (!(options.body instanceof FormData) && (options.method === 'POST' || options.method === 'PUT')) {
-        headers['Content-Type'] = 'application/json'
-      }
-
-      const response = await fetch(url, {
-        headers: {
-          ...headers,
-          ...options.headers,
-        },
-        mode: 'cors', // Explicitly set CORS mode
-        credentials: 'omit', // Don't send credentials to avoid CORS preflight
-        ...options,
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`HTTP ${response.status}: ${errorText}`)
-      }
-
-      const data = await response.json()
-
-      // Log successful database operations
-      if (operation) {
-        switch (operation.type) {
-          case 'INSERT':
-            logDataAdded(operation.table, operation.data, operation.id)
-            break
-          case 'UPDATE':
-            logDataUpdated(operation.table, operation.data, operation.id!)
-            break
-          case 'DELETE':
-            logDataDeleted(operation.table, operation.id!)
-            break
-        }
-      }
-
-      return data
-    } catch (error) {
-      // Enhanced error handling for common "Failed to fetch" scenarios
-      const errorMessage = this.getEnhancedErrorMessage(error, url)
-      console.error(`❌ API Error: ${endpoint}`, errorMessage)
-      
-      // Log database operation errors
-      if (operation) {
-        logDatabaseError({
-          operation: operation.type,
-          table: operation.table,
-          data: operation.data,
-          timestamp: new Date().toISOString(),
-          id: operation.id
-        }, errorMessage)
-      }
-      
-      throw new Error(errorMessage)
-    }
+  async getTenants(): Promise<ApiResponse> {
+    return unifiedGetTenants()
   }
 
-  private getEnhancedErrorMessage(error: any, url: string): string {
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      if (url.includes('localhost:8000')) {
-        return `🔌 Backend server not running on port 8000. Please start the backend server first.
-        
-To start the backend:
-1. Open terminal in: /Users/kaushatrivedi/Downloads/homewiz-backend-shardul-backend
-2. Run: python -m uvicorn app.main:app --reload --port 8000
-
-If you get GEMINI_API_KEY error, create a .env file with:
-GEMINI_API_KEY=your_gemini_api_key_here`
-      }
-      
-      return `🔌 Cannot connect to backend server at ${url}. Please check if the server is running.`
-    }
-    
-    if (error instanceof Error) {
-      if (error.message.includes('CORS')) {
-        return `🚫 CORS error - Backend needs to allow requests from frontend origin`
-      }
-      
-      if (error.message.includes('NetworkError')) {
-        return `🌐 Network error - Check internet connection and server status`
-      }
-      
-      return error.message
-    }
-    
-    return 'Unknown API error occurred'
+  async getLeads(): Promise<ApiResponse> {
+    return unifiedGetLeads()
   }
 
-  // ===== OPERATORS =====
-
-  async getOperators() {
-    return this.apiCall<any[]>('/operators/')
+  async createBuilding(data: any): Promise<ApiResponse> {
+    return unifiedCreateBuilding(data)
   }
 
-  async createOperator(operatorData: any) {
-    return this.apiCall<any>('/operators/', {
-      method: 'POST',
-      body: JSON.stringify(operatorData),
-    }, {
-      type: 'INSERT',
-      table: 'operators',
-      data: operatorData
-    })
+  async createRoom(data: any): Promise<ApiResponse> {
+    return unifiedCreateRoom(data)
   }
 
-  async updateOperator(id: number, operatorData: any) {
-    return this.apiCall<any>(`/operators/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(operatorData),
-    }, {
-      type: 'UPDATE',
-      table: 'operators',
-      data: operatorData,
-      id
-    })
+  async createTenant(data: any): Promise<ApiResponse> {
+    return unifiedCreateTenant(data)
   }
 
-  async deleteOperator(id: number) {
-    return this.apiCall<any>(`/operators/${id}`, {
-      method: 'DELETE',
-    }, {
-      type: 'DELETE',
-      table: 'operators',
-      id
-    })
+  async createLead(data: any): Promise<ApiResponse> {
+    return unifiedCreateLead(data)
   }
 
-  // ===== BUILDINGS =====
-
-  async getBuildings() {
-    const buildings = await this.apiCall<any[]>('/buildings/')
-    // Transform backend data to frontend format (handle UUID, boolean conversions)
-    if (Array.isArray(buildings)) {
-      return buildings.map(transformBackendDataForFrontend)
-    }
-    return buildings
+  async createOperator(data: any): Promise<ApiResponse> {
+    return unifiedCreateOperator(data)
   }
 
-  async createBuilding(buildingData: any) {
-    console.log('🏢 Creating building with JSON data (no images)')
-    // New backend only accepts JSON for building creation, images are uploaded separately
-    return this.apiCall<any>('/buildings/', {
-      method: 'POST',
-      body: JSON.stringify(buildingData),
-    }, {
-      type: 'INSERT',
-      table: 'buildings',
-      data: buildingData
-    })
-  }
-
-  async uploadBuildingImages(buildingId: string, files: File[]) {
-    console.log(`📸 Uploading ${files.length} images for building ${buildingId}`)
-
-    const formData = new FormData()
-    files.forEach((file) => {
-      formData.append('files', file)
-    })
-
-    // Don't use apiCall for file uploads to avoid Content-Type conflicts
-    const baseUrl = await this.getBaseUrl()
-    const url = `${baseUrl}/buildings/${buildingId}/images/upload`
-    
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type - let browser set it with boundary
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`HTTP ${response.status}: ${errorText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error(`❌ Image upload error:`, error)
-      throw error
-    }
-  }
-
-  async updateBuilding(id: string, buildingData: any) {
-    return this.apiCall<any>(`/buildings/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(buildingData),
-    }, {
-      type: 'UPDATE',
-      table: 'buildings',
-      data: buildingData,
-      id
-    })
-  }
-
-  async deleteBuilding(id: string) {
-    return this.apiCall<any>(`/buildings/${id}`, {
-      method: 'DELETE',
-    }, {
-      type: 'DELETE',
-      table: 'buildings',
-      id
-    })
-  }
-
-  async updateBuildingImages(buildingId: string, imageUrls: string[]) {
-    console.log(`🔗 Updating building ${buildingId} with ${imageUrls.length} Supabase image URLs`)
-
-    return this.apiCall<any>(`/buildings/${buildingId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ 
-        building_id: buildingId,
-        building_images: imageUrls 
-      }),
-    }, {
-      type: 'UPDATE',
-      table: 'buildings',
-      data: { building_id: buildingId, building_images: imageUrls },
-      id: buildingId
-    })
-  }
-
-  // ===== ROOMS =====
-
-  async getRooms() {
-    return this.apiCall<any[]>('/rooms/')
-  }
-
-  async createRoom(roomData: any) {
-    return this.apiCall<any>('/rooms/', {
-      method: 'POST',
-      body: JSON.stringify(roomData),
-    }, {
-      type: 'INSERT',
-      table: 'rooms',
-      data: roomData
-    })
-  }
-
-  async updateRoom(id: string, roomData: any) {
-    return this.apiCall<any>(`/rooms/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(roomData),
-    }, {
-      type: 'UPDATE',
-      table: 'rooms',
-      data: roomData,
-      id
-    })
-  }
-
-  async deleteRoom(id: string) {
-    return this.apiCall<any>(`/rooms/${id}`, {
-      method: 'DELETE',
-    }, {
-      type: 'DELETE',
-      table: 'rooms',
-      id
-    })
-  }
-
-  async uploadRoomImages(roomId: string, buildingId: string, files: File[]) {
-    console.log(`📸 Uploading ${files.length} images for room ${roomId} in building ${buildingId}`)
-
-    const formData = new FormData()
-    files.forEach((file) => {
-      formData.append('files', file)
-    })
-
-    // Don't use apiCall for file uploads to avoid Content-Type conflicts
-    const baseUrl = await this.getBaseUrl()
-    const url = `${baseUrl}/rooms/${roomId}/images/upload?building_id=${buildingId}`
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type - let browser set it with boundary
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`HTTP ${response.status}: ${errorText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error(`❌ Room image upload error:`, error)
-      throw error
-    }
-  }
-
-  async uploadSingleRoomImage(roomId: string, buildingId: string, file: File) {
-    console.log(`📸 Uploading single image for room ${roomId} in building ${buildingId}`)
-
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const baseUrl = await this.getBaseUrl()
-    const url = `${baseUrl}/rooms/${roomId}/images/single?building_id=${buildingId}`
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`HTTP ${response.status}: ${errorText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error(`❌ Single room image upload error:`, error)
-      throw error
-    }
-  }
-
-  async updateRoomImages(roomId: string, imageUrls: string[]) {
-    console.log(`🔗 Updating room ${roomId} with ${imageUrls.length} Supabase image URLs`)
-
-    return this.apiCall<any>(`/rooms/${roomId}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        room_id: roomId,
-        room_images: imageUrls
-      }),
-    }, {
-      type: 'UPDATE',
-      table: 'rooms',
-      data: { room_id: roomId, room_images: imageUrls },
-      id: roomId
-    })
-  }
-
-  // ===== TENANTS =====
-
-  async getTenants() {
-    return this.apiCall<any[]>('/tenants/')
-  }
-
-  async createTenant(tenantData: any) {
-    return this.apiCall<any>('/tenants/', {
-      method: 'POST',
-      body: JSON.stringify(tenantData),
-    }, {
-      type: 'INSERT',
-      table: 'tenants',
-      data: tenantData
-    })
-  }
-
-  async updateTenant(id: number, tenantData: any) {
-    return this.apiCall<any>(`/tenants/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(tenantData),
-    }, {
-      type: 'UPDATE',
-      table: 'tenants',
-      data: tenantData,
-      id
-    })
-  }
-
-  async deleteTenant(id: number) {
-    return this.apiCall<any>(`/tenants/${id}`, {
-      method: 'DELETE',
-    }, {
-      type: 'DELETE',
-      table: 'tenants',
-      id
-    })
-  }
-
-  // ===== LEADS =====
-
-  async getLeads() {
-    return this.apiCall<any[]>('/leads/')
-  }
-
-  async createLead(leadData: any) {
-    return this.apiCall<any>('/leads/', {
-      method: 'POST',
-      body: JSON.stringify(leadData),
-    }, {
-      type: 'INSERT',
-      table: 'leads',
-      data: leadData
-    })
-  }
-
-  async updateLead(id: number, leadData: any) {
-    return this.apiCall<any>(`/leads/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(leadData),
-    }, {
-      type: 'UPDATE',
-      table: 'leads',
-      data: leadData,
-      id
-    })
-  }
-
-  async deleteLead(id: number) {
-    return this.apiCall<any>(`/leads/${id}`, {
-      method: 'DELETE',
-    }, {
-      type: 'DELETE',
-      table: 'leads',
-      id
-    })
-  }
-
-  // ===== DASHBOARD METRICS =====
-
-  async getDashboardMetrics() {
-    return this.apiCall<any>('/analytics/dashboard')
-  }
-
-  // ===== LOGGING UTILITIES =====
-  
-  getLogs() {
-    return databaseLogger.getLogs()
-  }
-
+  // Placeholder methods for database logging (functionality moved to api-client)
   getLogStats() {
-    return databaseLogger.getStats()
+    console.warn('Database logging functionality has been moved to the unified API client')
+    return { total: 0, recent: [] }
   }
 
   clearLogs() {
-    databaseLogger.clearLogs()
+    console.warn('Database logging functionality has been moved to the unified API client')
   }
 }
 
-// Create singleton instance
+// Export singleton instance for backward compatibility
 export const apiService = new ApiService()
 
-export default apiService
+// Migration notice
+console.warn(
+  'Notice: apiService has been migrated to lib/api-client.ts. Please update your imports for better performance and maintainability.'
+)

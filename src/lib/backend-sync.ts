@@ -76,23 +76,44 @@ export const REQUIRED_FIELDS = {
  * Data Transformation Functions
  */
 
-// Transform frontend form data to backend format
+/**
+ * Transforms frontend tenant form data to backend database format
+ * 
+ * This function handles the critical mapping between the user-facing form fields
+ * and the backend database schema. It performs several important transformations:
+ * 
+ * Field Mapping Strategy:
+ * - Combines separate firstName/lastName fields into single tenant_name
+ * - Maps user-friendly field names to database column names
+ * - Handles fallback values for different form versions
+ * - Sets default values for required fields when not provided
+ * 
+ * @param frontendData - Raw form data from the frontend tenant form
+ * @returns Transformed object matching backend database schema
+ * 
+ * Critical Business Logic:
+ * - Name combination: firstName + lastName → tenant_name (with proper spacing)
+ * - Field aliasing: email → tenant_email, nationality → tenant_nationality
+ * - Room/Building ID resolution: Supports both selected_* and direct field names
+ * - Date mapping: preferred_move_in_date → lease_start_date for compatibility
+ * - Status defaulting: Sets 'ACTIVE' status if not specified
+ */
 export function transformTenantDataForBackend(frontendData: any) {
   return {
-    // Combine firstName + lastName → tenant_name
+    // Combine firstName + lastName → tenant_name with proper whitespace handling
     tenant_name: frontendData.firstName && frontendData.lastName 
       ? `${frontendData.firstName.trim()} ${frontendData.lastName.trim()}`
       : frontendData.tenant_name,
     
-    // Map field names to backend expectations
+    // Map user-friendly field names to backend database column names
     tenant_email: frontendData.email || frontendData.tenant_email,
     tenant_nationality: frontendData.nationality || frontendData.tenant_nationality,
     
-    // Ensure required fields are present
+    // Room/Building assignment - supports multiple form field naming conventions
     room_id: frontendData.selected_room_id || frontendData.room_id,
     building_id: frontendData.selected_building_id || frontendData.building_id,
     
-    // Copy other fields as-is
+    // Direct field mapping with fallback support for different form versions
     room_number: frontendData.room_number,
     lease_start_date: frontendData.lease_start_date || frontendData.preferred_move_in_date,
     lease_end_date: frontendData.lease_end_date,
@@ -100,9 +121,9 @@ export function transformTenantDataForBackend(frontendData: any) {
     booking_type: frontendData.booking_type,
     deposit_amount: frontendData.deposit_amount,
     phone: frontendData.phone,
-    status: frontendData.status || 'ACTIVE',
+    status: frontendData.status || 'ACTIVE', // Default to ACTIVE status for new tenants
     
-    // Optional fields
+    // Emergency contact information (optional fields)
     emergency_contact_name: frontendData.emergency_contact_name,
     emergency_contact_phone: frontendData.emergency_contact_phone,
     emergency_contact_relation: frontendData.emergency_contact_relation,
@@ -622,12 +643,33 @@ export function validateLeadFormData(data: any): ValidationResult {
   }
 }
 
+/**
+ * Validates room form data against business rules and backend constraints
+ * 
+ * This function performs comprehensive validation of room form data including:
+ * - Required field validation based on backend schema requirements
+ * - Enum value validation against predefined backend constants
+ * - Business logic validation (e.g., occupancy limits, date ranges)
+ * - Cross-field dependency validation
+ * 
+ * @param data - Raw form data from the frontend room form
+ * @returns ValidationResult object containing validation status, errors, and missing required fields
+ * 
+ * Business Rules Enforced:
+ * - Room number must be unique within a building (checked at backend level)
+ * - Private room rent must be specified for all rooms
+ * - Maximum occupancy cannot exceed physical bed count
+ * - Lease dates must be in correct chronological order
+ * - Status transitions must follow business workflow rules
+ */
 export function validateRoomFormData(data: any): ValidationResult {
   const errors: Record<string, string> = {}
+  // Transform frontend form data to backend format for validation
   const backendData = transformRoomDataForBackend(data)
+  // Check for missing required fields based on backend schema
   const missingRequired = validateRequiredFields(backendData, 'ROOM')
   
-  // Validate required fields
+  // Core required field validation - these fields are essential for room creation
   if (!backendData.room_number?.trim()) {
     errors.room_number = 'Room number is required'
   }
@@ -636,6 +678,7 @@ export function validateRoomFormData(data: any): ValidationResult {
     errors.building_id = 'Building selection is required'
   }
   
+  // Financial validation - rent amount is required for pricing calculations
   if (backendData.private_room_rent === undefined || backendData.private_room_rent === null) {
     errors.private_room_rent = 'Private room rent is required'
   }
