@@ -246,7 +246,6 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     { id: 'location', title: 'Location & Address', icon: <MapPin className="w-5 h-5" /> },
     { id: 'specifications', title: 'Building Specs', icon: <Ruler className="w-5 h-5" /> },
     { id: 'amenities', title: 'Amenities & Features', icon: <Sparkles className="w-5 h-5" /> },
-    { id: 'policies', title: 'Policies & Rules', icon: <FileText className="w-5 h-5" /> },
     { id: 'media', title: 'Images & Tours', icon: <Camera className="w-5 h-5" /> }
   ]
 
@@ -642,7 +641,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     const filesToProcess = files.slice(0, availableSlots)
 
     // Validate video files
-    const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
+    const MAX_VIDEO_SIZE = 500 * 1024 * 1024 // 500MB
     const validFiles: File[] = []
     const newErrors: Array<{ file: File; error: string }> = []
 
@@ -650,7 +649,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       if (file.size > MAX_VIDEO_SIZE) {
         newErrors.push({
           file,
-          error: `File size (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds maximum allowed size (50 MB)`
+          error: `File size (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds maximum allowed size (500 MB)`
         })
       } else {
         validFiles.push(file)
@@ -1911,6 +1910,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
                  
             
+            
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -2008,17 +2008,6 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           </div>
         )
 
-      case 'policies':
-        return (
-          <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-              <div className="text-green-800 font-medium">Building Rules & Policies</div>
-              <div className="text-green-700 text-sm mt-1">
-                This form now focuses on structured data for AI processing. Building rules and policies are managed separately in the property management system.
-              </div>
-            </div>
-          </div>
-        )
 
       case 'media':
         return (
@@ -2155,7 +2144,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   </p>
                   {categorizedMedia.videos.length < 3 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      Max 50MB per video • MP4, WebM, QuickTime, AVI
+                      Max 500MB per video • MP4, WebM, QuickTime, AVI
                     </p>
                   )}
                 </label>
@@ -2205,7 +2194,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             {initialData?.building_id ? 'Edit Building' : 'Add New Building'}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Configure building details, amenities, and policies with our comprehensive multi-step form
+            Configure building details, amenities, and features with our comprehensive multi-step form
           </p>
           <div className="flex items-center justify-center mt-4">
             <StatusBadge
