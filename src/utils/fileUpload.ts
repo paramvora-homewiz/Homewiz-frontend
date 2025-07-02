@@ -86,13 +86,13 @@ export function validateMediaFile(file: File): { isValid: boolean; error?: strin
 
   // Check file size limits
   const maxImageSize = 10 * 1024 * 1024 // 10MB
-  const maxVideoSize = 50 * 1024 * 1024 // 50MB
+  const maxVideoSize = 500 * 1024 * 1024 // 500MB
   const maxSize = isImage ? maxImageSize : maxVideoSize
 
   if (file.size > maxSize) {
     return {
       isValid: false,
-      error: `File size exceeds limit. Max size: ${isImage ? '10MB' : '50MB'}`
+      error: `File size exceeds limit. Max size: ${isImage ? '10MB' : '500MB'}`
     }
   }
 
@@ -242,13 +242,13 @@ export function validateFile(
         return { isValid: false, error: 'File must be a video' }
       }
       
-      const maxVideoSize = 50 * 1024 * 1024 // 50MB
+      const maxVideoSize = 500 * 1024 * 1024 // 500MB
       if (file.size > maxVideoSize) {
-        return { isValid: false, error: 'Video size exceeds 50MB limit' }
+        return { isValid: false, error: 'Video size exceeds 500MB limit' }
       }
       
       // Warning for large videos
-      if (file.size > 25 * 1024 * 1024) {
+      if (file.size > 250 * 1024 * 1024) {
         warnings.push('Large video file may take significantly longer to upload')
       }
       break

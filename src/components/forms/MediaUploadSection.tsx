@@ -328,7 +328,7 @@ export function MediaUploadSection({
           </div>
           <p className="text-xs text-gray-500">
             Images: {FILE_TYPE_DESCRIPTIONS.IMAGES} up to 10MB each<br />
-            Videos: {FILE_TYPE_DESCRIPTIONS.VIDEOS} up to 50MB each
+            Videos: {FILE_TYPE_DESCRIPTIONS.VIDEOS} up to 500MB each
           </p>
           {isUploading && (
             <div className="mt-4">
