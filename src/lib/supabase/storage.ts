@@ -73,7 +73,7 @@ export async function uploadFile(options: FileUploadOptions): Promise<FileUpload
       }
     }
 
-    // Check file size (max 10MB for images, 50MB for videos, 5MB for documents)
+    // Check file size (max 10MB for images, 500MB for videos, 5MB for documents)
     const maxSize = getMaxFileSize(bucket, file.type)
     if (file.size > maxSize) {
       console.error(`❌ File too large: ${formatFileSize(file.size)} > ${formatFileSize(maxSize)}`)
@@ -281,32 +281,43 @@ export function validateFileType(file: File, bucket: keyof typeof STORAGE_BUCKET
   error?: string
   supportedTypes?: string
 } {
-  const isValid = isValidFileType(file, bucket)
+  const isValidType = isValidFileType(file, bucket)
 
-  if (isValid) {
-    return { isValid: true }
-  }
-
-  let supportedTypes: string
-  switch (bucket) {
-    case 'BUILDING_IMAGES':
-      supportedTypes = `${FILE_TYPE_DESCRIPTIONS.IMAGES}, ${FILE_TYPE_DESCRIPTIONS.VIDEOS}`
-      break
-    case 'DOCUMENTS':
-      supportedTypes = FILE_TYPE_DESCRIPTIONS.DOCUMENTS
-      break
-    case 'AVATARS':
-      supportedTypes = FILE_TYPE_DESCRIPTIONS.IMAGES
+  if (!isValidType) {
+    let supportedTypes: string
+    switch (bucket) {
+      case 'BUILDING_IMAGES':
+        supportedTypes = `${FILE_TYPE_DESCRIPTIONS.IMAGES}, ${FILE_TYPE_DESCRIPTIONS.VIDEOS}`
+        break
+      case 'DOCUMENTS':
+        supportedTypes = FILE_TYPE_DESCRIPTIONS.DOCUMENTS
+        break
+      case 'AVATARS':
+        supportedTypes = FILE_TYPE_DESCRIPTIONS.IMAGES
       break
     default:
       supportedTypes = 'Unknown'
   }
 
-  return {
-    isValid: false,
-    error: `File type "${file.type}" is not supported. Supported formats: ${supportedTypes}`,
-    supportedTypes
+    return {
+      isValid: false,
+      error: `File type "${file.type}" is not supported. Supported formats: ${supportedTypes}`,
+      supportedTypes
+    }
   }
+
+  // Check file size if type is valid
+  const maxSize = getMaxFileSize(bucket, file.type)
+  if (file.size > maxSize) {
+    const maxSizeFormatted = formatFileSize(maxSize)
+    const fileSizeFormatted = formatFileSize(file.size)
+    return {
+      isValid: false,
+      error: `File size (${fileSizeFormatted}) exceeds maximum allowed size (${maxSizeFormatted})`
+    }
+  }
+
+  return { isValid: true }
 }
 
 function getMaxFileSize(bucket: keyof typeof STORAGE_BUCKETS, fileType?: string): number {
@@ -314,7 +325,7 @@ function getMaxFileSize(bucket: keyof typeof STORAGE_BUCKETS, fileType?: string)
     case 'BUILDING_IMAGES':
       // Different limits for images vs videos
       if (fileType && fileType.startsWith('video/')) {
-        return 50 * 1024 * 1024 // 50MB for videos
+        return 500 * 1024 * 1024 // 500MB for videos
       }
       return 10 * 1024 * 1024 // 10MB for images
     case 'DOCUMENTS':
