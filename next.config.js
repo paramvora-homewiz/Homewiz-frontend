@@ -13,6 +13,14 @@ const nextConfig = {
 
   // Basic settings for stability
   reactStrictMode: false,
+  
+  // Force asset regeneration to fix 404 issues
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
+
+  // Configure asset prefix for development
+  assetPrefix: process.env.NODE_ENV === 'development' ? '' : undefined,
 
   // Webpack configuration for chunk loading stability and WebSocket support
   webpack: (config, { dev, isServer }) => {
@@ -27,7 +35,7 @@ const nextConfig = {
       // Increase chunk loading timeout
       config.output.chunkLoadTimeout = 30000
 
-      // Optimize chunk splitting
+      // Optimize chunk splitting for development
       config.optimization = {
         ...config.optimization,
         splitChunks: {

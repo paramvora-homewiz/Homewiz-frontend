@@ -172,6 +172,19 @@ export function validateBuildingForm(data: BuildingFormData): ValidationResult {
     if (minBathroomsError) errors.total_bathrooms = minBathroomsError
   }
 
+  if (data.bathrooms_on_each_floor !== undefined) {
+    const minBathroomsPerFloorError = validators.minValue(data.bathrooms_on_each_floor, 1, 'Bathrooms per floor')
+    if (minBathroomsPerFloorError) errors.bathrooms_on_each_floor = minBathroomsPerFloorError
+
+    // Business logic validation
+    if (data.total_bathrooms && data.floors && data.bathrooms_on_each_floor) {
+      const expectedTotalBathrooms = data.bathrooms_on_each_floor * data.floors
+      if (expectedTotalBathrooms > data.total_bathrooms * 1.5) {
+        warnings.bathrooms_on_each_floor = 'Bathrooms per floor seems high compared to total bathrooms'
+      }
+    }
+  }
+
   if (data.min_lease_term !== undefined) {
     const minLeaseError = validators.minValue(data.min_lease_term, 1, 'Minimum lease term')
     if (minLeaseError) errors.min_lease_term = minLeaseError
@@ -180,10 +193,23 @@ export function validateBuildingForm(data: BuildingFormData): ValidationResult {
   if (data.pref_min_lease_term !== undefined) {
     const prefMinLeaseError = validators.minValue(data.pref_min_lease_term, 1, 'Preferred minimum lease term')
     if (prefMinLeaseError) errors.pref_min_lease_term = prefMinLeaseError
-    
+
     if (data.min_lease_term && data.pref_min_lease_term < data.min_lease_term) {
-      warnings.pref_min_lease_term = 'Preferred minimum lease term is less than minimum lease term'
+      errors.pref_min_lease_term = 'Preferred minimum lease term cannot be less than minimum lease term'
     }
+  }
+
+  // Enum validations
+  if (data.common_kitchen && !['None', 'Shared', 'Private', 'Both'].includes(data.common_kitchen)) {
+    errors.common_kitchen = 'Invalid common kitchen option'
+  }
+
+  if (data.pet_friendly && !['Yes', 'No', 'Conditional'].includes(data.pet_friendly)) {
+    errors.pet_friendly = 'Invalid pet-friendly option'
+  }
+
+  if (data.cleaning_common_spaces && !['Yes', 'No', 'Tenant Responsibility'].includes(data.cleaning_common_spaces)) {
+    errors.cleaning_common_spaces = 'Invalid cleaning common spaces option'
   }
 
   // URL validations
@@ -192,7 +218,14 @@ export function validateBuildingForm(data: BuildingFormData): ValidationResult {
     if (urlError) errors.virtual_tour_url = urlError
   }
 
-  // amenities_details and building_images are already objects/arrays, no need to validate as JSON strings
+  // JSON format validations
+  if (data.amenities_details && typeof data.amenities_details === 'string') {
+    try {
+      JSON.parse(data.amenities_details)
+    } catch (e) {
+      errors.amenities_details = 'Invalid amenities details format'
+    }
+  }
 
   return {
     isValid: Object.keys(errors).length === 0,

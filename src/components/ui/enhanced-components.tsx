@@ -522,6 +522,11 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, variant = 'default', icon, className = '' }: StatusBadgeProps) {
+  // Handle undefined or null status
+  if (!status) {
+    return null
+  }
+
   const getStatusStyles = (status: string) => {
     const statusMap: Record<string, string> = {
       'AVAILABLE': 'bg-green-100 text-green-800 border-green-200',
@@ -534,7 +539,8 @@ export function StatusBadge({ status, variant = 'default', icon, className = '' 
       'TERMINATED': 'bg-red-100 text-red-800 border-red-200',
       'EXPLORING': 'bg-gray-100 text-gray-800 border-gray-200',
       'INTERESTED': 'bg-blue-100 text-blue-800 border-blue-200',
-      'CONVERTED': 'bg-green-100 text-green-800 border-green-200'
+      'CONVERTED': 'bg-green-100 text-green-800 border-green-200',
+      'UNAVAILABLE': 'bg-gray-100 text-gray-800 border-gray-200'
     }
     return statusMap[status] || 'bg-gray-100 text-gray-800 border-gray-200'
   }
@@ -554,7 +560,7 @@ export function StatusBadge({ status, variant = 'default', icon, className = '' 
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
     >
       {icon}
-      {status.replace('_', ' ')}
+      {status.replace(/_/g, ' ')}
     </motion.span>
   )
 }

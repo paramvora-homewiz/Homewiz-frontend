@@ -147,23 +147,32 @@ export interface Building {
   state: string
   zip_code: string
   country: string
-  operator_id?: number  // Changed from string to optional number to match backend
-  total_rooms: number
-  available_rooms: number
+  // CRITICAL FIX: Match backend schema exactly
+  total_units: number    // Backend field name (not total_rooms)
+  available_units: number // Backend field name (not available_rooms)
   building_type: string
-  amenities: string[]
+  status: string         // Missing backend field - critical for building status
+  area?: string          // Missing backend field - geographic area
+  description?: string   // Backend field name (not building_description)
+  images?: string[]      // Backend field name (not building_images) - stored as Json
+  parking_available: boolean // Backend field
+  pet_friendly: boolean      // Backend field  
+  furnished_options: boolean // Backend field
+  // Additional fields that exist in frontend but not backend
+  operator_id?: number       // Frontend-only field (not in backend schema)
+  amenities?: string[]
   year_built?: number
   last_renovation?: number
   building_rules?: string
   amenities_details?: Record<string, any>
   neighborhood_description?: string
-  building_description?: string
+  building_description?: string  // Frontend alias for description
   public_transit_info?: string
   parking_info?: string
   security_features?: string
-  disability_access: boolean
+  disability_access?: boolean
   disability_features?: string
-  building_images?: string[]
+  building_images?: string[]     // Frontend alias for images
   virtual_tour_url?: string
   created_at?: string
   updated_at?: string
@@ -171,9 +180,20 @@ export interface Building {
 
 export interface BuildingFormData extends Omit<Building, 'building_id' | 'created_at' | 'updated_at'> {
   building_id?: string
+  // CRITICAL BACKEND COMPATIBILITY FIXES
+  total_units: number        // Backend field name (was total_rooms)
+  available_units: number    // Backend field name (was available_rooms) 
+  status: string             // Required backend field
+  area?: string              // Required backend field
+  description?: string       // Backend field name (not building_description)
+  images?: string[]          // Backend field name (stored as Json)
+  parking_available: boolean // Backend field
+  pet_friendly: boolean      // Backend field (boolean, not string)
+  furnished_options: boolean // Backend field
+  
+  // Additional form fields not in base Building interface
   full_address?: string
   street?: string
-  area?: string
   zip?: string
   floors?: number
   total_bathrooms?: number
@@ -187,7 +207,7 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
   secure_access: boolean
   bike_storage: boolean
   rooftop_access: boolean
-  pet_friendly?: string
+  pet_friendly_details?: string    // Detailed pet policy (renamed from pet_friendly)
   cleaning_common_spaces?: string
   utilities_included: boolean
   fitness_area: boolean
@@ -198,18 +218,40 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
   priority?: number
   property_manager?: number
   available: boolean
-  // Parking options (new structured boolean system)
-  parking_available?: boolean
+  
+  // Structured parking options (frontend enhancement)
   covered_parking?: boolean
   garage_parking?: boolean
   street_parking?: boolean
   visitor_parking?: boolean
   handicap_parking?: boolean
   electric_charging?: boolean
+  
+  // Accessibility features (frontend enhancement)
+  wheelchair_ramp?: boolean
+  elevator_access?: boolean
+  wide_doorways?: boolean
+  accessible_bathroom?: boolean
+  hearing_assistance?: boolean
+  visual_assistance?: boolean
+  accessible_parking?: boolean
+  grab_bars?: boolean
+  lowered_counters?: boolean
+  accessible_entrance?: boolean
+  service_animal_friendly?: boolean
+  accessible_emergency?: boolean
+  accessibility_details?: string
+  
   // Media files for upload
   media_files?: MediaFile[]
   // New categorized media structure
   categorized_media?: CategorizedMediaFiles
+  
+  // Maintain backward compatibility with old field names
+  total_rooms?: number       // Alias for total_units (for old forms)
+  available_rooms?: number   // Alias for available_units (for old forms)
+  building_description?: string  // Alias for description
+  building_images?: string[]     // Alias for images
 }
 
 // ============================================================================
@@ -248,10 +290,13 @@ export interface Room {
   updated_at?: string
 }
 
+export type RoomType = 'Standard' | 'Suite' | 'Studio' | 'Deluxe' | 'Penthouse'
+
 export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'updated_at'> {
   room_id?: string
   room_number: string
   building_id: string
+  room_type: RoomType // Critical: Required field missing from database schema
   ready_to_rent: boolean
   status: RoomStatus
   booked_from?: string
@@ -287,6 +332,17 @@ export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'upd
   available_from?: string
   additional_features?: string
   room_photos?: File[]
+  // Backend-required description field
+  description?: string
+  
+  // Backend Compatibility Fields (CRITICAL FIXES)
+  shared_room_rent_3?: number // Missing backend field - 3-person occupancy
+  shared_room_rent_4?: number // Missing backend field - 4-person occupancy  
+  availability_status?: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' // Backend field name
+  square_footage?: number // Backend field name (not sq_footage)
+  lease_start_date?: string // Backend tracking field
+  lease_end_date?: string // Backend tracking field
+  
   // New fields added based on best practices
   room_access_type?: 'KEY' | 'KEYCARD' | 'DIGITAL' | 'CODE'
   internet_speed?: number
@@ -294,6 +350,8 @@ export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'upd
   cleaning_frequency?: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'ON_REQUEST'
   utilities_meter_id?: string
   last_cleaning_date?: string
+  // JSON field improvements for better data structure
+  utilities_included?: Record<string, boolean> | string // Support both structured and JSON string
 }
 
 // Tenant Form Interface - Maps to tenants table

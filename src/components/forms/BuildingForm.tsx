@@ -17,7 +17,9 @@ import {
   validateBuildingFormData, 
   transformBuildingDataForBackend, 
   BACKEND_ENUMS,
-  ValidationResult 
+  ValidationResult,
+  validatePhoneFormatStrict,
+  validateEmailFormatStrict
 } from '@/lib/backend-sync'
 import { MediaUploadSection } from './MediaUploadSection'
 import { ValidationSummary } from './ValidationSummary'
@@ -55,7 +57,7 @@ interface BuildingFormProps {
 
 const PET_FRIENDLY_OPTIONS = [
   { value: 'NO_PETS', label: 'No Pets Allowed', icon: '🚫' },
-  { value: 'ESA_ONLY', label: 'Only ESA Allowed', icon: '🐕‍🦺' },
+  { value: 'ESA_ONLY', label: 'Only ESA Allowed', icon: '🐕' },
   { value: 'CATS_ONLY', label: 'Cats Only', icon: '🐱' },
   { value: 'DOGS_ONLY', label: 'Dogs Only', icon: '🐕' },
   { value: 'CATS_AND_DOGS', label: 'Cats & Dogs', icon: '🐱🐕' },
@@ -194,6 +196,31 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           ? JSON.parse(initialData.amenities_details)
           : initialData.amenities_details)
       : {}
+  )
+  
+  // Contact information structure for better data organization
+  const [contactInfo, setContactInfo] = useState({
+    office_phone: '',
+    emergency_phone: '',
+    leasing_email: '',
+    maintenance_email: '',
+    office_hours: '',
+    ...(initialData?.contact_info 
+      ? (typeof initialData.contact_info === 'string' 
+          ? JSON.parse(initialData.contact_info) 
+          : initialData.contact_info)
+      : {})
+  })
+  
+  // Amenities array for better JSON structure compatibility
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(
+    initialData?.amenities 
+      ? (Array.isArray(initialData.amenities) 
+          ? initialData.amenities 
+          : (typeof initialData.amenities === 'string' 
+              ? JSON.parse(initialData.amenities) 
+              : []))
+      : []
   )
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(
     initialData?.media_files || []
@@ -455,6 +482,57 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       ...prev,
       [amenity]: detail
     }))
+  }
+  
+  // Handler for contact info changes with validation
+  const handleContactInfoChange = (field: string, value: string) => {
+    setContactInfo(prev => ({
+      ...prev,
+      [field]: value
+    }))
+    
+    // Clear errors when user starts typing
+    if (errors[`contact_${field}`]) {
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[`contact_${field}`]
+        return newErrors
+      })
+    }
+    
+    // Real-time validation for phone and email fields
+    if (field.includes('phone') && value.trim()) {
+      const phoneValidation = validatePhoneFormatStrict(value)
+      if (!phoneValidation.isValid) {
+        setErrors(prev => ({
+          ...prev,
+          [`contact_${field}`]: phoneValidation.error || 'Invalid phone number format'
+        }))
+      }
+    } else if (field.includes('email') && value.trim()) {
+      const emailValidation = validateEmailFormatStrict(value)
+      if (!emailValidation.isValid) {
+        setErrors(prev => ({
+          ...prev,
+          [`contact_${field}`]: emailValidation.error || 'Invalid email format'
+        }))
+      }
+    }
+  }
+  
+  // Handler for amenity selection with improved JSON structure
+  const handleAmenityToggle = (amenityKey: string, amenityLabel: string) => {
+    setSelectedAmenities(prev => {
+      if (prev.includes(amenityLabel)) {
+        return prev.filter(a => a !== amenityLabel)
+      } else {
+        return [...prev, amenityLabel]
+      }
+    })
+    
+    // Also update boolean field for backward compatibility
+    const currentValue = formData[amenityKey as keyof BuildingFormData] as boolean
+    handleInputChange(amenityKey as keyof BuildingFormData, !currentValue)
   }
 
   // Categorized media handlers
@@ -813,10 +891,12 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     }
 
     try {
-      // Transform data to match backend expectations
+      // Transform data to match backend expectations with enhanced JSON structures
       const backendData = transformBuildingDataForBackend({
         ...formData,
+        amenities: selectedAmenities, // Structured amenities array
         amenities_details: JSON.stringify(amenitiesDetails),
+        contact_info: JSON.stringify(contactInfo), // Structured contact information
         media_files: mediaFiles,
         categorized_media: categorizedMedia
       })
@@ -1382,7 +1462,95 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 </select>
               </div>
             </div>
-
+            
+            {/* Contact Information Section */}
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                📞 Contact Information
+              </h3>
+              <p className="text-sm text-blue-700 mb-4">
+               
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    Office Phone
+                  </label>
+                  <Input
+                    value={contactInfo.office_phone}
+                    onChange={(e) => handleContactInfoChange('office_phone', e.target.value)}
+                    placeholder="(555) 123-4567"
+                    className={`border-blue-300 focus:border-blue-500 focus:ring-blue-500 ${
+                      errors.contact_office_phone ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                    }`}
+                  />
+                  {errors.contact_office_phone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.contact_office_phone}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    Emergency Phone
+                  </label>
+                  <Input
+                    value={contactInfo.emergency_phone}
+                    onChange={(e) => handleContactInfoChange('emergency_phone', e.target.value)}
+                    placeholder="(555) 999-0000"
+                    className={`border-blue-300 focus:border-blue-500 focus:ring-blue-500 ${
+                      errors.contact_emergency_phone ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                    }`}
+                  />
+                  {errors.contact_emergency_phone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.contact_emergency_phone}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    Leasing Email
+                  </label>
+                  <Input
+                    type="email"
+                    value={contactInfo.leasing_email}
+                    onChange={(e) => handleContactInfoChange('leasing_email', e.target.value)}
+                    placeholder="leasing@building.com"
+                    className={`border-blue-300 focus:border-blue-500 focus:ring-blue-500 ${
+                      errors.contact_leasing_email ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                    }`}
+                  />
+                  {errors.contact_leasing_email && (
+                    <p className="mt-1 text-sm text-red-600">{errors.contact_leasing_email}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    Maintenance Email
+                  </label>
+                  <Input
+                    type="email"
+                    value={contactInfo.maintenance_email}
+                    onChange={(e) => handleContactInfoChange('maintenance_email', e.target.value)}
+                    placeholder="maintenance@building.com"
+                    className={`border-blue-300 focus:border-blue-500 focus:ring-blue-500 ${
+                      errors.contact_maintenance_email ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                    }`}
+                  />
+                  {errors.contact_maintenance_email && (
+                    <p className="mt-1 text-sm text-red-600">{errors.contact_maintenance_email}</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    Office Hours
+                  </label>
+                  <Input
+                    value={contactInfo.office_hours}
+                    onChange={(e) => handleContactInfoChange('office_hours', e.target.value)}
+                    placeholder="Monday - Friday: 9 AM - 6 PM, Saturday: 10 AM - 4 PM"
+                    className="border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1633,12 +1801,21 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 { key: 'social_events', label: 'Social Events', icon: '🎉' },
                 { key: 'disability_access', label: 'Disability Access', icon: '♿' }
               ].map((amenity) => (
-                <label key={amenity.key} className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <label 
+                  key={amenity.key} 
+                  className={`
+                    flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all duration-200
+                    ${selectedAmenities.includes(amenity.label)
+                      ? 'border-blue-500 bg-blue-50 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }
+                  `}
+                >
                   <input
                     type="checkbox"
-                    checked={formData[amenity.key as keyof BuildingFormData] as boolean}
-                    onChange={(e) => handleInputChange(amenity.key as keyof BuildingFormData, e.target.checked)}
-                    className="rounded"
+                    checked={selectedAmenities.includes(amenity.label)}
+                    onChange={(e) => handleAmenityToggle(amenity.key, amenity.label)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-lg">{amenity.icon}</span>
                   <span className="text-sm font-medium">{amenity.label}</span>
@@ -1668,34 +1845,77 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               </div>
             </div>
 
-            {/* Progressive Disclosure: Show disability features only if accessibility is enabled */}
-            <AnimatePresence>
-              {formData.disability_access && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <label className="block text-sm font-medium text-blue-900 mb-2">
-                      🦽 Accessibility Features
-                    </label>
-                    <textarea
-                      value={formData.disability_features || ''}
-                      onChange={(e) => handleInputChange('disability_features', e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Describe accessibility features (ramps, elevators, wide doorways, accessible bathrooms, etc.)..."
-                      className="w-full p-3 border border-blue-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      rows={3}
-                    />
-                    <p className="text-xs text-blue-600 mt-1">
-                      💡 Detailed accessibility information helps tenants with specific needs
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Enhanced Accessibility Features - Structured Boolean Options */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                ♿ Accessibility Features
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={formData.disability_access || false}
+                    onChange={(e) => handleInputChange('disability_access', e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-lg">♿</span>
+                  <span className="text-sm font-medium text-gray-900">Disability Access Available</span>
+                </label>
+                
+                <AnimatePresence>
+                  {formData.disability_access && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="ml-6 space-y-4"
+                    >
+                      {/* Accessibility Features Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {[
+                          { key: 'wheelchair_ramp', label: 'Wheelchair Ramps', icon: '🦽' },
+                          { key: 'elevator_access', label: 'Elevator Access', icon: '🛗' },
+                          { key: 'wide_doorways', label: 'Wide Doorways', icon: '🚪' },
+                          { key: 'accessible_bathrooms', label: 'Accessible Bathrooms', icon: '🚿' },
+                          { key: 'hearing_loop', label: 'Hearing Loop System', icon: '🦻' },
+                          { key: 'braille_signage', label: 'Braille Signage', icon: '👆' },
+                          { key: 'accessible_parking', label: 'Accessible Parking', icon: '🅿️' },
+                          { key: 'grab_bars', label: 'Grab Bars', icon: '🤏' },
+                          { key: 'lowered_counters', label: 'Lowered Counters', icon: '📏' },
+                          { key: 'accessible_entrance', label: 'Accessible Entrance', icon: '🚶' },
+                          { key: 'emergency_alerts', label: 'Visual/Audio Emergency Alerts', icon: '🚨' },
+                          { key: 'accessible_kitchen', label: 'Accessible Kitchen Features', icon: '🍽️' }
+                        ].map((feature) => (
+                          <label
+                            key={feature.key}
+                            className={`
+                              flex items-center gap-2 p-2 border rounded-md cursor-pointer transition-all
+                              ${formData[feature.key as keyof BuildingFormData]
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                              }
+                            `}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData[feature.key as keyof BuildingFormData] as boolean || false}
+                              onChange={(e) => handleInputChange(feature.key as keyof BuildingFormData, e.target.checked)}
+                              className="rounded text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm">{feature.icon}</span>
+                            <span className="text-xs font-medium text-gray-900">{feature.label}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                 
+            
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
 
             {/* Security Features - Structured Boolean Options */}
             <div>

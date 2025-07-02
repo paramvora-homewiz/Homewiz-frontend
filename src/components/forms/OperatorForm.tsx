@@ -9,6 +9,7 @@ import { Badge } from '../ui/badge'
 import { LoadingSpinner } from '../ui/loading-spinner'
 import { HelpTooltip } from '../ui/help-tooltip'
 import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge } from '../ui/enhanced-components'
+import { ValidationSummary } from './ValidationSummary'
 import { OperatorFormData } from '../../types'
 import { 
   validateOperatorFormData, 
@@ -142,6 +143,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, onBack, 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [validationAttempted, setValidationAttempted] = useState(false)
 
   // Validation function (doesn't automatically set errors)
   const validateField = (fieldName: string, value: any): string | null => {
@@ -228,6 +230,9 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, onBack, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Set validation attempted
+    setValidationAttempted(true)
+
     // Validate all fields on submit
     const validationResult = validateAllFields()
     setErrors(validationResult.errors)
@@ -237,6 +242,7 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, onBack, 
     setTouchedFields(prev => new Set([...prev, ...requiredFields]))
 
     if (!validationResult.isValid) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
@@ -277,6 +283,13 @@ export default function OperatorForm({ initialData, onSubmit, onCancel, onBack, 
             />
           </div>
         </motion.div>
+
+        {/* Validation Summary */}
+        <ValidationSummary
+          errors={errors}
+          show={validationAttempted}
+          className="mb-6"
+        />
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
