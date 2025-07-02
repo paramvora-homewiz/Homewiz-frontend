@@ -64,11 +64,17 @@ export function MediaUploadSection({
 
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
-    if (!files) return
-
-    setIsUploading(true)
+    
+    // Always clear previous errors when new files are selected
     setUploadErrors([])
     setFileValidationErrors([])
+    
+    if (!files || files.length === 0) {
+      // User cancelled file selection, errors already cleared above
+      return
+    }
+
+    setIsUploading(true)
 
     try {
       const fileArray = Array.from(files)
@@ -91,6 +97,9 @@ export function MediaUploadSection({
         )
         setUploadErrors(errorMessages)
         setIsUploading(false)
+        
+        // Reset the file input to allow immediate retry
+        event.target.value = ''
         return
       }
 
