@@ -20,6 +20,7 @@ import {
   ValidationResult 
 } from '@/lib/backend-sync'
 import { MediaUploadSection } from './MediaUploadSection'
+import { ValidationSummary } from './ValidationSummary'
 import { createFormDataWithFiles } from '@/utils/fileUpload'
 import {
   Building,
@@ -39,7 +40,8 @@ import {
   Car,
   Dumbbell,
   Users,
-  Accessibility
+  Accessibility,
+  AlertCircle
 } from 'lucide-react'
 import '@/styles/design-system.css'
 
@@ -458,10 +460,62 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   // Categorized media handlers
   const handleCategorizedImageUpload = (e: React.ChangeEvent<HTMLInputElement>, category: keyof typeof categorizedMedia) => {
     const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
+    
+    // Clear previous image validation errors for this category when new files are selected
+    clearImageValidationErrors(category)
+    
+    if (files.length === 0) {
+      // User cancelled file selection, errors already cleared above
+      return
+    }
+
+    // Validate image files
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+    const validFiles: File[] = []
+    const newErrors: Array<{ file: File; error: string }> = []
+
+    files.forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        newErrors.push({
+          file,
+          error: 'Only image files are allowed in this section'
+        })
+      } else if (file.size > MAX_IMAGE_SIZE) {
+        newErrors.push({
+          file,
+          error: `File size (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds maximum allowed size (10 MB)`
+        })
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    // Update file validation errors if any
+    if (newErrors.length > 0) {
+      setFileValidationErrors(prev => [...prev, ...newErrors])
+      
+      // Show user-friendly error message
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Image Upload Error',
+          newErrors.map(err => `${err.file.name}: ${err.error}`).join('\n'),
+          { duration: 6000 }
+        )
+      })
+      
+      // Reset the file input to allow immediate retry
+      resetImageInput(e.target)
+    }
+
+    // Only process valid files
+    if (validFiles.length === 0) {
+      // Reset the file input since no valid files were processed
+      resetImageInput(e.target)
+      return
+    }
 
     // Create MediaFile objects with category tagging
-    const mediaFilePromises = files.map(async (file) => {
+    const mediaFilePromises = validFiles.map(async (file) => {
       return new Promise<MediaFile>((resolve) => {
         const reader = new FileReader()
         reader.onload = () => {
@@ -487,19 +541,69 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         ...prev,
         [category]: [...prev[category], ...newFiles]
       }))
+      
+      // Reset the file input after successful upload
+      resetImageInput(e.target)
     })
   }
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
+    
+    // Clear previous video validation errors when new files are selected or cancelled
+    clearVideoValidationErrors()
+    
+    if (files.length === 0) {
+      // User cancelled file selection, errors already cleared above
+      return
+    }
 
     // Limit to 3 videos total
     const currentVideoCount = categorizedMedia.videos.length
     const availableSlots = 3 - currentVideoCount
     const filesToProcess = files.slice(0, availableSlots)
 
-    const mediaFilePromises = filesToProcess.map(async (file) => {
+    // Validate video files
+    const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
+    const validFiles: File[] = []
+    const newErrors: Array<{ file: File; error: string }> = []
+
+    filesToProcess.forEach(file => {
+      if (file.size > MAX_VIDEO_SIZE) {
+        newErrors.push({
+          file,
+          error: `File size (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds maximum allowed size (50 MB)`
+        })
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    // Update file validation errors
+    if (newErrors.length > 0) {
+      setFileValidationErrors(prev => [...prev, ...newErrors])
+      
+      // Show user-friendly error message
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Video Upload Error',
+          newErrors.map(err => `${err.file.name}: ${err.error}`).join('\n'),
+          { duration: 8000 }
+        )
+      })
+      
+      // Reset the file input to allow immediate retry
+      resetVideoInput(e.target)
+    }
+
+    // Only process valid files
+    if (validFiles.length === 0) {
+      // Reset the file input since no valid files were processed
+      resetVideoInput(e.target)
+      return
+    }
+
+    const mediaFilePromises = validFiles.map(async (file) => {
       return new Promise<MediaFile>((resolve) => {
         resolve({
           id: `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -519,7 +623,38 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         ...prev,
         videos: [...prev.videos, ...newFiles]
       }))
+      
+      // Reset the file input after successful upload
+      resetVideoInput(e.target)
     })
+  }
+
+  // Helper function to clear video validation errors
+  const clearVideoValidationErrors = () => {
+    setFileValidationErrors(prev => 
+      prev.filter(err => !err.file.type.startsWith('video/'))
+    )
+  }
+
+  // Helper function to clear image validation errors for a specific category
+  const clearImageValidationErrors = (category: keyof typeof categorizedMedia) => {
+    setFileValidationErrors(prev => 
+      prev.filter(err => {
+        // Keep errors that are not images or not from the current category
+        return !err.file.type.startsWith('image/') || 
+               !err.file.name.includes(category) // Simple check, could be improved with metadata
+      })
+    )
+  }
+
+  // Helper function to reset video file input
+  const resetVideoInput = (input: HTMLInputElement) => {
+    input.value = ''
+  }
+
+  // Helper function to reset image file input
+  const resetImageInput = (input: HTMLInputElement) => {
+    input.value = ''
   }
 
   const removeMedia = (category: keyof typeof categorizedMedia, fileId: string) => {
@@ -527,6 +662,14 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       ...prev,
       [category]: prev[category].filter(file => file.id !== fileId)
     }))
+    
+    // Also remove any validation errors for this file
+    const removedFile = categorizedMedia[category].find(file => file.id === fileId)
+    if (removedFile) {
+      setFileValidationErrors(prev => 
+        prev.filter(err => err.file.name !== removedFile.name)
+      )
+    }
   }
 
   const renderImagePreview = (category: keyof typeof categorizedMedia) => {
@@ -628,47 +771,44 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       return
     }
 
-    // Show validation errors with specific field information
+    // Show validation errors
     if (!validationResult.isValid) {
-      const errorMessages = Object.entries(validationResult.errors).map(([field, error]) => 
-        `${field}: ${error}`
-      ).join('\n')
       console.error('❌ Validation errors:', validationResult.errors)
       
-      // Find which step contains the error fields
+      // Set validation attempted to show summary
+      setValidationAttempted(true)
+      
+      // Scroll to validation summary at top
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      
+      // Find which step contains the first error
       const errorFields = Object.keys(validationResult.errors)
-      let errorStep = 'unknown'
+      let errorStepIndex = currentStep
       
       if (errorFields.some(field => ['building_name', 'operator_id'].includes(field))) {
-        errorStep = 'Basic Information'
+        errorStepIndex = 0 // Basic Information
       } else if (errorFields.some(field => ['address', 'city', 'state', 'zip_code'].includes(field))) {
-        errorStep = 'Location & Address'
+        errorStepIndex = 1 // Location & Address
       } else if (errorFields.some(field => ['floors', 'total_rooms'].includes(field))) {
-        errorStep = 'Building Specs'
+        errorStepIndex = 2 // Building Specs
       }
       
-      import('@/lib/error-handler').then(({ showWarningMessage }) => {
-        showWarningMessage(
-          'Form Validation Error',
-          `Please fix ${Object.keys(validationResult.errors).length} error(s) in ${errorStep}:\n${errorMessages}`,
-          { duration: 10000 }
-        )
-      })
+      // Navigate to the step with the first error if not already there
+      if (errorStepIndex !== currentStep) {
+        goToStep(errorStepIndex)
+      }
+      
       return
     }
 
     // Check for file validation errors
     if (fileValidationErrors.length > 0) {
-      const fileErrorMessages = fileValidationErrors.map(({ file, error }) =>
-        `${file.name}: ${error}`
-      ).join('\n')
-      import('@/lib/error-handler').then(({ showWarningMessage }) => {
-        showWarningMessage(
-          'Invalid File Types',
-          `Please fix the following file issues:\n${fileErrorMessages}`,
-          { duration: 8000 }
-        )
-      })
+      // Set validation attempted to show summary
+      setValidationAttempted(true)
+      
+      // Scroll to validation summary at top
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      
       return
     }
 
@@ -841,7 +981,8 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 categorizedUrls.videos.push(videoResult.url)
                 console.log(`✅ Video uploaded: ${videoResult.url}`)
               } else {
-                console.error(`❌ Video upload failed:`, videoResult.error)
+                // Video upload failed - already validated at selection time
+                // Error was already shown to user via ValidationSummary
               }
             }
           }
@@ -1692,6 +1833,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <label htmlFor="outside-images" className="cursor-pointer">
                     <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600">Upload exterior photos</p>
+                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
                   </label>
                 </div>
                 {renderImagePreview('outside')}
@@ -1715,6 +1857,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <label htmlFor="common-images" className="cursor-pointer">
                     <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600">Upload common space photos</p>
+                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
                   </label>
                 </div>
                 {renderImagePreview('common_areas')}
@@ -1738,6 +1881,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <label htmlFor="amenity-images" className="cursor-pointer">
                     <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600">Upload gym, rooftop, etc.</p>
+                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
                   </label>
                 </div>
                 {renderImagePreview('amenities')}
@@ -1761,6 +1905,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <label htmlFor="kitchen-images" className="cursor-pointer">
                     <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600">Upload shared facilities</p>
+                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
                   </label>
                 </div>
                 {renderImagePreview('kitchen_bathrooms')}
@@ -1783,11 +1928,16 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   id="video-upload"
                   disabled={categorizedMedia.videos.length >= 3}
                 />
-                <label htmlFor="video-upload" className={`cursor-pointer ${categorizedMedia.videos.length >= 3 ? 'opacity-50' : ''}`}>
+                <label htmlFor="video-upload" className={`cursor-pointer ${categorizedMedia.videos.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-600">
                     {categorizedMedia.videos.length >= 3 ? 'Maximum 3 videos reached' : `Upload videos (${categorizedMedia.videos.length}/3)`}
                   </p>
+                  {categorizedMedia.videos.length < 3 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Max 50MB per video • MP4, WebM, QuickTime, AVI
+                    </p>
+                  )}
                 </label>
               </div>
               {renderVideoPreview()}
@@ -1813,6 +1963,10 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         return <div>Step content for {steps[currentStep].title}</div>
     }
   }
+
+  // State for validation summary
+  const [showValidationSummary, setShowValidationSummary] = useState(false)
+  const [validationAttempted, setValidationAttempted] = useState(false)
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
@@ -1841,6 +1995,13 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             />
           </div>
         </motion.div>
+
+        {/* Validation Summary - Only show after validation attempt */}
+        <ValidationSummary 
+          errors={errors}
+          fileValidationErrors={fileValidationErrors}
+          show={validationAttempted}
+        />
 
         {/* Progress Indicator */}
         <motion.div
@@ -1979,15 +2140,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                     )}
                   </motion.button>
 
-                  {/* Show helpful message when submit is disabled due to validation errors */}
-                  {(Object.keys(errors).length > 0 || fileValidationErrors.length > 0) && (
-                    <p className="text-sm text-red-600 mt-2 text-center">
-                      {fileValidationErrors.length > 0
-                        ? `Please fix ${fileValidationErrors.length} file validation error${fileValidationErrors.length > 1 ? 's' : ''} above`
-                        : `Please fix ${Object.keys(errors).length} form validation error${Object.keys(errors).length > 1 ? 's' : ''} above`
-                      }
-                    </p>
-                  )}
+                  {/* Remove inline validation text - using validation summary instead */}
                 </>
               ) : (
                 <motion.button
