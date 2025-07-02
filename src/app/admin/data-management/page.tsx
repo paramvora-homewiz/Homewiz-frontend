@@ -45,7 +45,7 @@ import { ViewBuildingModal } from '@/components/admin/ViewBuildingModal'
 import { ViewRoomModal } from '@/components/admin/ViewRoomModal'
 import { ViewTenantModal } from '@/components/admin/ViewTenantModal'
 import { ViewOperatorModal } from '@/components/admin/ViewOperatorModal'
-import { showSuccessMessage } from '@/lib/error-handler'
+import { showSuccessMessage, showWarningMessage } from '@/lib/error-handler'
 import { Tooltip } from '@/components/ui/tooltip'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
@@ -227,6 +227,20 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     setSortConfig({ key: '', direction: 'asc' })
   }, [activeTab])
 
+  // Add error handling for unhandled promise rejections
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason)
+      event.preventDefault() // Prevent the default browser behavior
+    }
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+    
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [])
+
   const handleSort = (key: string) => {
     setSortConfig({
       key,
@@ -268,36 +282,45 @@ export default function DataManagementPage({}: DataManagementPageProps) {
   }
 
   const handleExport = () => {
-    let data: any[] = []
-    let filename = ''
-    
-    switch (activeTab) {
-      case 'buildings':
-        data = buildings
-        filename = 'buildings-export'
-        break
-      case 'rooms':
-        data = rooms
-        filename = 'rooms-export'
-        break
-      case 'tenants':
-        data = tenants
-        filename = 'tenants-export'
-        break
-      case 'operators':
-        data = operators
-        filename = 'operators-export'
-        break
+    try {
+      let data: any[] = []
+      let filename = ''
+      
+      switch (activeTab) {
+        case 'buildings':
+          data = buildings
+          filename = 'buildings-export'
+          break
+        case 'rooms':
+          data = rooms
+          filename = 'rooms-export'
+          break
+        case 'tenants':
+          data = tenants
+          filename = 'tenants-export'
+          break
+        case 'operators':
+          data = operators
+          filename = 'operators-export'
+          break
+      }
+      
+      const jsonStr = JSON.stringify(data, null, 2)
+      const blob = new Blob([jsonStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${filename}-${new Date().toISOString().split('T')[0]}.json`
+      link.click()
+      
+      // Clean up URL object
+      setTimeout(() => {
+        URL.revokeObjectURL(url)
+      }, 100)
+    } catch (error) {
+      console.error('Export failed:', error)
+      showWarningMessage('Export Failed', 'Unable to export data. Please try again.')
     }
-    
-    const jsonStr = JSON.stringify(data, null, 2)
-    const blob = new Blob([jsonStr], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${filename}-${new Date().toISOString().split('T')[0]}.json`
-    link.click()
-    URL.revokeObjectURL(url)
   }
 
   const renderBuildingsTable = () => (
@@ -776,7 +799,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 variant="outline"
-                onClick={() => window.history.back()}
+                onClick={() => window.location.href = '/forms'}
                 className="flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-300"
               >
                 <ChevronLeft className="w-4 h-4" />

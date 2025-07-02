@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:clean": "rm -rf .next && next dev -p 3000",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -13,7 +14,8 @@
     "type-check": "tsc --noEmit",
     "build:render": "npm ci && npm run build",
     "start:render": "npm start",
-    "build:force": "SKIP_TYPE_CHECK=true next build"
+    "build:force": "SKIP_TYPE_CHECK=true next build",
+    "clean": "rm -rf .next node_modules/.cache"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.22.0",

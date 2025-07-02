@@ -74,7 +74,7 @@ export async function uploadFile(options: FileUploadOptions): Promise<FileUpload
     }
 
     // Check file size (max 10MB for images, 50MB for videos, 5MB for documents)
-    const maxSize = getMaxFileSize(bucket)
+    const maxSize = getMaxFileSize(bucket, file.type)
     if (file.size > maxSize) {
       console.error(`❌ File too large: ${formatFileSize(file.size)} > ${formatFileSize(maxSize)}`)
       return {
@@ -309,9 +309,13 @@ export function validateFileType(file: File, bucket: keyof typeof STORAGE_BUCKET
   }
 }
 
-function getMaxFileSize(bucket: keyof typeof STORAGE_BUCKETS): number {
+function getMaxFileSize(bucket: keyof typeof STORAGE_BUCKETS, fileType?: string): number {
   switch (bucket) {
     case 'BUILDING_IMAGES':
+      // Different limits for images vs videos
+      if (fileType && fileType.startsWith('video/')) {
+        return 50 * 1024 * 1024 // 50MB for videos
+      }
       return 10 * 1024 * 1024 // 10MB for images
     case 'DOCUMENTS':
       return 5 * 1024 * 1024 // 5MB for documents
