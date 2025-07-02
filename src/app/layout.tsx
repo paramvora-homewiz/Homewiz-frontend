@@ -1,13 +1,33 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { ToastProvider } from '../components/ui/toast'
-import { ThemeProvider } from '../contexts/ThemeContext'
-import { RootAuthProvider } from '../components/auth/RootAuthProvider'
-import { ConnectionStatusBanner } from '../components/ui/ConnectionStatusBanner'
-import config from '../lib/config'
 import "./globals.css";
 import "../styles/design-system.css";
 import "../styles/professional-light-theme.css";
+
+// Dynamically import components to avoid compilation issues
+import dynamic from 'next/dynamic';
+
+const ToastProvider = dynamic(
+  () => import('../components/ui/toast').then(mod => ({ default: mod.ToastProvider })),
+  { ssr: false }
+);
+
+const ThemeProvider = dynamic(
+  () => import('../contexts/ThemeContext').then(mod => ({ default: mod.ThemeProvider })),
+  { ssr: false }
+);
+
+const RootAuthProvider = dynamic(
+  () => import('../components/auth/RootAuthProvider').then(mod => ({ default: mod.RootAuthProvider })),
+  { ssr: false }
+);
+
+const ConnectionStatusBanner = dynamic(
+  () => import('../components/ui/ConnectionStatusBanner').then(mod => ({ default: mod.ConnectionStatusBanner })),
+  { ssr: false }
+);
+
+import config from '../lib/config';
 
 // Load Supabase debug utilities in development
 // Commented out to prevent chunk loading issues

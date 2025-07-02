@@ -39,7 +39,8 @@ import {
   Clock,
   AlertCircle,
   Search,
-  Download
+  Download,
+  Database
 } from 'lucide-react'
 import '@/styles/design-system.css'
 
@@ -608,7 +609,7 @@ function FormsDashboardContent() {
                 <h2 className="text-2xl font-bold text-gray-900">Quick Actions</h2>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-8 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4">
                 <motion.button
                   onClick={() => formData.refreshAll()}
                   disabled={formData.operatorsLoading || formData.buildingsLoading || formData.roomsLoading}
@@ -688,6 +689,16 @@ function FormsDashboardContent() {
                 >
                   <Download className="w-6 h-6 text-green-600 mx-auto mb-2" />
                   <div className="text-sm font-semibold text-green-700">Export</div>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => window.location.href = '/admin/data-management'}
+                  className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border-2 border-slate-200 hover:border-slate-300 transition-all duration-200"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Database className="w-6 h-6 text-slate-600 mx-auto mb-2" />
+                  <div className="text-sm font-semibold text-slate-700">Data Mgmt</div>
                 </motion.button>
               </div>
             </EnhancedCard>

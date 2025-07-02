@@ -9,6 +9,7 @@ import { Badge } from '../ui/badge'
 import { LoadingSpinner } from '../ui/loading-spinner'
 import { HelpTooltip } from '../ui/help-tooltip'
 import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge } from '../ui/enhanced-components'
+import { ValidationSummary } from './ValidationSummary'
 import { LeadFormData } from '../../types'
 import { 
   validateLeadFormData, 
@@ -127,6 +128,7 @@ export default function LeadForm({ initialData, onSubmit, onCancel, onBack, isLo
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [validationAttempted, setValidationAttempted] = useState(false)
   const [interestedRooms, setInterestedRooms] = useState<string[]>(
     initialData?.rooms_interested ? JSON.parse(initialData.rooms_interested) : []
   )
@@ -200,6 +202,9 @@ export default function LeadForm({ initialData, onSubmit, onCancel, onBack, isLo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Set validation attempted
+    setValidationAttempted(true)
+    
     // Final validation using backend-sync
     const validationResult = validateLeadFormData({
       ...formData,
@@ -209,6 +214,7 @@ export default function LeadForm({ initialData, onSubmit, onCancel, onBack, isLo
     
     if (!validationResult.isValid || Object.keys(errors).length > 0) {
       setErrors({ ...errors, ...validationResult.errors })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
@@ -333,6 +339,13 @@ export default function LeadForm({ initialData, onSubmit, onCancel, onBack, isLo
             </div>
           </motion.div>
         </motion.div>
+
+        {/* Validation Summary */}
+        <ValidationSummary
+          errors={errors}
+          show={validationAttempted}
+          className="mb-6"
+        />
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Contact Information */}

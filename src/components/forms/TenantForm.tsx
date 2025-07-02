@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge, ProgressIndicator } from '@/components/ui/enhanced-components'
+import { ValidationSummary } from './ValidationSummary'
 import { useFormStepNavigation } from '@/hooks/useFormStepNavigation'
 import { TenantFormData } from '@/types'
 import { 
@@ -198,6 +199,7 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
+  const [validationAttempted, setValidationAttempted] = useState(false)
   const [availableRooms, setAvailableRooms] = useState<any[]>([])
   const [selectedRoom, setSelectedRoom] = useState<any>(null)
 
@@ -363,6 +365,9 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
     const allFieldNames = Object.keys(formData)
     setTouchedFields(new Set(allFieldNames))
 
+    // Set validation attempted to show summary
+    setValidationAttempted(true)
+
     // Show validation errors with better user feedback
     if (!validationResult.isValid) {
       // Debug logging to help identify the issue
@@ -372,35 +377,9 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
       console.log('Missing Required Fields:', validationResult.missingRequired)
       console.log('Transformed Backend Data:', transformTenantDataForBackend(formData))
 
-      // Focus on the first field with an error
-      const firstErrorField = Object.keys(validationResult.errors)[0]
-      if (firstErrorField) {
-        const element = document.querySelector(`[name="${firstErrorField}"]`) as HTMLElement
-        if (element) {
-          element.focus()
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }
-
-      // Show comprehensive error message with specific field details
-      const errorCount = Object.keys(validationResult.errors).length
-      const missingCount = validationResult.missingRequired.length
-
-      let errorMessage = ''
-      if (missingCount > 0) {
-        errorMessage += `${missingCount} required field${missingCount > 1 ? 's' : ''} missing: ${validationResult.missingRequired.join(', ')}. `
-      }
-      if (errorCount > 0) {
-        errorMessage += `${errorCount} validation error${errorCount > 1 ? 's' : ''} found.`
-      }
-
-      import('@/lib/error-handler').then(({ showWarningMessage }) => {
-        showWarningMessage(
-          'Form Validation Failed',
-          errorMessage + ' Please review the highlighted fields and correct the errors.',
-          { duration: 8000 }
-        )
-      })
+      // Scroll to validation summary at top
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      
       return
     }
 
@@ -913,6 +892,12 @@ export default function TenantForm({ initialData, onSubmit, onCancel, isLoading,
             />
           </div>
         </motion.div>
+
+        {/* Validation Summary */}
+        <ValidationSummary 
+          errors={errors}
+          show={validationAttempted}
+        />
 
         {/* Progress Indicator */}
         <motion.div

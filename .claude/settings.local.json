@@ -17,7 +17,22 @@
       "Bash(npm run typecheck:*)",
       "Bash(npm run type-check:*)",
       "Bash(curl:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(npm test)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(chmod:*)",
+      "Bash(NODE_ENV=development npm run build 2 >& 1)",
+      "Bash(npm i:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(sudo rm:*)",
+      "Bash(rg:*)",
+      "Bash(node:*)",
+      "Bash(sed:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

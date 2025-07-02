@@ -36,7 +36,9 @@ import {
   Settings,
   FileText,
   Wrench,
-  Camera
+  Camera,
+  Shield,
+  Wifi
 } from 'lucide-react'
 
 // Multi-step form configuration
@@ -814,6 +816,278 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange }: StepProps) =>
     </div>
   ));
 
+// REMOVED: EnvironmentStep component - fields not supported by backend
+// const EnvironmentStep = React.memo(({ formData, handleInputChange }: StepProps) => (
+  <div>
+    <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
+      <div className="space-y-8">
+        {/* Natural Light & Views Section */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-emerald-700">
+            <Home className="w-5 h-5" />
+            Natural Light & Views
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Natural Light Level
+              </label>
+              <select
+                value={formData.natural_light_level || 'MODERATE'}
+                onChange={(e) => handleInputChange('natural_light_level', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="BRIGHT">Bright - Excellent natural light</option>
+                <option value="MODERATE">Moderate - Good natural light</option>
+                <option value="LOW">Low - Limited natural light</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Window Direction
+              </label>
+              <select
+                value={formData.window_direction || 'NONE'}
+                onChange={(e) => handleInputChange('window_direction', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="NORTH">North Facing</option>
+                <option value="SOUTH">South Facing</option>
+                <option value="EAST">East Facing</option>
+                <option value="WEST">West Facing</option>
+                <option value="MULTIPLE">Multiple Directions</option>
+                <option value="NONE">No Windows</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                External View
+              </label>
+              <select
+                value={formData.external_view || 'NONE'}
+                onChange={(e) => handleInputChange('external_view', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="CITY">City View</option>
+                <option value="GARDEN">Garden/Green Space</option>
+                <option value="COURTYARD">Courtyard</option>
+                <option value="STREET">Street View</option>
+                <option value="OCEAN">Ocean/Water View</option>
+                <option value="MOUNTAINS">Mountain View</option>
+                <option value="NONE">No View/Facing Wall</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Noise & Privacy Section */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-emerald-700">
+            <Shield className="w-5 h-5" />
+            Noise & Privacy
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Noise Level Environment
+              </label>
+              <select
+                value={formData.noise_level_environment || 'MODERATE'}
+                onChange={(e) => handleInputChange('noise_level_environment', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="QUIET">Quiet - Very peaceful</option>
+                <option value="MODERATE">Moderate - Some ambient noise</option>
+                <option value="LIVELY">Lively - Active area with regular noise</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sound Insulation Quality
+              </label>
+              <select
+                value={formData.sound_insulation_quality || 'GOOD'}
+                onChange={(e) => handleInputChange('sound_insulation_quality', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="EXCELLENT">Excellent - Very well soundproofed</option>
+                <option value="GOOD">Good - Well insulated</option>
+                <option value="FAIR">Fair - Basic insulation</option>
+                <option value="POOR">Poor - Minimal insulation</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Privacy Level
+              </label>
+              <select
+                value={formData.privacy_level || 'MEDIUM'}
+                onChange={(e) => handleInputChange('privacy_level', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="HIGH">High - Very private</option>
+                <option value="MEDIUM">Medium - Reasonably private</option>
+                <option value="LOW">Low - Limited privacy</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Air Quality & Climate Section */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-emerald-700">
+            <Wifi className="w-5 h-5" />
+            Air Quality & Climate
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Air Quality Rating
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={formData.air_quality_rating || 4}
+                onChange={(e) => handleInputChange('air_quality_rating', parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Poor (1)</span>
+                <span>Excellent (5)</span>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Current: {formData.air_quality_rating || 4}/5</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Temperature Control
+              </label>
+              <select
+                value={formData.temperature_control || 'SHARED'}
+                onChange={(e) => handleInputChange('temperature_control', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="INDIVIDUAL">Individual - Personal thermostat</option>
+                <option value="SHARED">Shared - Building/floor control</option>
+                <option value="NONE">None - No climate control</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ventilation Type
+              </label>
+              <select
+                value={formData.ventilation_type || 'NATURAL'}
+                onChange={(e) => handleInputChange('ventilation_type', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="NATURAL">Natural - Windows & air circulation</option>
+                <option value="MECHANICAL">Mechanical - HVAC system</option>
+                <option value="BOTH">Both - Natural + mechanical</option>
+                <option value="NONE">None - Limited ventilation</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="humidity_control"
+                checked={formData.humidity_control || false}
+                onChange={(e) => handleInputChange('humidity_control', e.target.checked)}
+                className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+              />
+              <label htmlFor="humidity_control" className="text-sm font-medium text-gray-700">
+                Humidity Control Available
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Physical Environment Section */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-emerald-700">
+            <Building className="w-5 h-5" />
+            Physical Environment
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ceiling Height (feet)
+              </label>
+              <input
+                type="number"
+                value={formData.ceiling_height || ''}
+                onChange={(e) => handleInputChange('ceiling_height', e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="e.g., 9"
+                min="7"
+                max="15"
+                step="0.5"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Lighting Quality
+              </label>
+              <select
+                value={formData.lighting_quality || 'GOOD'}
+                onChange={(e) => handleInputChange('lighting_quality', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+              >
+                <option value="EXCELLENT">Excellent - Bright, well-distributed</option>
+                <option value="GOOD">Good - Adequate lighting</option>
+                <option value="FAIR">Fair - Basic lighting</option>
+                <option value="POOR">Poor - Insufficient lighting</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="natural_ventilation"
+                checked={formData.natural_ventilation || false}
+                onChange={(e) => handleInputChange('natural_ventilation', e.target.checked)}
+                className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+              />
+              <label htmlFor="natural_ventilation" className="text-sm font-medium text-gray-700">
+                Natural Ventilation (Operable Windows)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Environment Details */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-emerald-700">
+            <Settings className="w-5 h-5" />
+            Additional Environmental Notes
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Allergen Considerations
+              </label>
+              <textarea
+                value={formData.allergen_considerations || ''}
+                onChange={(e) => handleInputChange('allergen_considerations', e.target.value || undefined)}
+                placeholder="Any allergen concerns, dust issues, or environmental sensitivities to note..."
+                rows={3}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 transition-colors resize-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  </div>
+));
 
 const MaintenanceStep = React.memo(({ formData, handleInputChange }: StepProps) => (
     <div>
@@ -1034,7 +1308,7 @@ function RoomForm({
         enableKeyboardNav: true,
         enableStepNavigation: true,
         steps: ['basic', 'specifications', 'availability', 'amenities', 'maintenance'],
-        requiredFields: ['room_number', 'building_id', 'room_type'] as (keyof RoomFormData)[],
+        requiredFields: ['room_number', 'building_id', 'room_type', 'private_room_rent'] as (keyof RoomFormData)[],
         maxSteps: 5
       },
       streamlined: {
@@ -1049,7 +1323,7 @@ function RoomForm({
         enableKeyboardNav: false,
         enableStepNavigation: true,
         steps: ['basic', 'specifications', 'availability', 'amenities', 'maintenance'],
-        requiredFields: ['room_number', 'building_id', 'room_type'] as (keyof RoomFormData)[],
+        requiredFields: ['room_number', 'building_id', 'room_type', 'private_room_rent'] as (keyof RoomFormData)[],
         maxSteps: 5
       },
       simple: {

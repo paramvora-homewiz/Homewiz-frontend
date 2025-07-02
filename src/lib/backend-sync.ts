@@ -11,6 +11,7 @@ export const BACKEND_ENUMS = {
   BED_TYPES: ['Single', 'Platform'] as const,
   ROOM_VIEWS: ['Street', 'City', 'Bay', 'Garden'] as const,
   ROOM_STATUS: ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'] as const,
+  ROOM_TYPES: ['Standard', 'Suite', 'Studio', 'Deluxe', 'Penthouse'] as const,
   LEAD_STATUS: ['EXPLORING', 'INTERESTED', 'SCHEDULED_VIEWING', 'APPLICATION_SUBMITTED', 'APPROVED', 'REJECTED', 'CONVERTED'] as const,
   VISA_STATUS: ['US-CITIZEN', 'F1-VISA', 'H1B-VISA'] as const,
   TENANT_STATUS: ['ACTIVE', 'INACTIVE', 'PENDING', 'TERMINATED'] as const,
@@ -26,8 +27,8 @@ export const REQUIRED_FIELDS = {
   BUILDING: ['building_id', 'building_name', 'street', 'city', 'state', 'zip'] as const,
   ROOM: [
     'room_number',
-    'building_id',
-    'private_room_rent'
+    'building_id', 
+    'room_type'
   ] as const,
   TENANT: [
     'tenant_name',
@@ -203,8 +204,13 @@ export function transformBuildingDataForBackend(frontendData: any) {
       })) || []
     ) : null,
 
-    // Additional fields
+    // Additional fields with JSON structure support
     amenities_details: frontendData.amenities_details,
+    contact_info: frontendData.contact_info 
+      ? (typeof frontendData.contact_info === 'string' 
+          ? frontendData.contact_info 
+          : JSON.stringify(frontendData.contact_info))
+      : null,
   }
 }
 
@@ -275,12 +281,85 @@ export function validateEmailFormat(email: string): boolean {
   return emailRegex.test(email)
 }
 
-// Validate phone number format
+// Validate phone number format with enhanced patterns
 export function validatePhoneFormat(phone: string): boolean {
   // Remove all non-digit characters for validation
   const digitsOnly = phone.replace(/\D/g, '')
   // Accept phone numbers with 10-15 digits (international format)
   return digitsOnly.length >= 10 && digitsOnly.length <= 15
+}
+
+// Standardized phone validation with common formats
+export function validatePhoneFormatStrict(phone: string): { isValid: boolean; formatted?: string; error?: string } {
+  if (!phone || typeof phone !== 'string') {
+    return { isValid: false, error: 'Phone number is required' }
+  }
+  
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, '')
+  
+  // US phone number (10 digits)
+  if (digitsOnly.length === 10) {
+    const formatted = `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6)}`
+    return { isValid: true, formatted }
+  }
+  
+  // US phone number with country code (11 digits starting with 1)
+  if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+    const formatted = `+1 (${digitsOnly.slice(1, 4)}) ${digitsOnly.slice(4, 7)}-${digitsOnly.slice(7)}`
+    return { isValid: true, formatted }
+  }
+  
+  // International numbers (10-15 digits)
+  if (digitsOnly.length >= 10 && digitsOnly.length <= 15) {
+    return { isValid: true, formatted: phone }
+  }
+  
+  return { 
+    isValid: false, 
+    error: 'Phone number must be 10-15 digits. Format: (123) 456-7890 or +1 (123) 456-7890' 
+  }
+}
+
+// Enhanced email validation with common domain patterns
+export function validateEmailFormatStrict(email: string): { isValid: boolean; error?: string } {
+  if (!email || typeof email !== 'string') {
+    return { isValid: false, error: 'Email address is required' }
+  }
+  
+  // Basic format check
+  const basicEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!basicEmailRegex.test(email)) {
+    return { isValid: false, error: 'Please enter a valid email address' }
+  }
+  
+  // More strict validation
+  const strictEmailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+  if (!strictEmailRegex.test(email)) {
+    return { isValid: false, error: 'Email format is invalid' }
+  }
+  
+  // Check for common typos in domains
+  const commonDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com']
+  const domain = email.split('@')[1]?.toLowerCase()
+  
+  // Check for common typos
+  const typoChecks = {
+    'gmai.com': 'gmail.com',
+    'gamil.com': 'gmail.com',
+    'gmial.com': 'gmail.com',
+    'yahooo.com': 'yahoo.com',
+    'hotmial.com': 'hotmail.com'
+  }
+  
+  if (domain && typoChecks[domain]) {
+    return { 
+      isValid: false, 
+      error: `Did you mean ${email.replace(domain, typoChecks[domain])}?` 
+    }
+  }
+  
+  return { isValid: true }
 }
 
 // Validate date is in proper ISO format (YYYY-MM-DD)
@@ -450,7 +529,7 @@ export function validateBuildingFormData(data: any): ValidationResult {
   const errors: Record<string, string> = {}
   const backendData = transformBuildingDataForBackend(data)
   const missingRequired = validateRequiredFields(backendData, 'BUILDING')
-  
+
   // Map backend field names back to frontend field names for better error display
   const frontendMissingRequired = missingRequired.map(field => {
     switch (field) {
@@ -459,41 +538,133 @@ export function validateBuildingFormData(data: any): ValidationResult {
       default: return field
     }
   }).filter(Boolean)
-  
+
   // Add frontend-specific validation errors
   if (!data.building_name?.trim()) {
     errors.building_name = 'Building name is required'
   }
-  
+
   if (!data.address?.trim() && !data.street?.trim()) {
     errors.address = 'Address is required'
   }
-  
+
   if (!data.city?.trim()) {
     errors.city = 'City is required'
   }
-  
+
   if (!data.state?.trim()) {
     errors.state = 'State is required'
   }
-  
+
   if (!data.zip_code?.trim() && !data.zip?.trim()) {
     errors.zip_code = 'ZIP code is required'
   }
-  
+
   if (!data.operator_id) {
     errors.operator_id = 'Operator selection is required'
   }
-  
-  // Validate numeric fields
+
+  // Validate numeric fields with enhanced constraints
   if (backendData.floors && backendData.floors < 1) {
     errors.floors = 'Building must have at least 1 floor'
   }
-  
+
   if (backendData.total_rooms && backendData.total_rooms < 1) {
     errors.total_rooms = 'Building must have at least 1 room'
   }
-  
+
+  // Validate bathroom fields
+  if (data.total_bathrooms !== undefined && data.total_bathrooms !== null) {
+    if (data.total_bathrooms < 1) {
+      errors.total_bathrooms = 'Building must have at least 1 bathroom'
+    }
+  }
+
+  if (data.bathrooms_on_each_floor !== undefined && data.bathrooms_on_each_floor !== null) {
+    if (data.bathrooms_on_each_floor < 1) {
+      errors.bathrooms_on_each_floor = 'Must have at least 1 bathroom per floor'
+    }
+
+    // Business logic: bathrooms per floor should be reasonable compared to total bathrooms
+    if (data.total_bathrooms && data.floors && data.bathrooms_on_each_floor) {
+      const expectedTotalBathrooms = data.bathrooms_on_each_floor * data.floors
+      if (expectedTotalBathrooms > data.total_bathrooms * 1.5) {
+        errors.bathrooms_on_each_floor = 'Bathrooms per floor seems too high compared to total bathrooms'
+      }
+    }
+  }
+
+  // Validate lease term fields
+  if (data.min_lease_term !== undefined && data.min_lease_term !== null) {
+    if (data.min_lease_term < 1) {
+      errors.min_lease_term = 'Minimum lease term must be at least 1 month'
+    }
+  }
+
+  if (data.pref_min_lease_term !== undefined && data.pref_min_lease_term !== null) {
+    if (data.pref_min_lease_term < 1) {
+      errors.pref_min_lease_term = 'Preferred minimum lease term must be at least 1 month'
+    }
+
+    // Business logic: preferred minimum should be >= minimum lease term
+    if (data.min_lease_term && data.pref_min_lease_term < data.min_lease_term) {
+      errors.pref_min_lease_term = 'Preferred minimum lease term cannot be less than minimum lease term'
+    }
+  }
+
+  // Validate year fields with business logic
+  if (data.year_built !== undefined && data.year_built !== null) {
+    const currentYear = new Date().getFullYear()
+    if (data.year_built < 1800 || data.year_built > currentYear) {
+      errors.year_built = `Year built must be between 1800 and ${currentYear}`
+    }
+  }
+
+  if (data.last_renovation !== undefined && data.last_renovation !== null) {
+    const currentYear = new Date().getFullYear()
+    if (data.last_renovation > currentYear) {
+      errors.last_renovation = `Last renovation year cannot be in the future`
+    }
+
+    // Business logic: renovation should be after or same as year built
+    if (data.year_built && data.last_renovation < data.year_built) {
+      errors.last_renovation = 'Last renovation cannot be before the year the building was built'
+    }
+  }
+
+  // Validate enum fields
+  if (data.common_kitchen && !['None', 'Shared', 'Private', 'Both'].includes(data.common_kitchen)) {
+    errors.common_kitchen = 'Invalid common kitchen option'
+  }
+
+  if (data.pet_friendly && !['Yes', 'No', 'Conditional'].includes(data.pet_friendly)) {
+    errors.pet_friendly = 'Invalid pet-friendly option'
+  }
+
+  // Validate cleaning_common_spaces - allow any non-empty string value
+  // The form uses detailed options like 'Daily cleaning service', 'Weekly professional cleaning', etc.
+  // So we just check if it's a non-empty string
+  if (data.cleaning_common_spaces && typeof data.cleaning_common_spaces !== 'string') {
+    errors.cleaning_common_spaces = 'Invalid cleaning common spaces option'
+  }
+
+  // Validate JSON fields format
+  if (data.amenities_details && typeof data.amenities_details === 'string') {
+    try {
+      JSON.parse(data.amenities_details)
+    } catch (e) {
+      errors.amenities_details = 'Invalid amenities details format'
+    }
+  }
+
+  // Validate URL fields
+  if (data.virtual_tour_url && data.virtual_tour_url.trim()) {
+    const urlPattern = /^https?:\/\/.+/
+    if (!urlPattern.test(data.virtual_tour_url)) {
+      errors.virtual_tour_url = 'Virtual tour URL must be a valid HTTP/HTTPS URL'
+    }
+  }
+
   return {
     isValid: frontendMissingRequired.length === 0 && Object.keys(errors).length === 0,
     errors,
@@ -575,6 +746,10 @@ export function validateRoomFormData(data: any): ValidationResult {
   const missingRequired = validateRequiredFields(backendData, 'ROOM')
   
   // Validate enum values
+  if (backendData.room_type && !validateEnum(backendData.room_type, 'ROOM_TYPES')) {
+    errors.room_type = 'Invalid room type'
+  }
+  
   if (backendData.bathroom_type && !validateEnum(backendData.bathroom_type, 'BATHROOM_TYPES')) {
     errors.bathroom_type = 'Invalid bathroom type'
   }
@@ -640,6 +815,26 @@ export function validateRoomFormData(data: any): ValidationResult {
     errors.last_cleaning_date = 'Invalid date format (use YYYY-MM-DD)'
   }
   
+  // Cross-field validation rules
+  if (backendData.maximum_people_in_room && backendData.bed_count) {
+    if (backendData.maximum_people_in_room > backendData.bed_count) {
+      errors.maximum_people_in_room = 'Maximum occupancy cannot exceed the number of beds'
+    }
+  }
+  
+  if (backendData.active_tenants && backendData.maximum_people_in_room) {
+    if (backendData.active_tenants > backendData.maximum_people_in_room) {
+      errors.active_tenants = 'Active tenants cannot exceed maximum room capacity'
+    }
+  }
+  
+  // Validate booking date logic
+  if (backendData.booked_from && backendData.booked_till) {
+    if (!validateLeaseDates(backendData.booked_from, backendData.booked_till)) {
+      errors.booked_till = 'Booking end date must be after start date'
+    }
+  }
+  
   return {
     isValid: missingRequired.length === 0 && Object.keys(errors).length === 0,
     errors,
@@ -663,65 +858,64 @@ export function transformOperatorDataForBackend(frontendData: any) {
 
 // Transform room data to match backend structure
 export function transformRoomDataForBackend(frontendData: any) {
+  // Transform amenities from individual boolean fields to JSON array for backend
+  const amenities = []
+  if (frontendData.mini_fridge) amenities.push('Mini Fridge')
+  if (frontendData.sink) amenities.push('Sink')
+  if (frontendData.bedding_provided) amenities.push('Bedding Provided')
+  if (frontendData.work_desk) amenities.push('Work Desk')
+  if (frontendData.work_chair) amenities.push('Work Chair')
+  if (frontendData.heating) amenities.push('Heating')
+  if (frontendData.air_conditioning) amenities.push('Air Conditioning')
+  if (frontendData.cable_tv) amenities.push('Cable TV')
+
+  // Transform utilities from checkboxes to JSON structure for backend
+  const utilities = {}
+  if (frontendData.utilities_electricity) utilities.electricity = true
+  if (frontendData.utilities_water) utilities.water = true
+  if (frontendData.utilities_gas) utilities.gas = true
+  if (frontendData.utilities_internet) utilities.internet = true
+  if (frontendData.utilities_cable_tv) utilities.cable_tv = true
+  if (frontendData.utilities_trash) utilities.trash = true
+  if (frontendData.utilities_heating) utilities.heating = true
+  if (frontendData.utilities_ac) utilities.ac = true
+
   return {
+    // BACKEND SCHEMA FIELDS ONLY
     room_id: frontendData.room_id || generateRoomId(),
-    room_number: frontendData.room_number,
     building_id: frontendData.building_id,
-
-    // Status and availability
-    ready_to_rent: frontendData.ready_to_rent ?? true,
-    status: frontendData.status || 'AVAILABLE',
-    booked_from: frontendData.booked_from || null,
-    booked_till: frontendData.booked_till || null,
-    active_tenants: frontendData.active_tenants || 0,
-    maximum_people_in_room: frontendData.maximum_people_in_room || 1,
-    available_from: frontendData.available_from || null,
-
-    // Pricing
-    private_room_rent: frontendData.private_room_rent || 0,
-    shared_room_rent_2: frontendData.shared_room_rent_2 || null,
-
-    // Room specifications
+    room_number: frontendData.room_number,
     room_type: frontendData.room_type || 'Standard',
-    floor_number: frontendData.floor_number || 1,
-    bed_count: frontendData.bed_count || 1,
-    bathroom_type: frontendData.bathroom_type || 'Shared',
-    bed_size: frontendData.bed_size || 'Twin',
-    bed_type: frontendData.bed_type || 'Single',
-    view: frontendData.view || 'Street',
-    sq_footage: frontendData.sq_footage || null,
-    room_storage: frontendData.room_storage || 'Built-in Closet',
-
-    // Environment and features
-    noise_level: frontendData.noise_level || null,
-    sunlight: frontendData.sunlight || null,
+    
+    // Backend field names (not frontend aliases)
+    square_footage: frontendData.square_footage || frontendData.sq_footage || null,
+    private_room_rent: frontendData.private_room_rent || null,
+    shared_room_rent_2: frontendData.shared_room_rent_2 || null,
+    shared_room_rent_3: frontendData.shared_room_rent_3 || null,
+    shared_room_rent_4: frontendData.shared_room_rent_4 || null,
+    availability_status: frontendData.availability_status || frontendData.status || 'AVAILABLE',
+    
+    // Date fields
+    lease_start_date: frontendData.lease_start_date || null,
+    lease_end_date: frontendData.lease_end_date || null,
+    
+    // JSON fields
+    amenities: amenities.length > 0 ? JSON.stringify(amenities) : null,
+    images: frontendData.room_images ? JSON.stringify(frontendData.room_images) : null,
+    
+    // Other backend fields
+    floor_number: frontendData.floor_number || null,
+    bathroom_type: frontendData.bathroom_type || null,
     furnished: frontendData.furnished ?? false,
-    additional_features: frontendData.additional_features || null,
-    virtual_tour_url: frontendData.virtual_tour_url || null,
-
-    // Maintenance tracking
-    last_check: frontendData.last_check || null,
-    last_check_by: frontendData.last_check_by || null,
-    last_renovation_date: frontendData.last_renovation_date || null,
-    current_booking_types: frontendData.current_booking_types || null,
-
-
-    // Amenities (boolean fields)
-    mini_fridge: frontendData.mini_fridge ?? false,
-    sink: frontendData.sink ?? false,
-    bedding_provided: frontendData.bedding_provided ?? false,
-    work_desk: frontendData.work_desk ?? false,
-    work_chair: frontendData.work_chair ?? false,
-    heating: frontendData.heating ?? false,
-    air_conditioning: frontendData.air_conditioning ?? false,
-    cable_tv: frontendData.cable_tv ?? false,
-
-    // New fields added based on best practices
-    room_access_type: frontendData.room_access_type || 'KEY',
-    internet_speed: frontendData.internet_speed || null,
-    room_condition_score: frontendData.room_condition_score || null,
-    cleaning_frequency: frontendData.cleaning_frequency || 'WEEKLY',
-    utilities_meter_id: frontendData.utilities_meter_id || null,
-    last_cleaning_date: frontendData.last_cleaning_date || null
+    description: frontendData.description || null,
+    
+    // Utilities: prefer form checkboxes, fallback to utilities_included field
+    utilities_included: Object.keys(utilities).length > 0 
+      ? JSON.stringify(utilities)
+      : (frontendData.utilities_included 
+          ? (typeof frontendData.utilities_included === 'object'
+              ? JSON.stringify(frontendData.utilities_included)
+              : frontendData.utilities_included)
+          : null)
   }
 }
