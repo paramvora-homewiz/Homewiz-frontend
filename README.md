@@ -176,6 +176,32 @@ NEXT_PUBLIC_ENABLE_SUPABASE_DIRECT=true
 NEXT_PUBLIC_ENABLE_AI_MOCK=false
 ```
 
+## 🚀 Deployment
+
+### Quick Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/homewiz-frontend)
+
+### Production Deployment
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed deployment instructions.
+
+#### Key Environment Variables for Production
+```env
+# Backend API (Production)
+NEXT_PUBLIC_BACKEND_API_URL=https://homewiz-backend-335786120771.us-west2.run.app
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Environment Management
+
+- **Development**: Uses `.env.local` (localhost backend)
+- **Production**: Uses environment variables set in Vercel
+- **Environment Switching**: Simply change environment variables, no code changes needed
+
 ## 💻 Development
 
 ### Running in Development Mode
