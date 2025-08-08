@@ -118,6 +118,9 @@ const TRANSPORTATION_OPTIONS = [
 export default function BuildingForm({ initialData, onSubmit, onCancel, isLoading, operators = [] }: BuildingFormProps) {
   const { getSmartDefaults, saveToHistory } = useFormSmartDefaults('building')
   const smartDefaults = getSmartDefaults()
+  
+  // Determine if we're in edit mode based on initial data
+  const isEditMode = !!initialData?.building_id
 
   // Convert initial data and smart defaults to ensure proper types
   const processInitialData = (data: any) => {
@@ -190,38 +193,65 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
   const [fileValidationErrors, setFileValidationErrors] = useState<Array<{ file: File; error: string }>>([])
-  const [amenitiesDetails, setAmenitiesDetails] = useState(
-    initialData?.amenities_details
-      ? (typeof initialData.amenities_details === 'string'
-          ? JSON.parse(initialData.amenities_details)
-          : initialData.amenities_details)
-      : {}
-  )
+  const [amenitiesDetails, setAmenitiesDetails] = useState(() => {
+    if (!initialData?.amenities_details) return {}
+    
+    if (typeof initialData.amenities_details === 'string') {
+      try {
+        return JSON.parse(initialData.amenities_details)
+      } catch (error) {
+        console.warn('Failed to parse amenities_details JSON:', error)
+        return {}
+      }
+    }
+    
+    return initialData.amenities_details
+  })
   
   // Contact information structure for better data organization
-  const [contactInfo, setContactInfo] = useState({
-    office_phone: '',
-    emergency_phone: '',
-    leasing_email: '',
-    maintenance_email: '',
-    office_hours: '',
-    ...(initialData?.contact_info 
-      ? (typeof initialData.contact_info === 'string' 
-          ? JSON.parse(initialData.contact_info) 
-          : initialData.contact_info)
-      : {})
+  const [contactInfo, setContactInfo] = useState(() => {
+    const defaults = {
+      office_phone: '',
+      emergency_phone: '',
+      leasing_email: '',
+      maintenance_email: '',
+      office_hours: ''
+    }
+    
+    if (!initialData?.contact_info) return defaults
+    
+    if (typeof initialData.contact_info === 'string') {
+      try {
+        return { ...defaults, ...JSON.parse(initialData.contact_info) }
+      } catch (error) {
+        console.warn('Failed to parse contact_info JSON:', error)
+        return defaults
+      }
+    }
+    
+    return { ...defaults, ...initialData.contact_info }
   })
   
   // Amenities array for better JSON structure compatibility
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(
-    initialData?.amenities 
-      ? (Array.isArray(initialData.amenities) 
-          ? initialData.amenities 
-          : (typeof initialData.amenities === 'string' 
-              ? JSON.parse(initialData.amenities) 
-              : []))
-      : []
-  )
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(() => {
+    if (!initialData?.amenities) return []
+    
+    if (Array.isArray(initialData.amenities)) {
+      return initialData.amenities
+    }
+    
+    if (typeof initialData.amenities === 'string') {
+      try {
+        const parsed = JSON.parse(initialData.amenities)
+        return Array.isArray(parsed) ? parsed : []
+      } catch (error) {
+        console.warn('Failed to parse amenities JSON:', error)
+        return []
+      }
+    }
+    
+    return []
+  })
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>(
     initialData?.media_files || []
   )
@@ -910,10 +940,10 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       // Note: media_files is not included in backendData from transformBuildingDataForBackend
       saveToHistory(historyData)
 
-      // NEW BACKEND: Two-step process (create building, then upload images)
+      // NEW BACKEND: Two-step process (create/update building, then upload images)
       
-      console.log('🏢 Step 1: Creating building without images...')
-      // First, create building (JSON only, no images)
+      console.log(isEditMode ? '🏢 Step 1: Updating building without images...' : '🏢 Step 1: Creating building without images...')
+      // First, create/update building (JSON only, no images)
       const buildingResponse = await onSubmit(backendData)
       
       // Check if submission was successful
@@ -939,8 +969,21 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
       }
       
       // Extract building_id from successful response
-      const buildingId = response.data?.building_id || backendData.building_id
-      console.log(`✅ Building created successfully with ID: ${buildingId}`)
+      // In edit mode, building_id might be in the initial data or backend data
+      const buildingId = response.data?.building_id || initialData?.building_id || backendData.building_id
+      
+      if (!buildingId) {
+        console.error('❌ No building ID found for image upload')
+        import('@/lib/error-handler').then(({ showWarningMessage }) => {
+          showWarningMessage(
+            'Image Upload Issue',
+            'Building was saved but images could not be uploaded. Please try uploading images again.'
+          )
+        })
+        return
+      }
+      
+      console.log(isEditMode ? `✅ Building updated successfully with ID: ${buildingId}` : `✅ Building created successfully with ID: ${buildingId}`)
       
       // Step 2: Upload categorized media to Supabase
       const hasMedia = Object.values(categorizedMedia).some(arr => arr.length > 0)
@@ -985,38 +1028,47 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               
               // Upload with custom paths
               const uploadPromises = filesWithPaths.map(async ({ file, storagePath, originalMetadata, sortOrder }) => {
-                const { uploadFile } = await import('@/lib/supabase/storage')
-                const result = await uploadFile({
-                  bucket: 'BUILDING_IMAGES',
-                  path: storagePath,
-                  file,
-                  metadata: {
-                    category,
-                    building_id: buildingId,
-                    original_name: file.name,
-                    uploaded_at: new Date().toISOString()
-                  }
-                })
-                
-                if (result.success && result.url) {
-                  // Create detailed metadata
-                  const imageMetadata = createImageMetadata(
-                    buildingId,
-                    category as any,
+                try {
+                  console.log(`📤 Uploading ${file.name} to ${storagePath}...`)
+                  const { uploadFile } = await import('@/lib/supabase/storage')
+                  const result = await uploadFile({
+                    bucket: 'BUILDING_IMAGES',
+                    path: storagePath,
                     file,
-                    storagePath,
-                    result.url,
-                    sortOrder
-                  )
-                  imageMetadataArray.push(imageMetadata)
-                  uploadedImageUrls.push(result.url)
-                  categorizedUrls[category].push(result.url)
-                  console.log(`✅ ${category} image uploaded: ${result.url}`)
-                } else {
-                  console.error(`❌ ${category} image upload failed:`, result.error)
+                    metadata: {
+                      category,
+                      building_id: buildingId,
+                      original_name: file.name,
+                      uploaded_at: new Date().toISOString()
+                    }
+                  })
+                  
+                  if (!result.success) {
+                    console.error(`❌ Failed to upload ${file.name}:`, result.error)
+                    return result
+                  }
+                  
+                  if (result.success && result.url) {
+                    // Create detailed metadata
+                    const imageMetadata = createImageMetadata(
+                      buildingId,
+                      category as any,
+                      file,
+                      storagePath,
+                      result.url,
+                      sortOrder
+                    )
+                    imageMetadataArray.push(imageMetadata)
+                    uploadedImageUrls.push(result.url)
+                    categorizedUrls[category].push(result.url)
+                    console.log(`✅ ${category} image uploaded: ${result.url}`)
+                  }
+                  
+                  return result
+                } catch (error) {
+                  console.error(`❌ Error uploading ${file.name}:`, error)
+                  return { success: false, error }
                 }
-                
-                return result
               })
               
               await Promise.all(uploadPromises)
@@ -1085,16 +1137,17 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               console.error('❌ Failed to update building with image URLs:', updateResponse.error)
             }
           } else {
-            console.log('⚠️ No images were successfully uploaded to Supabase - building created without images')
+            console.log(isEditMode ? '⚠️ No images were successfully uploaded to Supabase - building updated without new images' : '⚠️ No images were successfully uploaded to Supabase - building created without images')
           }
 
         } catch (imageError) {
-          console.error('❌ Failed to upload images to Supabase (building was created successfully):', imageError)
+          console.error(isEditMode ? '❌ Failed to upload images to Supabase (building was updated successfully):' : '❌ Failed to upload images to Supabase (building was created successfully):', imageError)
           import('@/lib/error-handler').then(({ handleFileUploadError }) => {
             handleFileUploadError(imageError, {
               additionalInfo: {
                 context: 'building_images',
-                buildingCreated: true
+                buildingCreated: !isEditMode,
+                buildingUpdated: isEditMode
               }
             })
           })
@@ -1110,10 +1163,14 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           // Upload images
           const imageFiles = mediaFiles.filter(file => file.type.startsWith('image/'))
           if (imageFiles.length > 0) {
+            console.log(`📤 Uploading ${imageFiles.length} images for building ${buildingId}...`)
             const imageResults = await uploadBuildingImages(buildingId, imageFiles.map(f => f.file))
-            imageResults.forEach((result) => {
+            imageResults.forEach((result, index) => {
               if (result.success && result.url) {
                 uploadedImageUrls.push(result.url)
+                console.log(`✅ Image ${index + 1} uploaded successfully`)
+              } else {
+                console.error(`❌ Failed to upload image ${index + 1}:`, result.error)
               }
             })
           }
@@ -1138,7 +1195,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
           console.error('Failed to upload legacy media files:', error)
         }
       } else {
-        console.log('📄 No images to upload - building creation complete')
+        console.log(isEditMode ? '📄 No images to upload - building update complete' : '📄 No images to upload - building creation complete')
       }
 
       // Show success message and reset form

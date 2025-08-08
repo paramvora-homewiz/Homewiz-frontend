@@ -427,7 +427,7 @@ export class BuildingsService extends BaseService<Building, BuildingInsert, Buil
             *,
             rooms!inner(room_id)
           `)
-          .eq('rooms.availability_status', 'AVAILABLE')
+          .eq('rooms.status', 'AVAILABLE')
 
         if (error) throw error
         return data
@@ -481,7 +481,7 @@ export class RoomsService extends BaseService<Room, RoomInsert, RoomUpdate> {
     return this.list({
       filters: {
         building_id: buildingId,
-        availability_status: 'AVAILABLE'
+        status: 'AVAILABLE'
       }
     })
   }
@@ -490,7 +490,7 @@ export class RoomsService extends BaseService<Room, RoomInsert, RoomUpdate> {
    * Update room availability
    */
   async updateAvailability(roomId: string, status: string): Promise<DatabaseResponse<Room>> {
-    return this.update(roomId, { availability_status: status } as RoomUpdate)
+    return this.update(roomId, { status: status } as RoomUpdate)
   }
 
   /**
@@ -505,7 +505,7 @@ export class RoomsService extends BaseService<Room, RoomInsert, RoomUpdate> {
           .select('*')
           .gte('private_room_rent', minPrice)
           .lte('private_room_rent', maxPrice)
-          .eq('availability_status', 'AVAILABLE')
+          .eq('status', 'AVAILABLE')
 
         if (error) throw error
         return data

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/enhanced-components'
 import { Building } from '@/lib/supabase/types'
+import { parseBuildingImages } from '@/lib/backend-sync'
 import { 
   Building as BuildingIcon, 
   MapPin, 
@@ -217,29 +218,35 @@ export function ViewBuildingModal({ building, open, onOpenChange }: ViewBuilding
         </div>
 
         {/* Images */}
-        {building.building_images && building.building_images.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Building Images</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {building.building_images.slice(0, 4).map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`${building.building_name} - Image ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
-              ))}
+        {(() => {
+          const imagesArray = parseBuildingImages(building.building_images)
+          
+          if (imagesArray.length === 0) return null
+          
+          return (
+            <div className="mt-6">
+              <h3 className="font-semibold text-gray-900 mb-3">Building Images</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {imagesArray.slice(0, 4).map((image, index) => (
+                  <img
+                    key={index}
+                    src={image}
+                    alt={`${building.building_name} - Image ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                ))}
+              </div>
+              {imagesArray.length > 4 && (
+                <p className="text-sm text-gray-500 mt-2">
+                  +{imagesArray.length - 4} more images
+                </p>
+              )}
             </div>
-            {building.building_images.length > 4 && (
-              <p className="text-sm text-gray-500 mt-2">
-                +{building.building_images.length - 4} more images
-              </p>
-            )}
-          </div>
-        )}
+          )
+        })()}
       </DialogContent>
     </Dialog>
   )

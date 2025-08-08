@@ -281,6 +281,22 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     }
   }
 
+  // Helper function to get total count for current tab
+  const getTotalCountForTab = () => {
+    switch (activeTab) {
+      case 'buildings':
+        return totalCounts.buildings
+      case 'rooms':
+        return totalCounts.rooms
+      case 'tenants':
+        return totalCounts.tenants
+      case 'operators':
+        return totalCounts.operators
+      default:
+        return 0
+    }
+  }
+
   const handleExport = () => {
     try {
       let data: any[] = []
@@ -1004,7 +1020,10 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                 {/* Pagination */}
                 <div className="mt-6 flex items-center justify-between">
                   <div className="text-sm text-gray-600">
-                    Page {currentPage} of {Math.ceil(100 / ITEMS_PER_PAGE)}
+                    {getTotalCountForTab() === 0 
+                      ? 'No data available'
+                      : `Page ${currentPage} of ${Math.ceil(getTotalCountForTab() / ITEMS_PER_PAGE) || 1}`
+                    }
                   </div>
                   <div className="flex items-center gap-2">
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -1024,6 +1043,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage >= Math.ceil(getTotalCountForTab() / ITEMS_PER_PAGE)}
                         className="shadow-sm hover:shadow-md transition-all duration-300"
                       >
                         Next

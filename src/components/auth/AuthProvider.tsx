@@ -2,9 +2,15 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { UserRole, User } from '../../types'
-import config from '../../lib/config'
-import { authConfigManager, AuthMode } from '../../lib/auth-config'
-import { collectUserAction } from '../../lib/data-collection'
+// Temporarily commenting out problematic imports
+// import config from '../../lib/config'
+// import { authConfigManager, AuthMode } from '../../lib/auth-config'
+// import { collectUserAction } from '../../lib/data-collection'
+
+enum AuthMode {
+  DEMO = 'demo',
+  CLERK = 'clerk'
+}
 
 interface AuthContextType {
   user: User | null
@@ -51,23 +57,18 @@ function DemoAuthProvider({ children }: AuthProviderProps) {
     // Set mounted state first
     setHasMounted(true)
 
-    // Get demo user from auth config
-    const demoUserConfig = authConfigManager.getDemoUser()
+    // Simple demo user
     const demoUser: User = {
-      ...demoUserConfig,
+      id: 'demo-user-1',
+      email: 'demo@homewiz.com',
+      name: 'Demo User',
+      role: 'edit',
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString(),
     }
 
     setUser(demoUser)
     setIsLoading(false)
-
-    // Collect user action
-    collectUserAction('demo_login', {
-      userId: demoUser.id,
-      email: demoUser.email,
-      role: demoUser.role,
-    })
   }, [])
 
   const hasRole = (role: UserRole): boolean => {
@@ -83,37 +84,24 @@ function DemoAuthProvider({ children }: AuthProviderProps) {
   const updateUserRole = async (role: UserRole): Promise<void> => {
     // In demo mode, just update local state
     setUser(prev => prev ? { ...prev, role } : null)
-
-    // Collect user action
-    collectUserAction('role_updated', {
-      userId: user?.id,
-      newRole: role,
-      previousRole: user?.role,
-    })
   }
 
   const signOut = async (): Promise<void> => {
-    collectUserAction('demo_logout', {
-      userId: user?.id,
-      email: user?.email,
-    })
     setUser(null)
   }
 
   const switchAuthMode = (mode: AuthMode): void => {
-    authConfigManager.switchMode(mode)
-    collectUserAction('auth_mode_switched', {
-      userId: user?.id,
-      newMode: mode,
-      previousMode: AuthMode.DEMO,
-    })
+    // Simple mode switching - no-op in demo
+    console.log('Switching to mode:', mode)
   }
 
   const refreshUser = async (): Promise<void> => {
-    // In demo mode, refresh from config
-    const demoUserConfig = authConfigManager.getDemoUser()
+    // Simple refresh - recreate demo user
     const refreshedUser: User = {
-      ...demoUserConfig,
+      id: 'demo-user-1',
+      email: 'demo@homewiz.com',
+      name: 'Demo User',
+      role: user?.role || 'edit',
       createdAt: user?.createdAt || new Date().toISOString(),
       lastLogin: new Date().toISOString(),
     }

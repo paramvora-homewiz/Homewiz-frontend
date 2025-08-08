@@ -11,6 +11,11 @@ export function ConnectionStatusBanner() {
   const [isChecking, setIsChecking] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
 
+  // Don't show banner if backend is disabled
+  if (config.api.disabled) {
+    return null
+  }
+
   // Check connection on mount and periodically
   useEffect(() => {
     const checkConnection = async () => {

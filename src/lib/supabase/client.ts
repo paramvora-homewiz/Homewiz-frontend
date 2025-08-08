@@ -31,10 +31,12 @@ function isValidUrl(url: string): boolean {
 const isSupabaseDisabled = !supabaseUrl ||
   supabaseUrl === 'disabled_for_development' ||
   supabaseUrl === 'your_supabase_url' ||
+  supabaseUrl === 'your_supabase_url_here' ||
   supabaseUrl.includes('dummy.supabase.co') ||
   !supabaseAnonKey ||
   supabaseAnonKey === 'disabled_for_development' ||
   supabaseAnonKey === 'your_supabase_anon_key' ||
+  supabaseAnonKey === 'your_supabase_anon_key_here' ||
   supabaseAnonKey === 'dummy_key' ||
   supabaseAnonKey.startsWith('dummy') ||
   !isValidUrl(supabaseUrl || '')
