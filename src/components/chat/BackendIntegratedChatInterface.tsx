@@ -245,25 +245,47 @@ export function BackendIntegratedChatInterface() {
           dataBuildings: data.buildings
         });
 
-        const assistantMessage: Message = {
-          id: `asst-${Date.now()}`,
-          content: data.result?.response || data.response || 'I found some results for you.',
-          role: 'assistant',
-          created_at: new Date().toISOString(),
-          metadata: {
-            result: data.result || data,
-            backend_success: true,
-            function_called: data.function_called,
-            data: data.result?.data || data.data,
-            // If this is a room search (has room data), ensure it's available in multiple places
-            rooms: data.result?.data || data.data,
-            stats: data.result?.stats || data.stats,
-            ...data
-          },
-          function_used: data.function_called
-        };
+        // Check if backend failed for any reason
+        if (data.success === false || (data.result?.success === false)) {
+          console.log('⚠️ Backend error detected', {
+            error: data.error || data.result?.error,
+            message: data.message || data.result?.message
+          });
+          
+          // Display appropriate error message
+          const errorMessage: Message = {
+            id: `asst-error-${Date.now()}`,
+            content: 'I apologize, but I\'m experiencing high demand at the moment. The AI service is temporarily unavailable due to rate limiting. Please try again in a few moments, or contact support if the issue persists.',
+            role: 'assistant',
+            created_at: new Date().toISOString(),
+            metadata: {
+              error: true,
+              backend_error: data.error || data.result?.error || 'Backend service unavailable'
+            }
+          };
 
-        setMessages(prev => [...prev, assistantMessage]);
+          setMessages(prev => [...prev, errorMessage]);
+        } else {
+          const assistantMessage: Message = {
+            id: `asst-${Date.now()}`,
+            content: data.result?.response || data.response || 'I found some results for you.',
+            role: 'assistant',
+            created_at: new Date().toISOString(),
+            metadata: {
+              result: data.result || data,
+              backend_success: true,
+              function_called: data.function_called,
+              data: data.result?.data || data.data,
+              // If this is a room search (has room data), ensure it's available in multiple places
+              rooms: data.result?.data || data.data,
+              stats: data.result?.stats || data.stats,
+              ...data
+            },
+            function_used: data.function_called
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+        }
         
       } else {
         // Fallback to Supabase direct query
