@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server'
 
 // Simple middleware without Clerk for demo mode
 export default function middleware(req: NextRequest) {
-  console.log('🎭 Demo mode enabled - no authentication required')
+  // Log the request to debug
+  console.log(`🎭 Middleware: ${req.method} ${req.url}`)
 
   // Add security headers
   const response = NextResponse.next()

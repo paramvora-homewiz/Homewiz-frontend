@@ -17,7 +17,7 @@ import { createOperator, createBuilding, createRoom, createTenant, createLead } 
 import { formIntegration } from '../../lib/supabase/form-integration'
 import config from '../../lib/config'
 import DatabaseLogsPanel from '../dashboard/DatabaseLogsPanel'
-import AdvancedAnalyticsDashboard from '../analytics/AdvancedAnalyticsDashboard'
+import AnalyticsDashboard from '../dashboard/AnalyticsDashboard'
 import AdvancedSearchPanel from '../search/AdvancedSearchPanel'
 import DataExportPanel from '../export/DataExportPanel'
 import NotificationPanel from '../notifications/NotificationPanel'
@@ -344,7 +344,7 @@ function FormsDashboardContent() {
                 </Button>
               </div>
             </div>
-            <AdvancedAnalyticsDashboard />
+            <AnalyticsDashboard />
           </div>
         )
 

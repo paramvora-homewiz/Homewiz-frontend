@@ -16,9 +16,11 @@ import { RoomFormData, FormTemplate, RecentSubmission } from '@/types'
 import { useFormTemplates } from '@/hooks/useFormTemplates'
 import {
   validateRoomFormData,
+  validateRoomFormDataForUpdate,
   transformRoomDataForBackend,
   BACKEND_ENUMS,
-  ValidationResult
+  ValidationResult,
+  parseBuildingImages
 } from '@/lib/backend-sync'
 import { showSuccessMessage, showInfoMessage } from '@/lib/error-handler'
 import { uploadRoomImages } from '@/lib/supabase/storage'
@@ -143,6 +145,7 @@ interface RoomFormProps {
   onSubmit: (data: RoomFormData) => Promise<void>
   onCancel?: () => void
   onBack?: () => void
+  onSuccess?: () => void
   isLoading?: boolean
   buildings?: Array<{ building_id: string; building_name: string }>
   
@@ -154,6 +157,13 @@ interface RoomFormProps {
 interface StepProps {
   formData: RoomFormData;
   handleInputChange: (field: keyof RoomFormData, value: any) => void;
+}
+
+// Extended props for AmenitiesStep
+interface AmenitiesStepProps extends StepProps {
+  existingImages: string[];
+  deletedImages: string[];
+  setDeletedImages: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 interface BasicInformationStepProps extends StepProps {
@@ -681,7 +691,7 @@ const AvailabilityStep = React.memo(({ formData, handleInputChange }: StepProps)
     </div>
   ));
 
-const AmenitiesStep = React.memo(({ formData, handleInputChange }: StepProps) => (
+const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages, deletedImages, setDeletedImages }: AmenitiesStepProps) => (
     <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div>
@@ -740,6 +750,66 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange }: StepProps) =>
           <p className="text-sm text-gray-600 mb-4">
             Upload photos of this room. Images will be saved to the building's room folder.
           </p>
+          
+          {/* Display existing images if in edit mode */}
+          {existingImages.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-md font-medium text-gray-900 mb-3">
+                Current Photos ({existingImages.filter(img => !deletedImages.includes(img)).length})
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {existingImages.map((imageUrl, index) => {
+                  const isDeleted = deletedImages.includes(imageUrl)
+                  // Debug logging for image URLs
+                  if (index === 0 || !imageUrl.startsWith('http')) {
+                    console.log(`🖼️ Rendering image [${index}]:`, {
+                      imageUrl,
+                      type: typeof imageUrl,
+                      startsWithHttp: imageUrl.startsWith('http'),
+                      length: imageUrl.length
+                    })
+                  }
+                  return (
+                    <div key={index} className={`relative group ${isDeleted ? 'opacity-50' : ''}`}>
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={imageUrl}
+                          alt={`Room photo ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error(`❌ Failed to load image [${index}]:`, imageUrl)
+                            e.currentTarget.src = '/placeholder-room.svg'
+                          }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isDeleted) {
+                            setDeletedImages(prev => prev.filter(img => img !== imageUrl))
+                          } else {
+                            setDeletedImages(prev => [...prev, imageUrl])
+                          }
+                        }}
+                        className={`absolute top-2 right-2 w-6 h-6 ${
+                          isDeleted 
+                            ? 'bg-green-500 hover:bg-green-600' 
+                            : 'bg-red-500 hover:bg-red-600'
+                        } text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity`}
+                      >
+                        {isDeleted ? '↺' : <X className="w-4 h-4" />}
+                      </button>
+                      {isDeleted && (
+                        <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                          <span className="text-red-700 font-medium">Marked for deletion</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
             <div className="mb-4">
@@ -1014,6 +1084,7 @@ function RoomForm({
   onSubmit, 
   onCancel, 
   onBack, 
+  onSuccess,
   isLoading, 
   buildings = [],
   config 
@@ -1131,6 +1202,50 @@ function RoomForm({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showTemplateSaveDialog, setShowTemplateSaveDialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Handle existing images
+  const [existingImages, setExistingImages] = useState<string[]>(() => {
+    console.log('🖼️ Initializing existing images:', {
+      hasInitialData: !!initialData,
+      roomId: initialData?.room_id,
+      room_images: initialData?.room_images,
+      images: initialData?.images,
+      type_room_images: typeof initialData?.room_images,
+      type_images: typeof initialData?.images,
+      initialDataKeys: initialData ? Object.keys(initialData) : []
+    })
+    
+    // Check both room_images and images fields
+    let parsed: string[] = []
+    
+    // First check if images array is already parsed (from EditRoomModal)
+    if (initialData?.images && Array.isArray(initialData.images)) {
+      console.log('🖼️ Using pre-parsed images array:', initialData.images)
+      console.log('🖼️ Image URLs in array:')
+      initialData.images.forEach((img, idx) => {
+        console.log(`  [${idx}]: "${img}" (type: ${typeof img}, valid: ${img.startsWith('http') || img.startsWith('/')})`)
+      })
+      parsed = initialData.images
+    } else if (initialData?.room_images) {
+      console.log('🖼️ Parsing room_images:', initialData.room_images)
+      parsed = parseBuildingImages(initialData.room_images)
+      console.log('🖼️ Parsed from room_images:', parsed)
+    } else if (initialData?.images) {
+      console.log('🖼️ Parsing images:', initialData.images)
+      parsed = parseBuildingImages(initialData.images)
+      console.log('🖼️ Parsed from images:', parsed)
+    }
+    
+    // Update existingImages if we found any during initialization
+    if (parsed.length > 0) {
+      console.log('🖼️ Found existing images during initialization:', parsed)
+    } else {
+      console.log('⚠️ No existing images found during initialization')
+    }
+    
+    return parsed
+  })
+  const [deletedImages, setDeletedImages] = useState<string[]>([])
 
   // Template management
   const { saveRecentSubmission, saveTemplate } = useFormTemplates({ formType: 'room' })
@@ -1356,6 +1471,61 @@ function RoomForm({
     return parts.join(', ') || 'Room configuration'
   }
 
+  // Check if any non-image fields have changed
+  const hasNonImageChanges = (currentData: RoomFormData, originalData: any): boolean => {
+    // List of fields to check (excluding image-related fields)
+    const fieldsToCheck = [
+      'room_number', 'room_type', 'status', 'ready_to_rent',
+      'private_room_rent', 'shared_room_rent_2', 'shared_room_rent_3', 'shared_room_rent_4',
+      'floor_number', 'bed_count', 'bathroom_type', 'bed_size', 'bed_type',
+      'view', 'sq_footage', 'square_footage', 'maximum_people_in_room',
+      'mini_fridge', 'sink', 'bedding_provided', 'work_desk', 'work_chair',
+      'heating', 'air_conditioning', 'cable_tv', 'furnished',
+      'room_storage', 'noise_level', 'sunlight', 'active_tenants',
+      'booked_from', 'booked_till', 'available_from',
+      'last_check', 'last_check_by', 'last_renovation_date',
+      'virtual_tour_url', 'description', 'additional_features',
+      'room_access_type', 'internet_speed', 'room_condition_score',
+      'cleaning_frequency', 'utilities_meter_id', 'last_cleaning_date',
+      'utilities_included'
+    ]
+
+    // Check each field for changes
+    for (const field of fieldsToCheck) {
+      const currentValue = (currentData as any)[field]
+      const originalValue = originalData[field]
+      
+      // Handle different types of comparisons
+      if (typeof currentValue === 'boolean' || typeof originalValue === 'boolean') {
+        if (Boolean(currentValue) !== Boolean(originalValue)) {
+          console.log(`Field ${field} changed: ${originalValue} → ${currentValue}`)
+          return true
+        }
+      } else if (typeof currentValue === 'number' || typeof originalValue === 'number') {
+        if (Number(currentValue || 0) !== Number(originalValue || 0)) {
+          console.log(`Field ${field} changed: ${originalValue} → ${currentValue}`)
+          return true
+        }
+      } else if (typeof currentValue === 'object' && currentValue !== null) {
+        // For objects like utilities_included, compare JSON strings
+        if (JSON.stringify(currentValue) !== JSON.stringify(originalValue || {})) {
+          console.log(`Field ${field} changed: ${JSON.stringify(originalValue)} → ${JSON.stringify(currentValue)}`)
+          return true
+        }
+      } else {
+        // String comparison (treat empty string, null, and undefined as equivalent)
+        const current = String(currentValue || '').trim()
+        const original = String(originalValue || '').trim()
+        if (current !== original) {
+          console.log(`Field ${field} changed: "${original}" → "${current}"`)
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
   /**
    * Complex form submission handler with multi-step validation and image upload coordination
    * 
@@ -1394,7 +1564,12 @@ function RoomForm({
       currentTarget: e.currentTarget,
       isSubmitting,
       isLoading,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      hasRoomPhotos: !!formData.room_photos,
+      roomPhotoCount: formData.room_photos?.length || 0,
+      hasInitialData: !!initialData,
+      roomId: initialData?.room_id,
+      buildingId: initialData?.building_id || formData.building_id
     })
 
     e.preventDefault()
@@ -1426,36 +1601,148 @@ function RoomForm({
     setIsSubmitting(true)
 
     try {
-      // Step 1: Comprehensive form validation using business rules
-      const validationResult = validateRoomFormData(formData)
+      // Handle existing images - filter out deleted ones
+      const remainingExistingImages = existingImages.filter(img => !deletedImages.includes(img))
+
+      // Store room photos for upload
+      const roomPhotos = formData.room_photos && formData.room_photos.length > 0 ? formData.room_photos : null
+
+      // Check if this is an image-only update BEFORE validation
+      const isImageOnlyUpdate = initialData?.room_id && 
+        (deletedImages.length > 0 || roomPhotos) &&
+        !hasNonImageChanges(formData, initialData)
+
+      if (isImageOnlyUpdate) {
+        console.log('📸 Detected image-only update - skipping validation')
+        console.log('📸 Image update details:', {
+          hasDeletedImages: deletedImages.length > 0,
+          deletedCount: deletedImages.length,
+          hasNewPhotos: !!roomPhotos,
+          newPhotoCount: roomPhotos?.length || 0,
+          existingImageCount: existingImages.length,
+          remainingExistingCount: remainingExistingImages.length,
+          remainingImages: remainingExistingImages,
+          newPhotos: roomPhotos?.map(f => f.name)
+        })
+        
+        try {
+          // Upload new images if any
+          let newImageUrls: string[] = []
+          if (roomPhotos && initialData.building_id) {
+            console.log(`📸 Uploading ${roomPhotos.length} new room images...`)
+            console.log(`📸 Using building_id from initialData: ${initialData.building_id}`)
+            console.log(`📸 Using room_id: ${initialData.room_id}`)
+            const uploadResults = await uploadRoomImages(initialData.building_id, initialData.room_id, roomPhotos)
+            console.log('📸 Upload results:', uploadResults)
+            const successfulUploads = uploadResults.filter(result => result.success)
+            newImageUrls = successfulUploads.map(result => result.url).filter(Boolean)
+            
+            if (successfulUploads.length < roomPhotos.length) {
+              const failedCount = roomPhotos.length - successfulUploads.length
+              showInfoMessage(`${successfulUploads.length} images uploaded successfully, ${failedCount} failed.`)
+            }
+          }
+          
+          // Combine existing (non-deleted) images with new uploads
+          const allImageUrls = [...remainingExistingImages, ...newImageUrls]
+          console.log('📸 All image URLs to save:', {
+            count: allImageUrls.length,
+            urls: allImageUrls
+          })
+          
+          // Use the dedicated image update function from RoomFormIntegration
+          const { RoomFormIntegration } = await import('@/lib/supabase/form-integration')
+          const updateResult = await RoomFormIntegration.updateRoomImages(
+            initialData.room_id,
+            allImageUrls.length > 0 ? allImageUrls : null
+          )
+          console.log('📸 Database update result:', updateResult)
+          
+          if (updateResult.success) {
+            showSuccessMessage(updateResult.message || 'Room images updated successfully!')
+            // Save to recent submissions even for image-only updates
+            const previewText = generatePreviewText(formData)
+            await saveRecentSubmission(formData, previewText)
+            
+            // Call onSuccess to trigger parent component refresh
+            if (onSuccess) {
+              setTimeout(() => {
+                onSuccess()
+              }, 1000) // Small delay to ensure database update is complete
+            }
+          } else {
+            showWarningMessage(updateResult.error || 'Failed to update room images')
+          }
+          
+          return // Exit early for image-only updates
+        } catch (error) {
+          console.error('❌ Error during image-only update:', error)
+          showWarningMessage('Failed to update room images. Please try again.')
+          return
+        } finally {
+          setIsSubmitting(false)
+        }
+      }
+
+      // Regular update/creation flow - validate first
+      // Use less strict validation for updates
+      const validationResult = initialData?.room_id 
+        ? validateRoomFormDataForUpdate(formData)
+        : validateRoomFormData(formData)
+        
       if (!validationResult.isValid) {
         console.error('❌ Room form validation failed:', validationResult)
         console.error('❌ Missing required fields:', validationResult.missingRequired)
         console.error('❌ Validation errors:', validationResult.errors)
         console.error('❌ Current form data:', formData)
         setErrors(validationResult.errors)
+        setIsSubmitting(false)
 
         // Provide specific feedback about what needs to be fixed
         showInfoMessage(`Please fill in all required fields. Missing: ${validationResult.missingRequired?.join(', ') || 'Unknown fields'}`)
         return
       }
 
-      // Step 2: Transform frontend form data to backend database format
+      // Transform frontend form data to backend database format
       const transformedData = transformRoomDataForBackend(formData)
 
-      // Store room photos for upload after room creation
-      const roomPhotos = formData.room_photos && formData.room_photos.length > 0 ? formData.room_photos : null
+      // If editing and we have existing images, include them in the transformed data
+      if (initialData?.room_id && remainingExistingImages.length > 0) {
+        transformedData.room_images = JSON.stringify(remainingExistingImages)
+      }
 
-      // Submit room data first (without images)
-      const createdRoom = await onSubmit(transformedData)
+      // Submit room data (with existing images if editing)
+      const submitResult = await onSubmit(transformedData)
+      
+      // Extract room data from result
+      const createdRoom = submitResult?.data || submitResult
 
-      // Upload room images after room creation if we have photos and room was created successfully
-      if (roomPhotos && formData.building_id && createdRoom?.room_id) {
+      // Standard room update/creation flow continues here...
+      // Upload room images after room creation/update if we have photos
+      const isEditMode = !!initialData?.room_id
+      const roomId = createdRoom?.room_id || initialData?.room_id
+      const buildingId = createdRoom?.building_id || initialData?.building_id || formData.building_id
+      
+      if (roomPhotos && roomId && buildingId) {
         try {
-          console.log(`📸 Uploading ${roomPhotos.length} room images for created room ${createdRoom.room_id}...`)
+          // Log the context
+          console.log('📸 Image upload context:', {
+            isEditMode,
+            roomId,
+            buildingId,
+            photoCount: roomPhotos.length,
+            hasCreatedRoom: !!createdRoom,
+            createdRoomId: createdRoom?.room_id,
+            initialRoomId: initialData?.room_id
+          })
+          
+          console.log(`📸 Uploading ${roomPhotos.length} room images...`)
+          console.log(`📸 Room ID: ${roomId}`)
+          console.log(`📸 Building ID: ${buildingId}`)
+          console.log(`📸 Is Edit Mode: ${!!initialData?.room_id}`)
 
           // Use Supabase storage to upload images
-          const uploadResults = await uploadRoomImages(formData.building_id, createdRoom.room_id, roomPhotos)
+          const uploadResults = await uploadRoomImages(buildingId, roomId, roomPhotos)
 
           // Check if any uploads were successful
           const successfulUploads = uploadResults.filter(result => result.success)
@@ -1466,27 +1753,37 @@ function RoomForm({
             console.log('📸 Upload results:', successfulUploads)
 
             // Extract image URLs from successful uploads
-            const imageUrls = successfulUploads.map(result => result.url).filter(Boolean)
+            const newImageUrls = successfulUploads.map(result => result.url).filter(Boolean)
 
-            if (imageUrls.length > 0) {
+            // Combine existing images with new uploads
+            const allImageUrls = [...remainingExistingImages, ...newImageUrls]
+
+            if (allImageUrls.length > 0) {
               try {
-                // Update room record in database with image URLs
-                console.log(`🔗 Updating room ${createdRoom.room_id} with ${imageUrls.length} image URLs...`)
+                // Update room record in database with combined image URLs
+                console.log(`🔗 Updating room ${roomId} with ${allImageUrls.length} image URLs (${remainingExistingImages.length} existing, ${newImageUrls.length} new)...`)
 
-                // Import database service dynamically to avoid circular dependencies
-                const { databaseService } = await import('@/lib/supabase/database')
-
-                const updateResult = await databaseService.rooms.update(createdRoom.room_id, {
-                  room_images: JSON.stringify(imageUrls)
-                })
+                // Use the dedicated image update function
+                const { RoomFormIntegration } = await import('@/lib/supabase/form-integration')
+                const updateResult = await RoomFormIntegration.updateRoomImages(
+                  roomId,
+                  allImageUrls
+                )
 
                 if (updateResult.success) {
-                  console.log(`✅ Room database record updated with ${imageUrls.length} image URLs`)
+                  console.log(`✅ Room database record updated with ${allImageUrls.length} image URLs`)
 
                   if (failedUploads.length > 0) {
                     showInfoMessage(`${successfulUploads.length} images uploaded and saved successfully, ${failedUploads.length} failed.`)
                   } else {
                     showSuccessMessage('All room images uploaded and saved successfully!')
+                  }
+                  
+                  // Call onSuccess to trigger parent component refresh
+                  if (onSuccess) {
+                    setTimeout(() => {
+                      onSuccess()
+                    }, 1000) // Small delay to ensure database update is complete
                   }
                 } else {
                   console.error('❌ Failed to update room record with image URLs:', updateResult.error)
@@ -1505,21 +1802,49 @@ function RoomForm({
           console.error('❌ Error uploading room images:', error)
           showInfoMessage('Room created successfully, but images could not be uploaded.')
         }
-      } else if (roomPhotos && !formData.building_id) {
+      } else if (roomPhotos && !buildingId) {
         console.warn('⚠️ Cannot upload room images: missing building_id')
-        showInfoMessage('Room created successfully, but images could not be uploaded (missing building ID).')
+        console.warn('Debug info:', {
+          formDataBuildingId: formData.building_id,
+          initialDataBuildingId: initialData?.building_id,
+          createdRoomBuildingId: createdRoom?.building_id
+        })
+        showInfoMessage('Room saved successfully, but images could not be uploaded (missing building ID).')
+      } else if (roomPhotos) {
+        console.log('📸 Room photos selected but conditions not met:', {
+          hasRoomPhotos: !!roomPhotos,
+          photoCount: roomPhotos?.length,
+          hasRoomId: !!roomId,
+          hasBuildingId: !!buildingId,
+          roomId,
+          buildingId
+        })
       }
 
       // Save to recent submissions after successful submit
       const previewText = generatePreviewText(formData)
       await saveRecentSubmission(formData, previewText)
+      
+      // If no photos were uploaded but the room was updated, still call onSuccess
+      if (!roomPhotos && submitResult?.success && onSuccess) {
+        setTimeout(() => {
+          onSuccess()
+        }, 500) // Small delay to ensure database update is complete
+      }
+      
+      // Call onComplete callback if provided in the submit result
+      if (submitResult?.onComplete) {
+        setTimeout(() => {
+          submitResult.onComplete()
+        }, 1500) // Delay to ensure all operations are complete
+      }
     } catch (error) {
       // Handle submission error
       console.error('Form submission error:', error)
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, onSubmit, saveRecentSubmission, isSubmitting, isLoading])
+  }, [formData, onSubmit, onSuccess, saveRecentSubmission, isSubmitting, isLoading, existingImages, deletedImages, initialData])
 
 
   // Step indicator component with conditional rendering
@@ -1735,7 +2060,13 @@ function RoomForm({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <AmenitiesStep formData={formData} handleInputChange={handleInputChange} />
+                <AmenitiesStep 
+                  formData={formData} 
+                  handleInputChange={handleInputChange}
+                  existingImages={existingImages}
+                  deletedImages={deletedImages}
+                  setDeletedImages={setDeletedImages}
+                />
               </motion.div>
             )}
             {currentStep === 'maintenance' && (

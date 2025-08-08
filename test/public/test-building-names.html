@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Building Names Display</title>
+</head>
+<body>
+    <h1>Building Names Display Test</h1>
+    <p>Please check the browser console after running a room query to see:</p>
+    <ul>
+        <li>🔍 Deep inspection of first room - Shows raw backend data</li>
+        <li>🏗️ Backend buildings data check - Shows if buildings are sent separately</li>
+        <li>🏢 Transforming room - Shows building data for each room</li>
+        <li>🏠 RoomCards received rooms - Shows final data structure</li>
+    </ul>
+    
+    <h2>Expected Log Output:</h2>
+    <pre>
+If backend sends 'building' (singular):
+- building_singular: {building_name: "Building Name", ...}
+- hasBuildingSingular: true
+- buildingSingularName: "Building Name"
+
+If backend sends 'buildings' (plural):
+- buildings: {building_name: "Building Name", ...}
+- hasBuildings: true
+- buildingName: "Building Name"
+    </pre>
+    
+    <h2>Code now supports both formats!</h2>
+    <p>The room cards will display building names whether the backend sends 'building' or 'buildings'.</p>
+</body>
+</html>

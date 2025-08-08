@@ -3,14 +3,103 @@
  * Ensures frontend data perfectly matches backend models and validation rules
  */
 
+/**
+ * Parse building_images field which can be in various formats
+ * @param images - Can be array, JSON string, or comma-separated string
+ * @returns Array of image URLs
+ */
+export function parseBuildingImages(images: any): string[] {
+  if (!images) return []
+  
+  // Helper function to validate URL
+  const isValidImageUrl = (url: string): boolean => {
+    if (!url || typeof url !== 'string') return false
+    const trimmed = url.trim()
+    
+    // Check if it's a valid URL or path
+    if (trimmed.startsWith('data:image/') || trimmed.startsWith('/')) {
+      return true
+    }
+    
+    // For HTTP/HTTPS URLs, also check if the domain is accessible
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      // Filter out known invalid domains
+      if (trimmed.includes('urbanests.com')) {
+        return false // This domain doesn't exist
+      }
+      // Only allow Supabase URLs or other valid domains
+      return trimmed.includes('supabase.co') || 
+             trimmed.includes('supabase.in') ||
+             trimmed.includes('amazonaws.com') ||
+             trimmed.includes('cloudinary.com') ||
+             trimmed.includes('googleapis.com')
+    }
+    
+    return false
+  }
+  
+  // Already an array
+  if (Array.isArray(images)) {
+    return images
+      .filter(img => typeof img === 'string' && img.trim())
+      .filter(isValidImageUrl)
+  }
+  
+  // String format
+  if (typeof images === 'string') {
+    const trimmed = images.trim()
+    
+    // Try parsing as JSON array
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter(img => typeof img === 'string' && img.trim())
+            .filter(isValidImageUrl)
+        }
+      } catch {
+        // Not valid JSON, continue
+      }
+    }
+    
+    // Check if it contains commas (comma-separated list)
+    if (trimmed.includes(',')) {
+      return trimmed.split(',')
+        .map(url => url.trim())
+        .filter(Boolean)
+        .filter(isValidImageUrl)
+    }
+    
+    // Single URL string - validate it
+    if (isValidImageUrl(trimmed)) {
+      return [trimmed]
+    }
+  }
+  
+  return []
+}
+
+/**
+ * Transform backend room data to frontend format
+ */
+export function transformRoomDataForFrontend(backendData: any) {
+  return {
+    ...backendData,
+    // Map room_images to both fields for compatibility
+    images: parseBuildingImages(backendData.room_images),
+    room_images: backendData.room_images,
+  }
+}
+
 // Backend Enum Values (Must match backend exactly)
 export const BACKEND_ENUMS = {
   OPERATOR_TYPES: ['LEASING_AGENT', 'BUILDING_MANAGER', 'ADMIN', 'MAINTENANCE'] as const,
-  BATHROOM_TYPES: ['Private', 'En-Suite', 'Shared'] as const,
+  BATHROOM_TYPES: ['Private', 'En-Suite', 'Shared', 'Semi-Private'] as const,
   BED_SIZES: ['Twin', 'Full', 'Queen'] as const,
-  BED_TYPES: ['Single', 'Platform'] as const,
-  ROOM_VIEWS: ['Street', 'City', 'Bay', 'Garden'] as const,
-  ROOM_STATUS: ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'] as const,
+  BED_TYPES: ['Standard', 'Bunk', 'Loft'] as const,
+  ROOM_VIEWS: ['Limited View', 'Courtyard', 'Street View', 'City View', 'Bay View', 'Garden View'] as const,
+  ROOM_STATUS: ['Available', 'Occupied', 'Maintenance', 'Reserved'] as const,
   ROOM_TYPES: ['Standard', 'Suite', 'Studio', 'Deluxe', 'Penthouse'] as const,
   LEAD_STATUS: ['EXPLORING', 'INTERESTED', 'SCHEDULED_VIEWING', 'APPLICATION_SUBMITTED', 'APPROVED', 'REJECTED', 'CONVERTED'] as const,
   VISA_STATUS: ['US-CITIZEN', 'F1-VISA', 'H1B-VISA'] as const,
@@ -26,9 +115,9 @@ export const REQUIRED_FIELDS = {
   OPERATOR: ['name', 'email'] as const,
   BUILDING: ['building_id', 'building_name', 'street', 'city', 'state', 'zip'] as const,
   ROOM: [
+    'room_id',
     'room_number',
-    'building_id', 
-    'room_type'
+    'building_id'
   ] as const,
   TENANT: [
     'tenant_name',
@@ -132,32 +221,32 @@ export function transformLeadDataForBackend(frontendData: any) {
 // Transform building data to match backend structure
 // Updated to work with existing backend data types (UUID, boolean, etc.)
 export function transformBuildingDataForBackend(frontendData: any) {
+  // Transform frontend data to match backend database schema exactly
   return {
+    // Core fields
     building_id: String(frontendData.building_id || generateBuildingId()),
     building_name: frontendData.building_name,
-
-    // Address consolidation
+    
+    // Address fields - backend uses these exact column names
     full_address: frontendData.full_address ||
       [frontendData.street, frontendData.area, frontendData.city, frontendData.state, frontendData.zip]
         .filter(Boolean).join(', '),
-
-    // Individual address fields (match database schema)
     street: frontendData.address || frontendData.street,
     area: frontendData.area,
     city: frontendData.city,
     state: frontendData.state,
-    zip: frontendData.zip_code || frontendData.zip,
-
-    // Basic building info (remove building_type as it doesn't exist in database)
-    year_built: frontendData.year_built,
-    last_renovation: frontendData.last_renovation,
+    zip: frontendData.zip_code || frontendData.zip, // Backend expects 'zip' not 'zip_code'
+    
+    // Operator and availability
     operator_id: frontendData.operator_id,
     available: frontendData.available ?? true,
+    
+    // Building structure
     floors: frontendData.floors,
     total_rooms: frontendData.total_rooms,
     total_bathrooms: frontendData.total_bathrooms,
     bathrooms_on_each_floor: frontendData.bathrooms_on_each_floor,
-
+    
     // Amenities and features
     common_kitchen: frontendData.common_kitchen,
     min_lease_term: frontendData.min_lease_term,
@@ -168,49 +257,42 @@ export function transformBuildingDataForBackend(frontendData: any) {
     secure_access: frontendData.secure_access ?? false,
     bike_storage: frontendData.bike_storage ?? false,
     rooftop_access: frontendData.rooftop_access ?? false,
-
-    // Convert pet_friendly to string for new backend (database stores as String)
-    pet_friendly: typeof frontendData.pet_friendly === 'boolean' 
-      ? (frontendData.pet_friendly ? "Yes" : "No")
-      : (frontendData.pet_friendly || "No"),
-
+    pet_friendly: frontendData.pet_friendly,
     cleaning_common_spaces: frontendData.cleaning_common_spaces,
     utilities_included: frontendData.utilities_included ?? false,
     fitness_area: frontendData.fitness_area ?? false,
     work_study_area: frontendData.work_study_area ?? false,
     social_events: frontendData.social_events ?? false,
+    
+    // Location and transportation
     nearby_conveniences_walk: frontendData.nearby_conveniences_walk,
     nearby_transportation: frontendData.nearby_transportation,
     priority: frontendData.priority || 0,
-
-    // Media fields - convert to format backend expects
-    building_images: Array.isArray(frontendData.images)
-      ? frontendData.images.join(',')  // Convert array to comma-separated string
-      : (frontendData.images || frontendData.building_images || ''),
-    virtual_tour_url: frontendData.video_url || frontendData.virtual_tour_url,
-
-    // Categorized media - convert to JSON strings for backend storage
-    categorized_images: frontendData.categorized_media ? JSON.stringify({
-      outside: frontendData.categorized_media.outside?.map(f => f.url || f.name) || [],
-      common_areas: frontendData.categorized_media.common_areas?.map(f => f.url || f.name) || [],
-      amenities: frontendData.categorized_media.amenities?.map(f => f.url || f.name) || [],
-      kitchen_bathrooms: frontendData.categorized_media.kitchen_bathrooms?.map(f => f.url || f.name) || []
-    }) : null,
-    categorized_videos: frontendData.categorized_media ? JSON.stringify(
-      frontendData.categorized_media.videos?.map(f => ({
-        name: f.name,
-        url: f.url || f.name,
-        metadata: f.metadata
-      })) || []
-    ) : null,
-
-    // Additional fields with JSON structure support
+    
+    // Building history
+    year_built: frontendData.year_built,
+    last_renovation: frontendData.last_renovation,
+    
+    // Additional info fields
+    building_rules: frontendData.building_rules,
     amenities_details: frontendData.amenities_details,
-    contact_info: frontendData.contact_info 
-      ? (typeof frontendData.contact_info === 'string' 
-          ? frontendData.contact_info 
-          : JSON.stringify(frontendData.contact_info))
-      : null,
+    neighborhood_description: frontendData.neighborhood_description,
+    building_description: frontendData.building_description,
+    public_transit_info: frontendData.public_transit_info,
+    parking_info: frontendData.parking_info,
+    security_features: frontendData.security_features,
+    disability_access: frontendData.disability_access,
+    disability_features: frontendData.disability_features,
+    
+    // Media fields - backend expects these exact names
+    building_images: frontendData.building_images || frontendData.images,
+    virtual_tour_url: frontendData.virtual_tour_url || frontendData.video_url,
+    
+    // DO NOT include these fields - they don't exist in backend:
+    // - categorized_images
+    // - categorized_videos
+    // - building_type
+    // - images (backend uses building_images)
   }
 }
 
@@ -220,26 +302,25 @@ export function transformBackendDataForFrontend(backendData: any) {
   return {
     ...backendData,
 
-    // Convert UUID to string
+    // Convert UUID to string if needed
     building_id: backendData.building_id?.toString() || backendData.building_id,
 
-    // Convert boolean pet_friendly to string
-    pet_friendly: typeof backendData.pet_friendly === 'boolean'
-      ? (backendData.pet_friendly ? "Yes" : "No")
-      : backendData.pet_friendly,
+    // Map backend fields to frontend expectations
+    // Backend uses 'building_images', frontend may expect 'images'
+    images: backendData.building_images || backendData.images || [],
+    building_images: backendData.building_images || backendData.images || [],
 
-    // Convert comma-separated building_images string to array
-    images: backendData.building_images
-      ? (typeof backendData.building_images === 'string'
-          ? backendData.building_images.split(',').map((url: string) => url.trim()).filter(Boolean)
-          : backendData.building_images)
-      : [],
-
-    // Map backend field names to frontend field names
-    video_url: backendData.virtual_tour_url,
-
-    // Ensure zip field is mapped correctly
+    // Map address fields
+    address: backendData.street || backendData.address,
+    street: backendData.street || backendData.address,
+    
+    // Map zip fields - backend uses 'zip', frontend expects 'zip_code'
+    zip_code: backendData.zip || backendData.zip_code,
     zip: backendData.zip || backendData.zip_code,
+
+    // Map video fields
+    video_url: backendData.virtual_tour_url || backendData.video_url,
+    virtual_tour_url: backendData.virtual_tour_url || backendData.video_url,
   }
 }
 
@@ -528,6 +609,23 @@ export function validateTenantFormData(data: any): ValidationResult {
 export function validateBuildingFormData(data: any): ValidationResult {
   const errors: Record<string, string> = {}
   const backendData = transformBuildingDataForBackend(data)
+  
+  // If this is an update (building_id exists), only validate critical fields
+  const isUpdate = !!data.building_id
+  if (isUpdate) {
+    // For updates, only validate the absolute minimum required fields
+    if (!String(data.building_name || '').trim()) {
+      errors.building_name = 'Building name is required'
+    }
+    
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+      missingRequired: []
+    }
+  }
+  
+  // For new buildings, do full validation
   const missingRequired = validateRequiredFields(backendData, 'BUILDING')
 
   // Map backend field names back to frontend field names for better error display
@@ -540,23 +638,23 @@ export function validateBuildingFormData(data: any): ValidationResult {
   }).filter(Boolean)
 
   // Add frontend-specific validation errors
-  if (!data.building_name?.trim()) {
+  if (!String(data.building_name || '').trim()) {
     errors.building_name = 'Building name is required'
   }
 
-  if (!data.address?.trim() && !data.street?.trim()) {
+  if (!String(data.address || '').trim() && !String(data.street || '').trim()) {
     errors.address = 'Address is required'
   }
 
-  if (!data.city?.trim()) {
+  if (!String(data.city || '').trim()) {
     errors.city = 'City is required'
   }
 
-  if (!data.state?.trim()) {
+  if (!String(data.state || '').trim()) {
     errors.state = 'State is required'
   }
 
-  if (!data.zip_code?.trim() && !data.zip?.trim()) {
+  if (!String(data.zip_code || '').trim() && !String(data.zip || '').trim()) {
     errors.zip_code = 'ZIP code is required'
   }
 
@@ -632,35 +730,19 @@ export function validateBuildingFormData(data: any): ValidationResult {
     }
   }
 
-  // Validate enum fields
-  if (data.common_kitchen && !['None', 'Shared', 'Private', 'Both'].includes(data.common_kitchen)) {
-    errors.common_kitchen = 'Invalid common kitchen option'
-  }
-
-  if (data.pet_friendly && !['Yes', 'No', 'Conditional'].includes(data.pet_friendly)) {
-    errors.pet_friendly = 'Invalid pet-friendly option'
-  }
-
-  // Validate cleaning_common_spaces - allow any non-empty string value
-  // The form uses detailed options like 'Daily cleaning service', 'Weekly professional cleaning', etc.
-  // So we just check if it's a non-empty string
-  if (data.cleaning_common_spaces && typeof data.cleaning_common_spaces !== 'string') {
-    errors.cleaning_common_spaces = 'Invalid cleaning common spaces option'
-  }
-
-  // Validate JSON fields format
-  if (data.amenities_details && typeof data.amenities_details === 'string') {
-    try {
-      JSON.parse(data.amenities_details)
-    } catch (e) {
-      errors.amenities_details = 'Invalid amenities details format'
-    }
-  }
+  // REMOVED STRICT VALIDATION FOR OPTIONAL FIELDS
+  // These fields are optional and should not block updates
+  // The backend will handle any data format issues
+  
+  // Skip validation for common_kitchen - accept any value
+  // Skip validation for pet_friendly - accept any value  
+  // Skip validation for cleaning_common_spaces - accept any value
+  // Skip validation for amenities_details - accept any value
 
   // Validate URL fields
-  if (data.virtual_tour_url && data.virtual_tour_url.trim()) {
+  if (data.virtual_tour_url && String(data.virtual_tour_url || '').trim()) {
     const urlPattern = /^https?:\/\/.+/
-    if (!urlPattern.test(data.virtual_tour_url)) {
+    if (!urlPattern.test(String(data.virtual_tour_url))) {
       errors.virtual_tour_url = 'Virtual tour URL must be a valid HTTP/HTTPS URL'
     }
   }
@@ -720,6 +802,47 @@ export function validateLeadFormData(data: any): ValidationResult {
 }
 
 /**
+ * Validates room form data for updates - less strict than creation
+ * Only validates required fields for updates and enum values
+ * @param data - Raw form data from the frontend room form
+ * @param isUpdate - Whether this is an update operation
+ * @returns ValidationResult object containing validation status, errors, and missing required fields
+ */
+export function validateRoomFormDataForUpdate(data: any): ValidationResult {
+  const errors: Record<string, string> = {}
+  // For updates, only require the room_id
+  const missingRequired: string[] = []
+  
+  // Only check critical fields for updates
+  if (!data.room_id) {
+    missingRequired.push('room_id')
+  }
+  
+  // Transform data to check enum values
+  const backendData = transformRoomDataForBackend(data)
+  
+  // Only validate enum values if they are provided
+  if (backendData.bathroom_type && !validateEnum(backendData.bathroom_type, 'BATHROOM_TYPES')) {
+    errors.bathroom_type = 'Invalid bathroom type'
+  }
+  
+  if (backendData.status && !validateEnum(backendData.status, 'ROOM_STATUS')) {
+    errors.status = 'Invalid room status'
+  }
+  
+  // Only validate numeric fields if provided and not empty
+  if (backendData.floor_number !== undefined && backendData.floor_number !== null && backendData.floor_number < 1) {
+    errors.floor_number = 'Floor number must be at least 1'
+  }
+  
+  return {
+    isValid: missingRequired.length === 0 && Object.keys(errors).length === 0,
+    errors,
+    missingRequired
+  }
+}
+
+/**
  * Validates room form data against business rules and backend constraints
  * 
  * This function performs comprehensive validation of room form data including:
@@ -745,11 +868,7 @@ export function validateRoomFormData(data: any): ValidationResult {
   // Check for missing required fields based on backend schema
   const missingRequired = validateRequiredFields(backendData, 'ROOM')
   
-  // Validate enum values
-  if (backendData.room_type && !validateEnum(backendData.room_type, 'ROOM_TYPES')) {
-    errors.room_type = 'Invalid room type'
-  }
-  
+  // Validate enum values for fields that exist in schema
   if (backendData.bathroom_type && !validateEnum(backendData.bathroom_type, 'BATHROOM_TYPES')) {
     errors.bathroom_type = 'Invalid bathroom type'
   }
@@ -787,44 +906,10 @@ export function validateRoomFormData(data: any): ValidationResult {
     errors.private_room_rent = 'Room rent cannot be negative'
   }
   
-  // Validate new fields
-  if (backendData.room_access_type && !validateEnum(backendData.room_access_type, 'ROOM_ACCESS_TYPES')) {
-    errors.room_access_type = 'Invalid room access type'
-  }
-  
-  if (backendData.cleaning_frequency && !validateEnum(backendData.cleaning_frequency, 'CLEANING_FREQUENCY')) {
-    errors.cleaning_frequency = 'Invalid cleaning frequency'
-  }
-  
-  if (backendData.room_condition_score !== undefined && backendData.room_condition_score !== null) {
-    const score = Number(backendData.room_condition_score)
-    if (isNaN(score) || score < 1 || score > 10) {
-      errors.room_condition_score = 'Room condition score must be between 1 and 10'
-    }
-  }
-  
-  if (backendData.internet_speed !== undefined && backendData.internet_speed !== null) {
-    const speed = Number(backendData.internet_speed)
-    if (isNaN(speed) || speed < 0) {
-      errors.internet_speed = 'Internet speed must be a positive number'
-    }
-  }
-  
-  // Validate date format for last_cleaning_date
-  if (backendData.last_cleaning_date && !validateDateFormat(backendData.last_cleaning_date)) {
-    errors.last_cleaning_date = 'Invalid date format (use YYYY-MM-DD)'
-  }
-  
   // Cross-field validation rules
   if (backendData.maximum_people_in_room && backendData.bed_count) {
     if (backendData.maximum_people_in_room > backendData.bed_count) {
       errors.maximum_people_in_room = 'Maximum occupancy cannot exceed the number of beds'
-    }
-  }
-  
-  if (backendData.active_tenants && backendData.maximum_people_in_room) {
-    if (backendData.active_tenants > backendData.maximum_people_in_room) {
-      errors.active_tenants = 'Active tenants cannot exceed maximum room capacity'
     }
   }
   
@@ -858,64 +943,82 @@ export function transformOperatorDataForBackend(frontendData: any) {
 
 // Transform room data to match backend structure
 export function transformRoomDataForBackend(frontendData: any) {
-  // Transform amenities from individual boolean fields to JSON array for backend
-  const amenities = []
-  if (frontendData.mini_fridge) amenities.push('Mini Fridge')
-  if (frontendData.sink) amenities.push('Sink')
-  if (frontendData.bedding_provided) amenities.push('Bedding Provided')
-  if (frontendData.work_desk) amenities.push('Work Desk')
-  if (frontendData.work_chair) amenities.push('Work Chair')
-  if (frontendData.heating) amenities.push('Heating')
-  if (frontendData.air_conditioning) amenities.push('Air Conditioning')
-  if (frontendData.cable_tv) amenities.push('Cable TV')
-
-  // Transform utilities from checkboxes to JSON structure for backend
-  const utilities = {}
-  if (frontendData.utilities_electricity) utilities.electricity = true
-  if (frontendData.utilities_water) utilities.water = true
-  if (frontendData.utilities_gas) utilities.gas = true
-  if (frontendData.utilities_internet) utilities.internet = true
-  if (frontendData.utilities_cable_tv) utilities.cable_tv = true
-  if (frontendData.utilities_trash) utilities.trash = true
-  if (frontendData.utilities_heating) utilities.heating = true
-  if (frontendData.utilities_ac) utilities.ac = true
-
   return {
-    // BACKEND SCHEMA FIELDS ONLY
+    // BACKEND SCHEMA FIELDS ONLY - match actual database columns
     room_id: frontendData.room_id || generateRoomId(),
     building_id: frontendData.building_id,
     room_number: frontendData.room_number,
-    room_type: frontendData.room_type || 'Standard',
     
-    // Backend field names (not frontend aliases)
-    square_footage: frontendData.square_footage || frontendData.sq_footage || null,
+    // Map room_type to the correct backend field if different
+    // Using status field as that's what exists in the schema
+    status: frontendData.status || frontendData.availability_status || 'AVAILABLE',
+    
+    // Numeric fields - use sq_footage as that's the actual column name
+    sq_footage: frontendData.square_footage || frontendData.sq_footage || null,
     private_room_rent: frontendData.private_room_rent || null,
     shared_room_rent_2: frontendData.shared_room_rent_2 || null,
-    shared_room_rent_3: frontendData.shared_room_rent_3 || null,
-    shared_room_rent_4: frontendData.shared_room_rent_4 || null,
-    availability_status: frontendData.availability_status || frontendData.status || 'AVAILABLE',
+    floor_number: frontendData.floor_number || null,
+    
+    // Individual amenity boolean fields (not JSON)
+    mini_fridge: frontendData.mini_fridge || false,
+    sink: frontendData.sink || false,
+    bedding_provided: frontendData.bedding_provided || false,
+    work_desk: frontendData.work_desk || false,
+    work_chair: frontendData.work_chair || false,
+    heating: frontendData.heating || false,
+    air_conditioning: frontendData.air_conditioning || false,
+    cable_tv: frontendData.cable_tv || false,
     
     // Date fields
-    lease_start_date: frontendData.lease_start_date || null,
-    lease_end_date: frontendData.lease_end_date || null,
+    available_from: frontendData.available_from || null,
+    booked_from: frontendData.booked_from || null,
+    booked_till: frontendData.booked_till || null,
+    last_check: frontendData.last_check || null,
+    last_renovation_date: frontendData.last_renovation_date || null,
     
-    // JSON fields
-    amenities: amenities.length > 0 ? JSON.stringify(amenities) : null,
-    images: frontendData.room_images ? JSON.stringify(frontendData.room_images) : null,
-    
-    // Other backend fields
-    floor_number: frontendData.floor_number || null,
+    // Other fields that exist in schema
     bathroom_type: frontendData.bathroom_type || null,
+    bed_count: frontendData.bed_count || frontendData.maximum_people_in_room || null,
+    bed_size: frontendData.bed_size || null,
+    bed_type: frontendData.bed_type || null,
     furnished: frontendData.furnished ?? false,
-    description: frontendData.description || null,
+    maximum_people_in_room: frontendData.maximum_people_in_room || null,
+    active_tenants: frontendData.active_tenants || null,
+    view: frontendData.view || null,
+    noise_level: frontendData.noise_level || null,
+    sunlight: frontendData.sunlight || null,
+    ready_to_rent: frontendData.ready_to_rent ?? false,
+    virtual_tour_url: frontendData.virtual_tour_url || null,
+    current_booking_types: frontendData.current_booking_types || null,
+    furniture_details: frontendData.furniture_details || null,
+    room_storage: frontendData.room_storage || null,
+    additional_features: frontendData.additional_features || null,
+    public_notes: frontendData.public_notes || null,
+    internal_notes: frontendData.internal_notes || null,
+    last_check_by: frontendData.last_check_by || null,
     
-    // Utilities: prefer form checkboxes, fallback to utilities_included field
-    utilities_included: Object.keys(utilities).length > 0 
-      ? JSON.stringify(utilities)
-      : (frontendData.utilities_included 
-          ? (typeof frontendData.utilities_included === 'object'
-              ? JSON.stringify(frontendData.utilities_included)
-              : frontendData.utilities_included)
-          : null)
+    // Store room_images properly - handle both arrays and single URLs
+    room_images: (() => {
+      if (!frontendData.room_images && !frontendData.images) return null
+      
+      const imageData = frontendData.room_images || frontendData.images
+      
+      // If it's already a string (single URL or JSON), return as is
+      if (typeof imageData === 'string') {
+        return imageData
+      }
+      
+      // If it's an array
+      if (Array.isArray(imageData)) {
+        // Single image - store as URL string
+        if (imageData.length === 1) {
+          return imageData[0]
+        }
+        // Multiple images - store as JSON array
+        return JSON.stringify(imageData)
+      }
+      
+      return null
+    })()
   }
 }

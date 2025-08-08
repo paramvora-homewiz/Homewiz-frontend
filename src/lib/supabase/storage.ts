@@ -63,6 +63,7 @@ export async function uploadFile(options: FileUploadOptions): Promise<FileUpload
 
     console.log(`📤 Starting upload to bucket: ${bucketName}, path: ${path}`)
     console.log(`📄 File details: ${file.name} (${file.type}, ${formatFileSize(file.size)})`)
+    console.log(`📄 Upload options:`, { bucket, bucketName, upsert, hasMetadata: !!metadata })
 
     // Validate file type
     if (!isValidFileType(file, bucket)) {

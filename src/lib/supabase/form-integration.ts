@@ -474,6 +474,56 @@ export class RoomFormIntegration {
   }
 
   /**
+   * Update only room images without touching any other fields
+   * This uses partial update pattern - only room_images field is sent
+   */
+  static async updateRoomImages(roomId: string, imageUrls: string[] | null): Promise<FormSubmissionResult> {
+    try {
+      // Handle different storage formats
+      let roomImagesValue: string | null = null
+      
+      if (imageUrls && imageUrls.length > 0) {
+        // If single image, store as URL string (matches existing data format)
+        if (imageUrls.length === 1) {
+          roomImagesValue = imageUrls[0]
+        } else {
+          // Multiple images stored as JSON array
+          roomImagesValue = JSON.stringify(imageUrls)
+        }
+      }
+      
+      // Only send room_images field in the update
+      const roomData: RoomUpdate = {
+        room_images: roomImagesValue
+      }
+
+      const result = await databaseService.rooms.update(roomId, roomData)
+
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data,
+          message: imageUrls && imageUrls.length > 0 
+            ? `Successfully updated ${imageUrls.length} room image${imageUrls.length > 1 ? 's' : ''}`
+            : 'Room images cleared successfully'
+        }
+      } else {
+        const enhancedError = handleDatabaseError(result.error, 'room_image_update')
+        return {
+          success: false,
+          error: enhancedError.userMessage || 'Failed to update room images'
+        }
+      }
+    } catch (error) {
+      const enhancedError = handleDatabaseError(error, 'room_image_update')
+      return {
+        success: false,
+        error: enhancedError.userMessage || 'An unexpected error occurred while updating images'
+      }
+    }
+  }
+
+  /**
    * Validate room form data
    */
   private static validateRoomData(formData: any, isUpdate = false): { isValid: boolean; errors: Record<string, string> } {
