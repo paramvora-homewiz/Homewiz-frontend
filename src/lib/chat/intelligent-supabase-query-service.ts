@@ -6,8 +6,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
-import SimpleChatService from '@/lib/supabase/chat-service-simple';
-import { ComprehensiveChatService } from '@/lib/supabase/comprehensive-chat-service';
+import { SupabaseChatService } from '@/lib/supabase/chat-service';
 
 // Initialize services
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
@@ -184,7 +183,7 @@ Return ONLY the JSON object:`;
       return { count };
     }
 
-    // Use SimpleChatService for room searches
+    // Use SupabaseChatService for room searches
     const searchParams = {
       priceMin: intent.filters.priceMin,
       priceMax: intent.filters.priceMax,
@@ -196,9 +195,9 @@ Return ONLY the JSON object:`;
 
     let result;
     if (intent.action === 'list' || intent.action === 'search') {
-      result = await SimpleChatService.searchRooms(searchParams);
+      result = await SupabaseChatService.searchRooms(searchParams);
     } else {
-      result = await SimpleChatService.getAllRooms(10);
+      result = await SupabaseChatService.getAllRooms(10);
     }
     
     console.log('🏠 Room query result:', {
