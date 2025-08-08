@@ -3,10 +3,12 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Home, Clock, Shield, Star, ArrowRight, Upload, CheckCircle } from 'lucide-react'
+import { Home, Clock, Shield, Star, ArrowRight, Upload, CheckCircle, MessageSquare, Building } from 'lucide-react'
+import { useFormModal } from '@/hooks/useFormModal'
 import Link from 'next/link'
 
 export function LandingPage() {
+  const { openModal } = useFormModal()
   const features = [
     {
       icon: Clock,
@@ -93,15 +95,22 @@ export function LandingPage() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4 justify-center items-center px-4"
             >
-              <Link href="/forms">
+              <Link href="/explore">
                 <Button size="xl" variant="professional" className="group shadow-xl hover:shadow-2xl">
-                  Try Demo Now
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  Explore Properties
+                  <Building className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link href="/chat">
+                <Button size="xl" variant="professional" className="group shadow-xl hover:shadow-2xl">
+                  Chat with AI Assistant
+                  <MessageSquare className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link href="/forms">
                 <Button size="xl" variant="outline" className="shadow-lg hover:shadow-xl">
-                  View Forms Dashboard
+                  Try Demo Forms
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </motion.div>
@@ -198,12 +207,15 @@ export function LandingPage() {
             <p className="text-xl text-blue-100 mb-8">
               Join thousands of happy renters who found their perfect home with HomeWiz.
             </p>
-            <Link href="/forms">
-              <Button size="xl" variant="secondary" className="group shadow-xl hover:shadow-2xl bg-white/90 backdrop-blur-sm">
-                Try Demo Application
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            <Button 
+              size="xl" 
+              variant="secondary" 
+              className="group shadow-xl hover:shadow-2xl bg-white/90 backdrop-blur-sm"
+              onClick={openModal}
+            >
+              Try Demo Application
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </motion.div>
         </div>
       </section>

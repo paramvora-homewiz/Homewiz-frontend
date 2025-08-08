@@ -15,6 +15,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import BuildingForm from '@/components/forms/BuildingForm'
 import { databaseService } from '@/lib/supabase/database'
 import { showSuccessMessage, showWarningMessage } from '@/lib/error-handler'
+import { transformBackendDataForFrontend } from '@/lib/backend-sync'
 import { Building as BuildingIcon, Save, X } from 'lucide-react'
 import type { Building } from '@/lib/supabase/types'
 
@@ -56,6 +57,15 @@ export default function EditBuildingModal({
         )
         onOpenChange(false)
         onSuccess?.()
+        
+        // Return success response with building data for image upload handling
+        return { 
+          success: true, 
+          data: { 
+            building_id: building!.building_id,
+            ...response.data 
+          }
+        }
       } else {
         throw new Error(response.error?.message || 'Failed to update building')
       }
@@ -70,9 +80,6 @@ export default function EditBuildingModal({
     } finally {
       setIsLoading(false)
     }
-    
-    // Return success response
-    return { success: true }
   }
 
   const handleClose = () => {
@@ -105,7 +112,10 @@ export default function EditBuildingModal({
           <BuildingForm
             key={formKey} // Force re-render with new key
             initialData={{
-              ...building,
+              // Transform backend data to frontend format first
+              ...transformBackendDataForFrontend(building),
+              // Explicitly preserve building_id for update operations
+              building_id: building.building_id,
               // Convert operator_id to match form expectations
               operator_id: building.operator_id ? Number(building.operator_id) : undefined,
               property_manager: building.property_manager ? Number(building.property_manager) : undefined,
@@ -121,7 +131,10 @@ export default function EditBuildingModal({
                 ? building.amenities 
                 : (typeof building.amenities === 'string' && building.amenities.startsWith('[')
                     ? JSON.parse(building.amenities)
-                    : [])
+                    : []),
+              // Ensure images are properly mapped
+              images: building.building_images || building.images || [],
+              building_images: building.building_images || building.images || []
             }}
             onSubmit={handleSubmit}
             onCancel={handleClose}
