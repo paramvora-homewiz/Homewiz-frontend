@@ -14,6 +14,7 @@ interface RoomData {
   furnished?: boolean
   bathroom_included?: boolean
   room_images?: any // Can be string, array, or null
+  // Support for nested building data (existing format)
   buildings?: {
     building_name: string
     city: string
@@ -27,6 +28,12 @@ interface RoomData {
     state: string
     building_images?: any
   }
+  // Support for flat fields from backend
+  building_name?: string
+  building_address?: string
+  building_city?: string
+  building_state?: string
+  building_id?: string
 }
 
 interface RoomCardsProps {
@@ -150,11 +157,11 @@ export default function RoomCards({ rooms, showExploreLink = true, onRoomClick }
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                       Room {room.room_number}
                     </h4>
-                    {/* Support both 'buildings' (plural) and 'building' (singular) */}
-                    {((room.buildings && room.buildings.building_name) || (room.building && room.building.building_name)) && (
+                    {/* Support nested formats and flat fields */}
+                    {(room.buildings?.building_name || room.building?.building_name || room.building_name) && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
-                        {room.buildings?.building_name || room.building?.building_name}
+                        {room.buildings?.building_name || room.building?.building_name || room.building_name}
                       </p>
                     )}
                   </div>
