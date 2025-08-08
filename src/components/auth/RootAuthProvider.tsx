@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { AuthProvider } from './AuthProvider'
-import config from '../../lib/config'
+import React from 'react';
+import { AuthProvider } from './AuthProvider';
+import config from '../../lib/config';
 
 interface RootAuthProviderProps {
   children: React.ReactNode

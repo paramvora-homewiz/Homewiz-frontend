@@ -145,9 +145,19 @@ export default function InteractiveMessageRenderer({ content, data, metadata, on
   // Detect analytics/insights data
   const isFinancialReport = data?.insight_type === 'FINANCIAL' || 
                            metadata?.result?.insight_type === 'FINANCIAL' ||
+                           metadata?.result?.result?.insight_type === 'FINANCIAL' ||
                            data?.success && data?.data?.by_building;
-  const isAnalyticsReport = data?.insight_type || metadata?.result?.insight_type;
-  const analyticsData = data?.data || metadata?.result?.data || null;
+  const isAnalyticsReport = data?.insight_type || metadata?.result?.insight_type || metadata?.result?.result?.insight_type;
+  const analyticsData = metadata?.result?.result?.data || data?.data || metadata?.result?.data || null;
+  
+  // Debug logging
+  console.log('🔍 Analytics Detection:', {
+    isAnalyticsReport,
+    analyticsData,
+    metadataStructure: metadata,
+    hasResultResult: !!metadata?.result?.result,
+    insightType: metadata?.result?.result?.insight_type
+  });
 
   // Handle building click - show details first
   const handleBuildingClick = (building: BuildingData) => {
@@ -807,7 +817,7 @@ export default function InteractiveMessageRenderer({ content, data, metadata, on
   const renderAnalyticsReport = () => {
     if (!analyticsData || !isAnalyticsReport) return null;
 
-    const insightType = data?.insight_type || metadata?.result?.insight_type || '';
+    const insightType = metadata?.result?.result?.insight_type || data?.insight_type || metadata?.result?.insight_type || '';
     
     // Handle different insight types
     switch(insightType.toUpperCase()) {
@@ -1022,7 +1032,16 @@ export default function InteractiveMessageRenderer({ content, data, metadata, on
 
   // Render Tenant Report
   const renderTenantReport = () => {
-    return <div className="mt-6 p-4 bg-blue-50 rounded-lg">Tenant metrics report coming soon...</div>;
+    if (!analyticsData) return null;
+    
+    // Import TenantMetricsRenderer dynamically
+    const TenantMetricsRenderer = React.lazy(() => import('./TenantMetricsRenderer'));
+    
+    return (
+      <React.Suspense fallback={<div className="mt-6 p-4 bg-blue-50 rounded-lg">Loading tenant metrics...</div>}>
+        <TenantMetricsRenderer data={analyticsData} rawData={analyticsData} />
+      </React.Suspense>
+    );
   };
 
   // Render Room Performance Report
