@@ -1,11 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
-import { Database } from './database'
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export interface RoomSearchParams {
   priceMin?: number
@@ -132,7 +131,7 @@ export class SupabaseChatService {
         filteredData = filteredData.filter(room => {
           const buildingAmenities = room.buildings?.amenities || []
           return params.amenities!.every(amenity => 
-            buildingAmenities.some(ba => ba.toLowerCase().includes(amenity.toLowerCase()))
+            buildingAmenities.some((ba: string) => ba.toLowerCase().includes(amenity.toLowerCase()))
           )
         })
       }
@@ -326,6 +325,52 @@ export class SupabaseChatService {
     } catch (error) {
       console.error('Error scheduling tour:', error)
       return false
+    }
+  }
+
+  // Get all rooms with limit
+  static async getAllRooms(limit: number = 10): Promise<RoomInfo[]> {
+    try {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select(`
+          *,
+          buildings (
+            building_id,
+            building_name,
+            address,
+            city,
+            state,
+            zip_code,
+            total_units,
+            available_units,
+            amenities,
+            year_built,
+            parking_available,
+            elevator,
+            gym,
+            pool,
+            laundry_in_building,
+            pets_allowed,
+            virtual_tour_url,
+            contact_phone,
+            contact_email,
+            building_images,
+            building_videos
+          )
+        `)
+        .eq('ready_to_rent', true)
+        .limit(limit)
+
+      if (error) throw error
+
+      return (data || []).map(room => ({
+        ...room,
+        building: room.buildings
+      }))
+    } catch (error) {
+      console.error('Error getting all rooms:', error)
+      throw error
     }
   }
 }
