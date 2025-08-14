@@ -1,0 +1,200 @@
+/* Professional Light Theme Override */
+/* This file ensures all components use a professional light theme regardless of system preferences */
+
+/* Force light theme globally */
+html,
+html.dark,
+html.light {
+  /* Override any dark theme variables */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.75rem;
+}
+
+/* Force light theme for body */
+body,
+.dark body,
+html.dark body {
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f0f9ff 100%) !important;
+  color: #1e293b !important;
+}
+
+/* Override dark mode classes */
+.dark .bg-gray-900,
+.dark .bg-gray-800,
+.dark .bg-gray-700 {
+  background-color: #ffffff !important;
+}
+
+.dark .text-white,
+.dark .text-gray-100,
+.dark .text-gray-200 {
+  color: #1e293b !important;
+}
+
+.dark .border-gray-700,
+.dark .border-gray-600 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Professional component overrides */
+.dark .card-premium,
+.dark .EnhancedCard {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.dark .glass-effect {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(209, 213, 219, 0.4) !important;
+}
+
+/* Button overrides */
+.dark .btn-secondary {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #2563eb !important;
+  border-color: #bae6fd !important;
+}
+
+.dark .btn-secondary:hover {
+  background: #eff6ff !important;
+  border-color: #60a5fa !important;
+}
+
+/* Input overrides */
+.dark .input-premium,
+.dark .input-professional {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #e5e7eb !important;
+  color: #1e293b !important;
+}
+
+.dark .input-premium:focus,
+.dark .input-professional:focus {
+  background: #ffffff !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px #dbeafe !important;
+}
+
+/* Navigation overrides */
+.dark .nav-professional {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Form overrides */
+.dark .form-professional {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9)) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Status indicator overrides */
+.dark .status-professional {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .dark .card-premium,
+  .dark .EnhancedCard {
+    margin: 0.5rem !important;
+    padding: 1rem !important;
+  }
+  
+  .dark .hero-professional {
+    padding: 2rem 1rem !important;
+  }
+  
+  .dark .section-professional {
+    padding: 2rem 1rem !important;
+    margin: 1rem 0 !important;
+  }
+}
+
+/* Ensure all text is readable */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark p,
+.dark span,
+.dark div {
+  color: inherit !important;
+}
+
+/* Override any remaining dark backgrounds */
+.dark [class*="bg-gray-"],
+.dark [class*="bg-slate-"],
+.dark [class*="bg-zinc-"] {
+  background-color: #ffffff !important;
+}
+
+/* Ensure proper contrast for interactive elements */
+.dark button:not(.btn-primary):not(.btn-professional):not([class*="gradient"]) {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
+}
+
+.dark button:not(.btn-primary):not(.btn-professional):not([class*="gradient"]):hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Professional animations remain smooth */
+.dark * {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* Ensure backdrop blur effects work properly */
+.dark .backdrop-blur-sm,
+.dark .backdrop-blur,
+.dark .backdrop-blur-md,
+.dark .backdrop-blur-lg {
+  backdrop-filter: blur(8px) saturate(180%) !important;
+}
+
+/* Professional shadows for light theme */
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dark .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Ensure professional appearance on all screen sizes */
+@media (min-width: 1024px) {
+  .dark .hero-professional {
+    padding: 4rem 2rem !important;
+  }
+  
+  .dark .section-professional {
+    padding: 3rem 2rem !important;
+  }
+}

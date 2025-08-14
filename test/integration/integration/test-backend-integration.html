@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backend Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>HomeWiz Backend Integration Test</h1>
+    
+    <div id="results"></div>
+    
+    <script>
+        async function testBackendIntegration() {
+            const results = document.getElementById('results');
+            
+            // Test 1: Backend Health Check
+            try {
+                results.innerHTML += '<div class="test info"><h3>Test 1: Backend Health Check</h3><p>Testing backend connection...</p></div>';
+                
+                const healthResponse = await fetch('http://localhost:8000/');
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    results.innerHTML += '<div class="test success"><h3>✅ Backend Health Check Passed</h3><pre>' + JSON.stringify(healthData, null, 2) + '</pre></div>';
+                } else {
+                    results.innerHTML += '<div class="test error"><h3>❌ Backend Health Check Failed</h3><p>Status: ' + healthResponse.status + '</p></div>';
+                    return;
+                }
+            } catch (error) {
+                results.innerHTML += '<div class="test error"><h3>❌ Backend Connection Failed</h3><p>' + error.message + '</p></div>';
+                return;
+            }
+            
+            // Test 2: Query Endpoint Structure
+            try {
+                results.innerHTML += '<div class="test info"><h3>Test 2: Query Endpoint Structure</h3><p>Testing query endpoint data structure...</p></div>';
+                
+                const queryResponse = await fetch('http://localhost:8000/query/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: 'Show me available rooms' })
+                });
+                
+                if (queryResponse.ok) {
+                    const queryData = await queryResponse.json();
+                    
+                    // Analyze data structure
+                    const analysis = {
+                        hasSuccess: !!queryData.success,
+                        hasFunctionCalled: !!queryData.function_called,
+                        hasResult: !!queryData.result,
+                        hasResultResponse: !!queryData.result?.response,
+                        hasResultData: !!queryData.result?.data,
+                        resultDataLength: queryData.result?.data?.length || 0,
+                        resultDataIsArray: Array.isArray(queryData.result?.data),
+                        sampleRoomKeys: queryData.result?.data?.[0] ? Object.keys(queryData.result.data[0]) : []
+                    };
+                    
+                    results.innerHTML += '<div class="test success"><h3>✅ Query Endpoint Structure Analysis</h3>';
+                    results.innerHTML += '<h4>Data Structure Analysis:</h4><pre>' + JSON.stringify(analysis, null, 2) + '</pre>';
+                    results.innerHTML += '<h4>Sample Response (first 500 chars):</h4><pre>' + JSON.stringify(queryData, null, 2).substring(0, 500) + '...</pre></div>';
+                    
+                    // Test 3: Frontend Data Extraction Simulation
+                    results.innerHTML += '<div class="test info"><h3>Test 3: Frontend Data Extraction Simulation</h3><p>Simulating frontend data extraction logic...</p></div>';
+                    
+                    // Simulate what the frontend does
+                    const metadata = {
+                        result: queryData.result || queryData,
+                        backend_success: true,
+                        function_called: queryData.function_called,
+                        data: queryData.result?.data || queryData.data,
+                        rooms: queryData.result?.data || queryData.data,
+                        stats: queryData.result?.stats || queryData.stats,
+                        ...queryData
+                    };
+                    
+                    // Test room extraction logic
+                    let rooms = [];
+                    if (metadata?.rooms && Array.isArray(metadata.rooms)) {
+                        rooms = metadata.rooms;
+                    } else if (metadata?.data && Array.isArray(metadata.data)) {
+                        rooms = metadata.data;
+                    } else if (metadata?.result?.data && Array.isArray(metadata.result.data)) {
+                        rooms = metadata.result.data;
+                    }
+                    
+                    const extractionResults = {
+                        roomsFound: rooms.length,
+                        extractionSource: metadata?.rooms ? 'metadata.rooms' : 
+                                        metadata?.data ? 'metadata.data' : 
+                                        metadata?.result?.data ? 'metadata.result.data' : 'none',
+                        sampleRoom: rooms[0] ? {
+                            room_number: rooms[0].room_number,
+                            building_name: rooms[0].building_name,
+                            private_room_rent: rooms[0].private_room_rent,
+                            status: rooms[0].status
+                        } : null
+                    };
+                    
+                    if (rooms.length > 0) {
+                        results.innerHTML += '<div class="test success"><h3>✅ Frontend Data Extraction Successful</h3><pre>' + JSON.stringify(extractionResults, null, 2) + '</pre></div>';
+                    } else {
+                        results.innerHTML += '<div class="test error"><h3>❌ Frontend Data Extraction Failed</h3><pre>' + JSON.stringify(extractionResults, null, 2) + '</pre></div>';
+                    }
+                    
+                } else {
+                    results.innerHTML += '<div class="test error"><h3>❌ Query Endpoint Failed</h3><p>Status: ' + queryResponse.status + '</p></div>';
+                }
+            } catch (error) {
+                results.innerHTML += '<div class="test error"><h3>❌ Query Test Failed</h3><p>' + error.message + '</p></div>';
+            }
+        }
+        
+        // Run tests when page loads
+        testBackendIntegration();
+    </script>
+</body>
+</html>
