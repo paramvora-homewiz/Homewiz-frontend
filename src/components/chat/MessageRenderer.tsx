@@ -5,6 +5,7 @@ import { InlineOccupancyChart } from './analytics/InlineOccupancyChart';
 import { InlineRevenueChart } from './analytics/InlineRevenueChart';
 import { InlineAnalyticsGrid } from './analytics/InlineAnalyticsGrid';
 import { InlinePropertyComparison } from './analytics/InlinePropertyComparison';
+import SmartDataVisualizer from './SmartDataVisualizer';
 
 interface MessageRendererProps {
   content: string;
@@ -17,6 +18,35 @@ export function MessageRenderer({ content, metadata, role }: MessageRendererProp
   const hasAnalyticsData = metadata?.analytics_data || metadata?.has_analytics;
   const analyticsType = metadata?.analytics_type;
   const analyticsData = metadata?.analytics_data;
+  
+  // Check if content contains raw JSON data
+  const containsRawData = React.useMemo(() => {
+    // Check if content looks like JSON
+    const trimmedContent = content.trim();
+    return (trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
+           (trimmedContent.startsWith('[') && trimmedContent.endsWith(']')) ||
+           content.includes('"Analytics Data"') ||
+           content.includes('"total_leads"') ||
+           content.includes('"conversion_rate"') ||
+           content.includes('"revenue"') ||
+           content.includes('"occupancy"');
+  }, [content]);
+  
+  // Try to parse JSON from content
+  const parsedContentData = React.useMemo(() => {
+    if (!containsRawData) return null;
+    
+    try {
+      // Try to extract JSON from the content
+      const jsonMatch = content.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      // If parsing fails, return null
+    }
+    return null;
+  }, [content, containsRawData]);
 
   // For user messages, just render the content
   if (role === 'user') {
@@ -70,6 +100,37 @@ export function MessageRenderer({ content, metadata, role }: MessageRendererProp
             </div>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // Check if we have raw data to display
+  if (parsedContentData) {
+    const textBeforeJson = content.substring(0, content.indexOf(JSON.stringify(parsedContentData).charAt(0)));
+    const textAfterJson = content.substring(content.lastIndexOf(JSON.stringify(parsedContentData).slice(-1)) + 1);
+    
+    return (
+      <div className="space-y-4">
+        {/* Text before JSON */}
+        {textBeforeJson.trim() && (
+          <div className="prose prose-sm max-w-none">
+            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{textBeforeJson.trim()}</p>
+          </div>
+        )}
+        
+        {/* Smart Data Visualization */}
+        <SmartDataVisualizer 
+          data={parsedContentData} 
+          title="Analytics Data"
+          className="my-4"
+        />
+        
+        {/* Text after JSON */}
+        {textAfterJson.trim() && (
+          <div className="prose prose-sm max-w-none">
+            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{textAfterJson.trim()}</p>
+          </div>
+        )}
       </div>
     );
   }
