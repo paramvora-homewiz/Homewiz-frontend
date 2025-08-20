@@ -4,8 +4,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Loader2, Bot, User, AlertCircle, CheckCircle, Building } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import InteractiveMessageRenderer from './InteractiveMessageRenderer';
+import SmartDataVisualizer from './SmartDataVisualizer';
+import AnalyticsMessageDisplay from './AnalyticsMessageDisplay';
+import LLMUsageIndicator from './LLMUsageIndicator';
+import { llmService, LLMIntegrationService } from '@/lib/llm-integration-service';
 import { supabase } from '@/lib/supabase/client';
 import { IntelligentSupabaseQueryService } from '@/lib/chat/intelligent-supabase-query-service';
+import { formatBackendResponse, extractRelevantData } from '@/lib/clean-backend-response';
 
 interface Message {
   id: string;
@@ -15,6 +20,11 @@ interface Message {
   isStreaming?: boolean;
   metadata?: any;
   function_used?: string;
+  llmMetrics?: {
+    responseTime?: number;
+    tokensUsed?: number;
+    model?: string;
+  };
 }
 
 export function BackendIntegratedChatInterface() {
@@ -27,6 +37,8 @@ export function BackendIntegratedChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef<string | null>(null);
   const [backendConnected, setBackendConnected] = useState(false);
+  const [isLLMActive, setIsLLMActive] = useState(false);
+  const [currentLLMModel, setCurrentLLMModel] = useState<string>('HomeWiz AI');
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -103,6 +115,53 @@ export function BackendIntegratedChatInterface() {
     }
   };
 
+  // Helper function to determine if we should use SmartDataVisualizer
+  const shouldUseSmartVisualizer = (metadata: any): boolean => {
+    // Use SmartDataVisualizer for:
+    // 1. Raw API queries or complex data structures
+    // 2. Analytics or financial reports
+    // 3. Data that's not specifically room or building listings
+    const functionCalled = metadata?.function_called || '';
+    const hasComplexData = metadata?.result && typeof metadata.result === 'object' && !Array.isArray(metadata.result);
+    const isAnalytics = metadata?.result?.insight_type || metadata?.insight_type;
+    const isApiQuery = functionCalled.includes('api_query') || functionCalled.includes('raw_query');
+    const hasNestedData = metadata?.result?.data && typeof metadata.result.data === 'object' && !isRoomOrBuildingData(metadata.result.data);
+    
+    // Check for financial/analytics data patterns
+    const hasFinancialData = metadata?.result?.total_potential_revenue !== undefined ||
+                            metadata?.result?.actual_revenue !== undefined ||
+                            metadata?.result?.revenue_realization_rate !== undefined ||
+                            metadata?.result?.realization_rate !== undefined ||
+                            metadata?.result?.by_building !== undefined;
+    
+    const hasLeadData = metadata?.result?.total_leads !== undefined ||
+                       metadata?.result?.conversion_rate !== undefined;
+    
+    // Always use SmartDataVisualizer for financial or lead data
+    if (hasFinancialData || hasLeadData) return true;
+    
+    return isApiQuery || isAnalytics || (hasComplexData && hasNestedData);
+  };
+  
+  // Helper function to check if data is room or building data
+  const isRoomOrBuildingData = (data: any): boolean => {
+    if (Array.isArray(data) && data.length > 0) {
+      const firstItem = data[0];
+      return !!(firstItem.room_id || firstItem.room_number || firstItem.building_id || firstItem.building_name);
+    }
+    return false;
+  };
+  
+  // Helper function to get appropriate title for SmartDataVisualizer
+  const getDataVisualizerTitle = (metadata: any): string => {
+    const functionCalled = metadata?.function_called || '';
+    if (functionCalled.includes('api_query')) return 'API Query Results';
+    if (functionCalled.includes('analytics')) return 'Analytics Report';
+    if (metadata?.result?.insight_type === 'FINANCIAL') return 'Financial Report';
+    if (metadata?.result?.insight_type) return `${metadata.result.insight_type} Analysis`;
+    return 'Query Results';
+  };
+
   const handleAction = useCallback(async (action: string, data: any) => {
     console.log('🎯 Action triggered:', action, data);
     
@@ -172,6 +231,10 @@ export function BackendIntegratedChatInterface() {
 
     setIsLoading(true);
     setError(null);
+    setIsLLMActive(true);
+    
+    // Track request start time for metrics
+    const requestStartTime = Date.now();
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
     const useBackend = backendUrl && 
@@ -266,22 +329,64 @@ export function BackendIntegratedChatInterface() {
 
           setMessages(prev => [...prev, errorMessage]);
         } else {
+          // Calculate response time
+          const responseTime = Date.now() - requestStartTime;
+          
+          // Check if we need LLM parsing for complex data
+          let processedData = data.result || data;
+          let usedLLMParsing = false;
+          let llmParsingTime = 0;
+          
+          if (LLMIntegrationService.shouldUseLLM(processedData)) {
+            console.log('🧠 Using LLM to parse complex data structure');
+            const llmStartTime = Date.now();
+            
+            try {
+              const llmResult = await llmService.parseComplexData(
+                processedData,
+                `User query: ${messageContent}`
+              );
+              
+              if (llmResult.success && llmResult.formattedData) {
+                processedData = {
+                  ...processedData,
+                  llm_formatted: llmResult.formattedData,
+                  llm_insights: llmResult.insights,
+                  llm_visualization: llmResult.visualization
+                };
+                usedLLMParsing = true;
+                llmParsingTime = Date.now() - llmStartTime;
+                console.log('✅ LLM parsing successful', llmResult);
+              }
+            } catch (llmError) {
+              console.error('❌ LLM parsing failed, using original data', llmError);
+            }
+          }
+          
           const assistantMessage: Message = {
             id: `asst-${Date.now()}`,
             content: data.result?.response || data.response || 'I found some results for you.',
             role: 'assistant',
             created_at: new Date().toISOString(),
             metadata: {
-              result: data.result || data,
+              result: processedData,
               backend_success: true,
               function_called: data.function_called,
               data: data.result?.data || data.data,
               // If this is a room search (has room data), ensure it's available in multiple places
               rooms: data.result?.data || data.data,
               stats: data.result?.stats || data.stats,
+              used_llm_parsing: usedLLMParsing,
               ...data
             },
-            function_used: data.function_called
+            function_used: data.function_called,
+            llmMetrics: {
+              responseTime,
+              model: 'HomeWiz AI Backend',
+              tokensUsed: data.tokens_used || data.result?.tokens_used,
+              usedLLMParsing,
+              llmParsingTime: usedLLMParsing ? llmParsingTime : undefined
+            }
           };
 
           setMessages(prev => [...prev, assistantMessage]);
@@ -307,6 +412,9 @@ export function BackendIntegratedChatInterface() {
           roomsCount: fallbackResponse.result?.rooms?.length || 0
         });
         
+        // Calculate response time
+        const responseTime = Date.now() - requestStartTime;
+        
         const fallbackMessage: Message = {
           id: `asst-supabase-${Date.now()}`,
           content: fallbackResponse.response,
@@ -317,7 +425,11 @@ export function BackendIntegratedChatInterface() {
             result: fallbackResponse.result || fallbackResponse.data,
             supabase_direct: true
           },
-          function_used: fallbackResponse.metadata?.intent?.entity || 'supabase_query'
+          function_used: fallbackResponse.metadata?.intent?.entity || 'supabase_query',
+          llmMetrics: {
+            responseTime,
+            model: 'Supabase Direct Query'
+          }
         };
 
         setMessages(prev => [...prev, fallbackMessage]);
@@ -336,6 +448,7 @@ export function BackendIntegratedChatInterface() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setIsLLMActive(false);
     }
   };
 
@@ -368,6 +481,10 @@ export function BackendIntegratedChatInterface() {
                 {backendStatus}
               </span>
             </div>
+            <LLMUsageIndicator 
+              isActive={isLLMActive}
+              model={currentLLMModel}
+            />
           </div>
           <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
             Session: {sessionId.slice(-8)}
@@ -426,13 +543,30 @@ export function BackendIntegratedChatInterface() {
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
                     : 'bg-white/80 backdrop-blur-sm border border-gray-200/50'
                 }`}>
-                  {message.role === 'assistant' && (message.metadata?.result || message.metadata?.data) ? (
-                    <InteractiveMessageRenderer
-                      content={message.content}
-                      data={message.metadata?.result || message.metadata?.data}
-                      metadata={message.metadata}
-                      onAction={handleAction}
-                    />
+                  {message.role === 'assistant' && (message.metadata?.result || message.metadata?.data || message.content?.includes('"insight_type"')) ? (
+                    (() => {
+                      // Find the user's query that triggered this response
+                      const messageIndex = messages.findIndex(m => m.id === message.id);
+                      const previousMessage = messageIndex > 0 ? messages[messageIndex - 1] : null;
+                      const userQuery = previousMessage?.role === 'user' ? previousMessage.content : '';
+                      
+                      console.log('🔍 Finding user query:', { 
+                        messageIndex, 
+                        userQuery, 
+                        messageId: message.id,
+                        previousMessage,
+                        previousRole: previousMessage?.role,
+                        allMessages: messages.map(m => ({ id: m.id, role: m.role, content: m.content.substring(0, 50) }))
+                      });
+                      
+                      return (
+                        <AnalyticsMessageDisplay 
+                          message={message}
+                          className={message.role === 'user' ? 'text-white' : 'text-gray-800'}
+                          userQuery={userQuery}
+                        />
+                      );
+                    })()
                   ) : (
                     <div className={message.role === 'user' ? 'text-white' : 'text-gray-800'}>
                       {message.content}
@@ -448,6 +582,20 @@ export function BackendIntegratedChatInterface() {
                       message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
                     }`}>
                       Function: {message.function_used}
+                    </div>
+                  )}
+                  
+                  {message.llmMetrics && message.role === 'assistant' && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <LLMUsageIndicator
+                        isActive={false}
+                        model={message.llmMetrics.model}
+                        responseTime={message.llmMetrics.responseTime}
+                        tokensUsed={message.llmMetrics.tokensUsed}
+                        usedLLMParsing={message.llmMetrics.usedLLMParsing}
+                        llmParsingTime={message.llmMetrics.llmParsingTime}
+                        className="text-xs"
+                      />
                     </div>
                   )}
                 </div>
@@ -521,3 +669,4 @@ export function BackendIntegratedChatInterface() {
     </div>
   );
 }
+export default BackendIntegratedChatInterface;
