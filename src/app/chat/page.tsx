@@ -4,9 +4,10 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 
 // Backend integrated chat interface with analytics debugging
-const ChatInterface = dynamic(() => {
-  return import('@/components/chat/BackendIntegratedChatInterface').then(mod => ({ default: mod.BackendIntegratedChatInterface }))
-}, { ssr: false })
+const ChatInterface = dynamic(() => 
+  import('@/components/chat/BackendIntegratedChatInterface'), 
+  { ssr: false }
+)
 
 export default function ChatPage() {
   return (
@@ -23,7 +24,7 @@ export default function ChatPage() {
           </div>
           
           <div className="bg-white rounded-2xl shadow-xl">
-            <ChatInterface className="h-[600px]" />
+            <ChatInterface />
           </div>
         </div>
       </div>
