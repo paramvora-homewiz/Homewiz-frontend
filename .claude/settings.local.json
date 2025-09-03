@@ -62,7 +62,8 @@
       "Bash(npx tailwindcss:*)",
       "Bash(npx postcss:*)",
       "Bash(npm run tsx:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(npx kill-port:*)"
     ],
     "deny": []
   }

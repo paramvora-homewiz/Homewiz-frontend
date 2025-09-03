@@ -7,6 +7,7 @@ import InteractiveMessageRenderer from './InteractiveMessageRenderer';
 import SmartDataVisualizer from './SmartDataVisualizer';
 import AnalyticsMessageDisplay from './AnalyticsMessageDisplay';
 import LLMUsageIndicator from './LLMUsageIndicator';
+import NoResultsDisplay from './NoResultsDisplay';
 import { llmService, LLMIntegrationService } from '@/lib/llm-integration-service';
 import { supabase } from '@/lib/supabase/client';
 import { IntelligentSupabaseQueryService } from '@/lib/chat/intelligent-supabase-query-service';
@@ -550,15 +551,157 @@ export function BackendIntegratedChatInterface() {
                       const previousMessage = messageIndex > 0 ? messages[messageIndex - 1] : null;
                       const userQuery = previousMessage?.role === 'user' ? previousMessage.content : '';
                       
-                      console.log('🔍 Finding user query:', { 
+                      // Check if this is room/building data or analytics data
+                      const data = message.metadata?.data || message.metadata?.result?.data || message.metadata?.result;
+                      const functionCalled = message.metadata?.function_called || message.function_used || '';
+                      
+                      // Check if this is a no results scenario for rooms/buildings
+                      const isEmptyRoomSearch = (
+                        functionCalled.includes('room') && 
+                        Array.isArray(data) && 
+                        data.length === 0
+                      ) || (
+                        message.content.toLowerCase().includes('no rooms found') ||
+                        message.content.toLowerCase().includes('no rooms match')
+                      );
+                      
+                      const isEmptyBuildingSearch = (
+                        functionCalled.includes('building') && 
+                        Array.isArray(data) && 
+                        data.length === 0
+                      ) || (
+                        message.content.toLowerCase().includes('no buildings found') ||
+                        message.content.toLowerCase().includes('no buildings match')
+                      );
+                      
+                      // Determine if this is room/building data with results
+                      const isRoomData = Array.isArray(data) && data.length > 0 && data[0] && (
+                        data[0].room_id !== undefined || 
+                        data[0].room_number !== undefined ||
+                        data[0].private_room_rent !== undefined ||
+                        data[0].rent !== undefined ||
+                        functionCalled.includes('room')
+                      );
+                      
+                      const isBuildingData = Array.isArray(data) && data.length > 0 && data[0] && (
+                        data[0].building_id !== undefined ||
+                        data[0].building_name !== undefined ||
+                        functionCalled.includes('building')
+                      );
+                      
+                      console.log('🔍 Message type detection:', { 
                         messageIndex, 
-                        userQuery, 
-                        messageId: message.id,
-                        previousMessage,
-                        previousRole: previousMessage?.role,
-                        allMessages: messages.map(m => ({ id: m.id, role: m.role, content: m.content.substring(0, 50) }))
+                        userQuery,
+                        functionCalled,
+                        isRoomData,
+                        isBuildingData,
+                        isEmptyRoomSearch,
+                        isEmptyBuildingSearch,
+                        dataLength: Array.isArray(data) ? data.length : 'not array',
+                        firstItem: Array.isArray(data) && data[0] ? Object.keys(data[0]) : null
                       });
                       
+                      // Handle empty search results
+                      if (isEmptyRoomSearch || isEmptyBuildingSearch) {
+                        // Parse search criteria from user query
+                        const priceMatch = userQuery.match(/\$(\d+)(?:\s*[-to]*\s*\$(\d+))?/i);
+                        const searchCriteria: any = {};
+                        
+                        if (priceMatch) {
+                          searchCriteria.priceMin = parseInt(priceMatch[1]);
+                          searchCriteria.priceMax = priceMatch[2] ? parseInt(priceMatch[2]) : parseInt(priceMatch[1]);
+                        }
+                        
+                        // Extract location or features from query
+                        const queryLower = userQuery.toLowerCase();
+                        
+                        // Location extraction
+                        if (queryLower.includes('downtown')) {
+                          searchCriteria.location = 'downtown';
+                        } else if (queryLower.includes('uptown')) {
+                          searchCriteria.location = 'uptown';
+                        } else if (queryLower.includes('midtown')) {
+                          searchCriteria.location = 'midtown';
+                        }
+                        
+                        // Buildings extraction
+                        const buildingMatch = queryLower.match(/in\s+([^,\s]+(?:\s+[^,\s]+)*)\s+building/);
+                        if (buildingMatch) {
+                          searchCriteria.location = buildingMatch[1];
+                        }
+                        
+                        const features = [];
+                        if (queryLower.includes('fitness') || queryLower.includes('gym')) {
+                          features.push('fitness areas');
+                        }
+                        if (queryLower.includes('pet') && queryLower.includes('friendly')) {
+                          features.push('pet-friendly policies');
+                        }
+                        if (queryLower.includes('parking')) {
+                          features.push('parking');
+                        }
+                        if (queryLower.includes('furnished')) {
+                          features.push('furnished');
+                        }
+                        if (queryLower.includes('wifi')) {
+                          features.push('wifi included');
+                        }
+                        if (queryLower.includes('laundry')) {
+                          features.push('laundry facilities');
+                        }
+                        if (features.length > 0) {
+                          searchCriteria.features = features;
+                        }
+                        
+                        // If we couldn't extract any criteria, at least show what the user asked for
+                        if (Object.keys(searchCriteria).length === 0) {
+                          searchCriteria.originalQuery = userQuery;
+                        }
+                        
+                        return (
+                          <div className="space-y-4">
+                            <div className={message.role === 'user' ? 'text-white' : 'text-gray-800'}>
+                              {message.content}
+                            </div>
+                            <NoResultsDisplay
+                              searchCriteria={searchCriteria}
+                              totalAvailable={15} // You can get this from metadata if available
+                              onAction={(action, data) => {
+                                console.log('No results action:', action, data);
+                                if (action === 'search' && typeof data === 'string') {
+                                  handleAction(data);
+                                } else if (action === 'view_all') {
+                                  handleAction('Show me all available rooms');
+                                } else if (action === 'adjust_criteria') {
+                                  handleAction('Help me adjust my search criteria');
+                                }
+                              }}
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // Use InteractiveMessageRenderer for room/building data with results
+                      if (isRoomData || isBuildingData) {
+                        return (
+                          <InteractiveMessageRenderer 
+                            content={message.content}
+                            data={message.metadata?.data || message.metadata}
+                            metadata={message.metadata}
+                            onAction={(action: string, actionData: any) => {
+                              console.log('Interactive action:', action, actionData);
+                              // Handle actions like schedule_tour, view_building_rooms, etc.
+                              if (action === 'view_building_rooms') {
+                                handleAction(`Show me rooms in ${actionData.buildingName}`);
+                              } else if (action === 'schedule_tour') {
+                                handleAction(`Schedule a tour for ${actionData.buildingName}`);
+                              }
+                            }}
+                          />
+                        );
+                      }
+                      
+                      // Use AnalyticsMessageDisplay for analytics data
                       return (
                         <AnalyticsMessageDisplay 
                           message={message}

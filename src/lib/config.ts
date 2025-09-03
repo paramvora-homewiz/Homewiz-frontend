@@ -14,7 +14,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
   
   // Backend API Configuration
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8000/api'),
+  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8002/api'),
   NEXT_PUBLIC_CLOUD_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
   NEXT_PUBLIC_DISABLE_BACKEND: z.string().transform(val => val === 'true').default('false'),

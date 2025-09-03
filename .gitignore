@@ -42,3 +42,11 @@ yarn-error.log*
 next-env.d.ts
 
 .claude
+
+# Claude Code generated files
+start-local-backend.sh
+run-backend.sh
+README-LOCAL-SETUP.md
+SYSTEM_ANALYSIS.md
+TESTING_CHECKLIST.md
+frontend.log

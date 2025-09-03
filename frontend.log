@@ -1,0 +1,356 @@
+
+> homewiz-frontend@0.1.0 dev
+> next dev -p 3000
+
+  ▲ Next.js 13.5.11
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+  - Experiments (use at your own risk):
+     · serverActions
+
+ ✓ Ready in 1387ms
+ ✓ Compiled /src/middleware in 209ms (54 modules)
+🎭 Middleware: GET http://localhost:3000/
+ ✓ Compiled /page in 2.8s (1333 modules)
+ ✓ Compiled in 341ms (659 modules)
+🎭 Middleware: GET http://localhost:3000/
+ ✓ Compiled /favicon.ico/route in 459ms (1340 modules)
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ○ Compiling /chat/page ...
+🎭 Middleware: GET http://localhost:3000/.well-known/appspecific/com.chrome.devtools.json
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/.well-known/appspecific/com.chrome.devtools.json
+🎭 Middleware: GET http://localhost:3000/.well-known/appspecific/com.chrome.devtools.json
+🎭 Middleware: GET http://localhost:3000/
+🎭 Middleware: GET http://localhost:3000/
+🎭 Middleware: GET http://localhost:3000/chat
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+🎭 Middleware: GET http://localhost:3000/.well-known/appspecific/com.chrome.devtools.json
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+🎭 Middleware: GET http://localhost:3000/.well-known/appspecific/com.chrome.devtools.json
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+   Reload env: .env.local
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+🎭 Middleware: GET http://localhost:3000/chat
+🎭 Middleware: GET http://localhost:3000/chat
+🎭 Middleware: GET http://localhost:3000/.well-known/appspecific/com.chrome.devtools.json
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+ ⚠ ./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js
+./node_modules/@supabase/realtime-js/dist/main/index.js
+./node_modules/@supabase/supabase-js/dist/main/index.js
+./src/lib/supabase/chat-service.ts
+./src/lib/chat/intelligent-supabase-query-service.ts
+./src/components/chat/BackendIntegratedChatInterface.tsx
+./src/app/chat/page.tsx
+[?25h

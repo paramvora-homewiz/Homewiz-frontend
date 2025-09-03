@@ -9,18 +9,18 @@ const backendApiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
 export const backendConfig = {
   // WebSocket endpoints - Connect to backend for LLM processing
   websocket: {
-    chat: backendWsUrl || 'ws://localhost:8000/ws/chat',
+    chat: backendWsUrl || 'ws://localhost:8002/ws/chat',
   },
-  
+
   // HTTP endpoints - Backend API for LLM and other services
   http: {
-    base: process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8000',
-    chat: process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8000/api',
+    base: process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8002',
+    chat: process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8002/api',
     // Specific endpoints for different services
-    query: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/query` : 'http://localhost:8000/query',
-    leads: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/leads` : 'http://localhost:8000/leads',
-    buildings: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/buildings` : 'http://localhost:8000/buildings',
-    rooms: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/rooms` : 'http://localhost:8000/rooms',
+    query: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/query` : 'http://localhost:8002/query',
+    leads: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/leads` : 'http://localhost:8002/leads',
+    buildings: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/buildings` : 'http://localhost:8002/buildings',
+    rooms: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/rooms` : 'http://localhost:8002/rooms',
   },
   
   // Connection settings

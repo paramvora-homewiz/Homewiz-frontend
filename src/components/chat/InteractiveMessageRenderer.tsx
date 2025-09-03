@@ -79,6 +79,24 @@ export default function InteractiveMessageRenderer({ content, data, metadata, on
   const [showAllRooms, setShowAllRooms] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<RoomData | null>(null);
 
+  // Debug logging for incoming data
+  console.log('🎯 InteractiveMessageRenderer received:', {
+    content: content?.substring(0, 100),
+    data: data,
+    metadata: metadata,
+    dataType: typeof data,
+    dataIsArray: Array.isArray(data),
+    dataLength: Array.isArray(data) ? data.length : null,
+    hasMetadata: !!metadata,
+    metadataKeys: metadata ? Object.keys(metadata) : [],
+    // Check specific room-related fields
+    hasDirectRooms: !!data?.rooms,
+    hasDataField: !!data?.data,
+    dataDataIsArray: Array.isArray(data?.data),
+    metadataRooms: metadata?.rooms,
+    metadataData: metadata?.data
+  });
+
   // Component state and data extraction
 
   // Extract rooms data - check multiple possible locations
@@ -86,11 +104,24 @@ export default function InteractiveMessageRenderer({ content, data, metadata, on
   
   // Check if this is a room query based on various indicators
   const isRoomQuery = (item: any) => {
+    // More flexible room detection - check for any room-like properties
     return item && (
       item.room_id !== undefined || 
       item.room_number !== undefined || 
       item.private_room_rent !== undefined ||
-      item.room_type !== undefined
+      item.room_type !== undefined ||
+      item.rent !== undefined ||
+      item.status !== undefined ||
+      item.bed_type !== undefined ||
+      item.floor_number !== undefined ||
+      // Check for building_id which is common in room objects
+      (item.building_id !== undefined && (
+        item.room_number !== undefined || 
+        item.floor_number !== undefined ||
+        item.bed_count !== undefined
+      )) ||
+      // Check if room_id looks like a room ID (e.g., "BLDG_1000_FOLSOM_R007")
+      (typeof item.id === 'string' && item.id.includes('_R'))
     );
   };
   
