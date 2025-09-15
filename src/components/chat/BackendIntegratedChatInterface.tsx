@@ -8,10 +8,13 @@ import SmartDataVisualizer from './SmartDataVisualizer';
 import AnalyticsMessageDisplay from './AnalyticsMessageDisplay';
 import LLMUsageIndicator from './LLMUsageIndicator';
 import NoResultsDisplay from './NoResultsDisplay';
+import UniversalDataRenderer from './UniversalDataRenderer';
+import TeamMessageFormatter from './TeamMessageFormatter';
 import { llmService, LLMIntegrationService } from '@/lib/llm-integration-service';
 import { supabase } from '@/lib/supabase/client';
 import { IntelligentSupabaseQueryService } from '@/lib/chat/intelligent-supabase-query-service';
 import { formatBackendResponse, extractRelevantData } from '@/lib/clean-backend-response';
+import { LLMResponseFormatter } from '@/lib/llm-response-formatter';
 
 interface Message {
   id: string;
@@ -364,9 +367,31 @@ export function BackendIntegratedChatInterface() {
             }
           }
           
+          // Process the API response through LLM for natural language formatting
+          let formattedContent = data.result?.response || data.response || 'I found some results for you.';
+          
+          // If we have data, format it through LLM
+          const apiData = data.result?.data || data.data;
+          if (apiData) {
+            try {
+              console.log('🤖 Processing response through LLM for natural language...');
+              const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+              console.log('🔐 API Key being used:', apiKey ? 'Set' : 'Not set');
+              formattedContent = await LLMResponseFormatter.formatWithLLM(
+                apiData,
+                messageContent,
+                apiKey
+              );
+              console.log('✅ LLM formatting successful');
+            } catch (error) {
+              console.error('❌ LLM formatting failed, using fallback:', error);
+              // Fallback is already handled in the formatter
+            }
+          }
+          
           const assistantMessage: Message = {
             id: `asst-${Date.now()}`,
-            content: data.result?.response || data.response || 'I found some results for you.',
+            content: formattedContent,
             role: 'assistant',
             created_at: new Date().toISOString(),
             metadata: {
@@ -378,6 +403,7 @@ export function BackendIntegratedChatInterface() {
               rooms: data.result?.data || data.data,
               stats: data.result?.stats || data.stats,
               used_llm_parsing: usedLLMParsing,
+              llm_formatted: true,
               ...data
             },
             function_used: data.function_called,
@@ -555,54 +581,59 @@ export function BackendIntegratedChatInterface() {
                       const data = message.metadata?.data || message.metadata?.result?.data || message.metadata?.result;
                       const functionCalled = message.metadata?.function_called || message.function_used || '';
                       
-                      // Check if this is a no results scenario for rooms/buildings
-                      const isEmptyRoomSearch = (
-                        functionCalled.includes('room') && 
-                        Array.isArray(data) && 
-                        data.length === 0
+                      // Check if message was formatted by LLM
+                      if (message.metadata?.llm_formatted) {
+                        // Render the natural language response with markdown support
+                        return (
+                          <div className="space-y-4">
+                            <div className={`${message.role === 'user' ? 'text-white' : 'text-gray-800'} prose prose-sm max-w-none`}>
+                              <div dangerouslySetInnerHTML={{ 
+                                __html: message.content
+                                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                  .replace(/\n/g, '<br />')
+                                  .replace(/• /g, '• ')
+                              }} />
+                            </div>
+                            
+                            {/* Show Team Message Format button if data exists */}
+                            {data && (
+                              <TeamMessageFormatter 
+                                data={data}
+                                userQuery={userQuery}
+                                content={message.content}
+                              />
+                            )}
+                          </div>
+                        );
+                      }
+                      
+                      // Fallback to UniversalDataRenderer for non-LLM formatted responses
+                      if (data && (Array.isArray(data) || typeof data === 'object')) {
+                        return (
+                          <div>
+                            <div className={message.role === 'user' ? 'text-white' : 'text-gray-800 mb-2'}>
+                              {message.content}
+                            </div>
+                            <UniversalDataRenderer 
+                              data={data}
+                              content=""
+                              metadata={message.metadata}
+                              userQuery={userQuery}
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // Check if this is a no results scenario
+                      const isEmptySearch = (
+                        Array.isArray(data) && data.length === 0
                       ) || (
-                        message.content.toLowerCase().includes('no rooms found') ||
-                        message.content.toLowerCase().includes('no rooms match')
+                        message.content.toLowerCase().includes('no') && 
+                        message.content.toLowerCase().includes('found')
                       );
-                      
-                      const isEmptyBuildingSearch = (
-                        functionCalled.includes('building') && 
-                        Array.isArray(data) && 
-                        data.length === 0
-                      ) || (
-                        message.content.toLowerCase().includes('no buildings found') ||
-                        message.content.toLowerCase().includes('no buildings match')
-                      );
-                      
-                      // Determine if this is room/building data with results
-                      const isRoomData = Array.isArray(data) && data.length > 0 && data[0] && (
-                        data[0].room_id !== undefined || 
-                        data[0].room_number !== undefined ||
-                        data[0].private_room_rent !== undefined ||
-                        data[0].rent !== undefined ||
-                        functionCalled.includes('room')
-                      );
-                      
-                      const isBuildingData = Array.isArray(data) && data.length > 0 && data[0] && (
-                        data[0].building_id !== undefined ||
-                        data[0].building_name !== undefined ||
-                        functionCalled.includes('building')
-                      );
-                      
-                      console.log('🔍 Message type detection:', { 
-                        messageIndex, 
-                        userQuery,
-                        functionCalled,
-                        isRoomData,
-                        isBuildingData,
-                        isEmptyRoomSearch,
-                        isEmptyBuildingSearch,
-                        dataLength: Array.isArray(data) ? data.length : 'not array',
-                        firstItem: Array.isArray(data) && data[0] ? Object.keys(data[0]) : null
-                      });
                       
                       // Handle empty search results
-                      if (isEmptyRoomSearch || isEmptyBuildingSearch) {
+                      if (isEmptySearch) {
                         // Parse search criteria from user query
                         const priceMatch = userQuery.match(/\$(\d+)(?:\s*[-to]*\s*\$(\d+))?/i);
                         const searchCriteria: any = {};
@@ -681,33 +712,11 @@ export function BackendIntegratedChatInterface() {
                         );
                       }
                       
-                      // Use InteractiveMessageRenderer for room/building data with results
-                      if (isRoomData || isBuildingData) {
-                        return (
-                          <InteractiveMessageRenderer 
-                            content={message.content}
-                            data={message.metadata?.data || message.metadata}
-                            metadata={message.metadata}
-                            onAction={(action: string, actionData: any) => {
-                              console.log('Interactive action:', action, actionData);
-                              // Handle actions like schedule_tour, view_building_rooms, etc.
-                              if (action === 'view_building_rooms') {
-                                handleAction(`Show me rooms in ${actionData.buildingName}`);
-                              } else if (action === 'schedule_tour') {
-                                handleAction(`Schedule a tour for ${actionData.buildingName}`);
-                              }
-                            }}
-                          />
-                        );
-                      }
-                      
-                      // Use AnalyticsMessageDisplay for analytics data
+                      // Default: just show the content
                       return (
-                        <AnalyticsMessageDisplay 
-                          message={message}
-                          className={message.role === 'user' ? 'text-white' : 'text-gray-800'}
-                          userQuery={userQuery}
-                        />
+                        <div className={message.role === 'user' ? 'text-white' : 'text-gray-800'}>
+                          {message.content}
+                        </div>
                       );
                     })()
                   ) : (

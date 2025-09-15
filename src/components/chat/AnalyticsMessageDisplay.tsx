@@ -128,13 +128,80 @@ export default function AnalyticsMessageDisplay({ message, className = '', userQ
     return 'Analytics Report';
   };
   
-  const visualizer = (
-    <SmartDataVisualizer 
-      data={data}
-      title={getTitle()}
-      userQuery={userQuery}
-    />
-  );
+  // Simple text-based renderer for analytics data
+  const renderDataAsText = (data: any) => {
+    if (!data) return null;
+    
+    return (
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <h3 className="font-bold text-lg mb-3">{getTitle()}</h3>
+        <div className="space-y-2">
+          {Object.entries(data).map(([key, value]) => {
+            // Skip complex nested objects for now
+            if (key === 'by_building' && typeof value === 'object') {
+              return (
+                <div key={key} className="mt-3">
+                  <div className="font-medium">By Building:</div>
+                  <div className="ml-4 space-y-2">
+                    {Object.entries(value as any).map(([building, buildingData]: [string, any]) => (
+                      <div key={building} className="border-l-4 border-blue-500 pl-3">
+                        <div className="font-medium">{building}:</div>
+                        {Object.entries(buildingData).map(([bKey, bValue]) => (
+                          <div key={bKey} className="text-sm ml-2">
+                            • {bKey.replace(/_/g, ' ')}: {typeof bValue === 'number' && (bKey.includes('revenue') || bKey.includes('rent')) ? `$${bValue.toLocaleString()}` : String(bValue)}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            
+            // Format key to be more readable
+            const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            
+            // Handle different value types
+            let displayValue = value;
+            if (typeof value === 'object' && value !== null) {
+              if (Array.isArray(value)) {
+                return (
+                  <div key={key}>
+                    <div className="font-medium">{formattedKey}:</div>
+                    <div className="ml-4">
+                      {value.map((item, idx) => (
+                        <div key={idx} className="text-sm">• {JSON.stringify(item)}</div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              } else {
+                displayValue = JSON.stringify(value, null, 2);
+              }
+            } else if (typeof value === 'number') {
+              // Format numbers nicely
+              if (key.includes('revenue') || key.includes('rent') || key.includes('price')) {
+                displayValue = `$${value.toLocaleString()}`;
+              } else if (key.includes('percent') || key.includes('rate')) {
+                displayValue = `${value}%`;
+              } else {
+                displayValue = value.toLocaleString();
+              }
+            }
+            
+            return (
+              <div key={key} className="flex">
+                <span className="font-medium min-w-[200px]">{formattedKey}:</span>
+                <span className="text-gray-700 dark:text-gray-300">{String(displayValue)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  
+  const visualizer = renderDataAsText(data);
   
   // If we have a user query, check for mismatches
   if (userQuery) {

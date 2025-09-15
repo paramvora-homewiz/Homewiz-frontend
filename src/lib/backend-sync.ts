@@ -9,6 +9,7 @@
  * @returns Array of image URLs
  */
 export function parseBuildingImages(images: any): string[] {
+  console.log('📸 parseBuildingImages input:', images, 'type:', typeof images);
   if (!images) return []
   
   // Helper function to validate URL
@@ -21,18 +22,19 @@ export function parseBuildingImages(images: any): string[] {
       return true
     }
     
-    // For HTTP/HTTPS URLs, also check if the domain is accessible
+    // For HTTP/HTTPS URLs, accept all valid URLs for now
+    // We'll let the browser handle invalid images
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      // Filter out known invalid domains
-      if (trimmed.includes('urbanests.com')) {
-        return false // This domain doesn't exist
-      }
-      // Only allow Supabase URLs or other valid domains
-      return trimmed.includes('supabase.co') || 
-             trimmed.includes('supabase.in') ||
-             trimmed.includes('amazonaws.com') ||
-             trimmed.includes('cloudinary.com') ||
-             trimmed.includes('googleapis.com')
+      console.log('🖼️ Processing image URL:', trimmed);
+      return true; // Accept all HTTP/HTTPS URLs
+    }
+    
+    // Also accept URLs without protocol (will be handled by browser)
+    if (trimmed.includes('.jpg') || trimmed.includes('.jpeg') || 
+        trimmed.includes('.png') || trimmed.includes('.gif') || 
+        trimmed.includes('.webp') || trimmed.includes('.svg')) {
+      console.log('🖼️ Processing image path:', trimmed);
+      return true;
     }
     
     return false
