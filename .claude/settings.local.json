@@ -63,7 +63,16 @@
       "Bash(npx postcss:*)",
       "Bash(npm run tsx:*)",
       "Bash(npx eslint:*)",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_zf97Dw/**)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_InNa3D/**)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_qBWq2f/**)",
+      "Bash(open http://localhost:3000/chat)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_SX4nQ0/**)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_8LpUqv/**)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_Xuphm6/**)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_hV9CvN/**)",
+      "Read(//var/folders/95/ftqk0_mn4zb8cn8rncd5nvwr0000gn/T/TemporaryItems/NSIRD_screencaptureui_mNc7YL/**)"
     ],
     "deny": []
   }

@@ -27,13 +27,18 @@ interface RoomData {
     city: string
     state: string
     building_images?: any
-  }
+  } | string // Building can also be just a string
   // Support for flat fields from backend
   building_name?: string
   building_address?: string
   building_city?: string
   building_state?: string
   building_id?: string
+  // Backend format fields
+  id?: string
+  title?: string
+  rent?: number
+  [key: string]: any // Allow any additional fields
 }
 
 interface RoomCardsProps {
@@ -78,17 +83,40 @@ export default function RoomCards({ rooms, showExploreLink = true, onRoomClick }
       >
         <AnimatePresence>
         {displayRooms.map((room, index) => {
+          // Debug log for images
+          console.log('🖼️ Room images for', room.title || room.room_number, {
+            room_images: room.room_images,
+            images: room.images,
+            building_images: room.buildings?.building_images || room.building?.building_images,
+            details_images: room.details?.images,
+            room_building_images: room.building_images,
+            all_fields: Object.keys(room).filter(key => key.includes('image')),
+            raw_room: room
+          });
+          
           // Get room images and fall back to building images if no room images
-          const roomImages = parseBuildingImages(room.room_images)
+          const roomImages = parseBuildingImages(
+            room.room_images || 
+            room.images || 
+            room.details?.images || 
+            room.details?.room_images
+          );
+          
           // Support both 'buildings' (plural) and 'building' (singular)
-          const buildingFromPlural = room.buildings ? parseBuildingImages(room.buildings.building_images) : []
-          const buildingFromSingular = room.building ? parseBuildingImages(room.building.building_images) : []
-          const buildingImages = buildingFromPlural.length > 0 ? buildingFromPlural : buildingFromSingular
-          const images = roomImages.length > 0 ? roomImages : buildingImages
-          const mainImage = images[0]
+          const buildingImages = parseBuildingImages(
+            room.buildings?.building_images || 
+            room.buildings?.images ||
+            room.building?.building_images || 
+            room.building?.images ||
+            room.building_images ||
+            room.details?.building_images
+          );
+          
+          const images = roomImages.length > 0 ? roomImages : buildingImages;
+          const mainImage = images[0];
           
           // Check if we have a valid image URL
-          const hasValidImage = mainImage && typeof mainImage === 'string' && mainImage.trim() !== ''
+          const hasValidImage = mainImage && typeof mainImage === 'string' && mainImage.trim() !== '' && mainImage !== '/placeholder-room.jpg'
           
           return (
             <motion.div
@@ -155,20 +183,38 @@ export default function RoomCards({ rooms, showExploreLink = true, onRoomClick }
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                      Room {room.room_number}
+                      {room.title || `Room ${room.room_number}`}
                     </h4>
                     {/* Support nested formats and flat fields */}
-                    {(room.buildings?.building_name || room.building?.building_name || room.building_name) && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {room.buildings?.building_name || room.building?.building_name || room.building_name}
-                      </p>
-                    )}
+                    {(() => {
+                      let buildingName = null;
+                      
+                      // Extract building name from various sources
+                      if (room.buildings?.building_name) {
+                        buildingName = room.buildings.building_name;
+                      } else if (room.building) {
+                        if (typeof room.building === 'string') {
+                          buildingName = room.building;
+                        } else if (typeof room.building === 'object' && room.building !== null) {
+                          // Handle object format {id, name, address}
+                          buildingName = room.building.name || room.building.building_name;
+                        }
+                      } else if (room.building_name) {
+                        buildingName = room.building_name;
+                      }
+                      
+                      return buildingName ? (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {buildingName}
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="text-right">
                     <div className="bg-blue-600 text-white px-3 py-1 rounded-full">
                       <p className="text-lg font-bold">
-                        ${room.private_room_rent}<span className="text-xs font-normal">/mo</span>
+                        ${room.private_room_rent || room.rent || 0}<span className="text-xs font-normal">/mo</span>
                       </p>
                     </div>
                   </div>

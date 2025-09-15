@@ -15,7 +15,14 @@ import { parseBuildingImages } from '@/lib/backend-sync';
 interface RoomData {
   id?: number;
   room_id?: string;
-  building?: string;
+  building?: string | {
+    id?: string | number;
+    name?: string;
+    building_name?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+  };
   building_id?: string;
   building_name?: string;
   buildings?: any;
@@ -23,6 +30,8 @@ interface RoomData {
   room_type?: string;
   price?: number;
   private_room_rent?: number;
+  rent?: number;
+  title?: string;
   type?: string;
   bathrooms?: number;
   bathroom_type?: string;
@@ -135,7 +144,19 @@ export function RoomDetailsModal({ isOpen, onClose, room, onAction }: RoomDetail
   const SunlightIcon = sunlight.icon;
 
   // Extract building name from various possible fields
-  const buildingName = room.building_name || room.building || room.buildings?.name || 'Building';
+  // Extract building name from various sources
+  let buildingName = room.building_name;
+  if (!buildingName && room.building) {
+    if (typeof room.building === 'string') {
+      buildingName = room.building;
+    } else if (typeof room.building === 'object' && room.building !== null) {
+      buildingName = room.building.name || room.building.building_name;
+    }
+  }
+  if (!buildingName && room.buildings) {
+    buildingName = room.buildings.name || room.buildings.building_name;
+  }
+  buildingName = buildingName || 'Building';
   
   // Extract address
   const address = room.full_address || room.buildings?.address || '';

@@ -490,105 +490,49 @@ export default function InteractiveMessageRenderer({ content, data, metadata, on
     );
   };
 
-  // Render room cards using the dedicated RoomCards component
+  // Render room information as text
   const renderRoomCards = () => {
     // Ensure rooms is an array
     if (!Array.isArray(rooms) || rooms.length === 0) {
       return null;
     }
-
-    // Transform rooms data to match RoomCards interface while preserving all properties
-    const transformedRooms = rooms.map((room: any) => {
-      // Debug log each room's building data
-      console.log('🏢 Transforming room:', {
-        roomNumber: room.room_number,
-        hasBuildings: !!room.buildings,
-        buildingsData: room.buildings,
-        buildingName: room.buildings?.building_name,
-        // Check for building info in other fields
-        building_id: room.building_id,
-        building_name_direct: room.building_name,
-        building_singular: room.building,
-        building_data: room.building?.building_name,
-        allKeys: Object.keys(room).filter(key => key.includes('building')),
-        // Show ALL keys to see full structure
-        allRoomKeys: Object.keys(room)
-      });
-      
-      // Preserve all original room properties
-      const transformed = {
-        ...room,
-        // Ensure required fields exist
-        room_id: room.room_id || `room-${room.id}`,
-        room_number: room.room_number || room.room_id || 'Unknown',
-        room_type: room.room_type || room.type || 'Standard',
-        private_room_rent: room.private_room_rent || room.price || 0,
-        status: room.status || (room.available !== false ? 'Available' : 'Occupied'),
-        floor_number: room.floor_number || 1,
-        furnished: room.furnished !== undefined ? room.furnished : (room.furnishing === 'Furnished'),
-        bathroom_included: room.bathroom_included !== undefined ? room.bathroom_included : (room.bathrooms && room.bathrooms > 0),
-        room_images: room.room_images || room.images || [],
-        // Preserve the buildings object which comes from the join - this is key!
-        // Check for both 'buildings' (plural) and 'building' (singular)
-        buildings: room.buildings || room.building || null
-      };
-      
-      return transformed;
-    })
-
+    
+    // Generate text-based room information
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="mt-8"
-      >
-        {/* Enhanced Room Header */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center justify-between mb-6"
-        >
-          <div className="flex items-center space-x-3">
-            <motion.div 
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg"
-            >
-              <Home className="w-5 h-5 text-white" />
-            </motion.div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
-                🏠 Found {rooms.length} Perfect {rooms.length === 1 ? 'Room' : 'Rooms'}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {rooms.filter(r => r.status === 'Available').length} available • 
-                Price range: ${Math.min(...rooms.map(r => r.private_room_rent || r.price || 0))} - ${Math.max(...rooms.map(r => r.private_room_rent || r.price || 0))}
-              </p>
-            </div>
-          </div>
-          <motion.div 
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: "spring" }}
-            className="bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 rounded-full border border-emerald-200"
-          >
-            <span className="text-sm font-semibold text-emerald-700 flex items-center">
-              <Eye className="w-4 h-4 mr-1" />
-              View details
-            </span>
-          </motion.div>
-        </motion.div>
-        
-        {/* Use the dedicated RoomCards component */}
-        <RoomCards 
-          rooms={transformedRooms} 
-          showExploreLink={true} 
-          onRoomClick={(room) => setSelectedRoom(room)}
-        />
-      </motion.div>
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <h3 className="font-bold text-lg mb-3">Found {rooms.length} Rooms:</h3>
+        <div className="space-y-4">
+          {rooms.map((room: any, index: number) => {
+            // Extract room details
+            const roomNumber = room.room_number || room.title?.match(/Room\s+(\w+)/i)?.[1] || room.id?.match(/_R(\d+)$/)?.[1] || 'Unknown';
+            const rent = room.private_room_rent || room.rent || room.price || 0;
+            const buildingName = room.buildings?.building_name || 
+              (typeof room.building === 'object' ? room.building?.name : room.building) || 
+              room.building_name || 
+              room.title?.split(' - ')[1] || 
+              'Unknown Building';
+            const status = room.status || 'Available';
+            
+            return (
+              <div key={room.room_id || room.id || index} className="border-l-4 border-blue-500 pl-3">
+                <div className="font-semibold">{room.title || `Room ${roomNumber}`}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <div>• Building: {buildingName}</div>
+                  <div>• Rent: ${rent}/month</div>
+                  <div>• Status: {status}</div>
+                  {room.floor_number && <div>• Floor: {room.floor_number}</div>}
+                  {room.room_type && <div>• Type: {room.room_type}</div>}
+                  {room.furnished && <div>• Furnished: Yes</div>}
+                  {room.bathroom_included && <div>• Private Bathroom: Yes</div>}
+                  {room.amenities && Array.isArray(room.amenities) && room.amenities.length > 0 && (
+                    <div>• Amenities: {room.amenities.join(', ')}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     );
   };
 
