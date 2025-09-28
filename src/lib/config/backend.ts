@@ -18,6 +18,7 @@ export const backendConfig = {
     chat: process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8000/api',
     // Specific endpoints for different services
     query: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/query` : 'http://localhost:8000/query',
+    queryWeb: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/query/web` : 'http://localhost:8000/query/web',
     leads: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/leads` : 'http://localhost:8000/leads',
     buildings: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/buildings` : 'http://localhost:8000/buildings',
     rooms: process.env.NEXT_PUBLIC_BACKEND_API_URL ? `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/rooms` : 'http://localhost:8000/rooms',
