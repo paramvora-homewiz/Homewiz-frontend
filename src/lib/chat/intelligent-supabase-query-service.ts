@@ -333,7 +333,7 @@ These metrics are updated in real-time from our database.`;
     }
 
     // Fallback to AI generation
-    const prompt = `
+const prompt = `
 Generate a natural, conversational response for this real estate query result:
 
 Original Query: "${intent.originalQuery}"

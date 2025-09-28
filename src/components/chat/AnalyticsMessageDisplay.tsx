@@ -3,6 +3,7 @@
 import React from 'react';
 import SmartDataVisualizer from './SmartDataVisualizer';
 import QueryResponseMismatchDetector from './QueryResponseMismatchDetector';
+import { MessageRenderer } from './MessageRenderer';
 
 interface AnalyticsMessageDisplayProps {
   message: any;
@@ -111,7 +112,7 @@ export default function AnalyticsMessageDisplay({ message, className = '', userQ
   
   if (!showVisualization) {
     // Fallback to original content if no analytics data found
-    return <div className={className}>{message.content}</div>;
+    return <MessageRenderer content={message.content} metadata={message.metadata} role={message.role || 'assistant'} />;
   }
   
   // Determine the appropriate title
@@ -140,9 +141,7 @@ export default function AnalyticsMessageDisplay({ message, className = '', userQ
   if (userQuery) {
     return (
       <div className="space-y-4">
-        <div className={className}>
-          {cleanMessage}
-        </div>
+        <MessageRenderer content={message.content} metadata={message.metadata} role={message.role || 'assistant'} />
         <QueryResponseMismatchDetector query={userQuery} responseData={data}>
           {visualizer}
         </QueryResponseMismatchDetector>
@@ -152,9 +151,7 @@ export default function AnalyticsMessageDisplay({ message, className = '', userQ
   
   return (
     <div className="space-y-4">
-      <div className={className}>
-        {cleanMessage}
-      </div>
+      <MessageRenderer content={message.content} metadata={message.metadata} role={message.role || 'assistant'} />
       {visualizer}
     </div>
   );
