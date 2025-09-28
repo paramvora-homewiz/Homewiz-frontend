@@ -7,10 +7,12 @@ import InteractiveMessageRenderer from './InteractiveMessageRenderer';
 import SmartDataVisualizer from './SmartDataVisualizer';
 import AnalyticsMessageDisplay from './AnalyticsMessageDisplay';
 import LLMUsageIndicator from './LLMUsageIndicator';
+import { MessageRenderer } from './MessageRenderer';
 import { llmService, LLMIntegrationService } from '@/lib/llm-integration-service';
 import { supabase } from '@/lib/supabase/client';
 import { IntelligentSupabaseQueryService } from '@/lib/chat/intelligent-supabase-query-service';
 import { formatBackendResponse, extractRelevantData } from '@/lib/clean-backend-response';
+import backendConfig from '@/lib/config/backend';
 
 interface Message {
   id: string;
@@ -84,8 +86,8 @@ export function BackendIntegratedChatInterface() {
     }
     
     try {
-      // Test with a simple query instead of health endpoint
-      const response = await fetch(`${backendUrl}/query/`, {
+      // Test with the web query endpoint
+      const response = await fetch(backendConfig.http.queryWeb, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: 'test connection' })
@@ -255,7 +257,7 @@ export function BackendIntegratedChatInterface() {
       if (useBackend && backendConnected) {
         console.log('🚀 Using backend for query:', messageContent);
         
-        const response = await fetch(`${backendUrl}/query/`, {
+        const response = await fetch(backendConfig.http.queryWeb, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -312,18 +314,24 @@ export function BackendIntegratedChatInterface() {
         if (data.success === false || (data.result?.success === false)) {
           console.log('⚠️ Backend error detected', {
             error: data.error || data.result?.error,
-            message: data.message || data.result?.message
+            message: data.message || data.result?.message,
+            response: data.response || data.result?.response
           });
-          
-          // Display appropriate error message
+
+          // Use the backend's response if available, otherwise show error
+          const errorContent = data.response || data.result?.response || data.message || data.result?.message ||
+                             'I apologize, but I\'m experiencing high demand at the moment. The AI service is temporarily unavailable due to rate limiting. Please try again in a few moments, or contact support if the issue persists.';
+
+          // Display the error message from backend
           const errorMessage: Message = {
             id: `asst-error-${Date.now()}`,
-            content: 'I apologize, but I\'m experiencing high demand at the moment. The AI service is temporarily unavailable due to rate limiting. Please try again in a few moments, or contact support if the issue persists.',
+            content: errorContent,
             role: 'assistant',
             created_at: new Date().toISOString(),
             metadata: {
               error: true,
-              backend_error: data.error || data.result?.error || 'Backend service unavailable'
+              backend_error: data.error || data.result?.error || 'Backend service unavailable',
+              ...data
             }
           };
 
@@ -568,21 +576,15 @@ export function BackendIntegratedChatInterface() {
                       );
                     })()
                   ) : (
-                    <div className={message.role === 'user' ? 'text-white' : 'text-gray-800'}>
-                      {message.content}
-                    </div>
+                    <MessageRenderer
+                      content={message.content}
+                      metadata={message.metadata}
+                      role={message.role}
+                    />
                   )}
                   
                   {message.isStreaming && (
                     <span className="inline-block animate-pulse ml-1">...</span>
-                  )}
-                  
-                  {message.function_used && (
-                    <div className={`text-xs mt-2 ${
-                      message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
-                      Function: {message.function_used}
-                    </div>
                   )}
                   
                   {message.llmMetrics && message.role === 'assistant' && (
