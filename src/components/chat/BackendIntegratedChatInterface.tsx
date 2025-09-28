@@ -312,11 +312,10 @@ export function BackendIntegratedChatInterface() {
 
         // Check if backend failed for any reason
         if (data.success === false || (data.result?.success === false)) {
-          console.log('⚠️ Backend error detected', {
-            error: data.error || data.result?.error,
-            message: data.message || data.result?.message,
-            response: data.response || data.result?.response
-          });
+          console.log('⚠️ Backend error detected - Full Response:', data);
+          console.log('📝 Backend response content:', data.response || data.result?.response);
+          console.log('💬 Backend message:', data.message || data.result?.message);
+          console.log('❌ Backend error:', data.error || data.result?.error);
 
           // Use the backend's response if available, otherwise show error
           const errorContent = data.response || data.result?.response || data.message || data.result?.message ||
@@ -329,7 +328,8 @@ export function BackendIntegratedChatInterface() {
             role: 'assistant',
             created_at: new Date().toISOString(),
             metadata: {
-              error: true,
+              error: false, // Set to false so it renders normally with markdown
+              backend_response: true, // Flag to indicate this is from backend
               backend_error: data.error || data.result?.error || 'Backend service unavailable',
               ...data
             }
