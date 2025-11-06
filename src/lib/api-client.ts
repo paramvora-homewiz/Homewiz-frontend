@@ -75,7 +75,10 @@ export class ApiClient {
   private requestQueue: Map<string, Promise<any>> = new Map()
 
   private constructor() {
+    // Use the smart default from config
+    // config.api.baseUrl already handles production vs development detection
     this.baseUrl = config.api.baseUrl
+
     this.defaultHeaders = {
       'Content-Type': 'application/json',
       'X-Client-Version': config.app.version,
@@ -85,6 +88,13 @@ export class ApiClient {
     // Add demo mode header if enabled
     if (config.app.demoMode) {
       this.defaultHeaders['X-Demo-Mode'] = 'true'
+    }
+
+    // Log the baseUrl for debugging
+    if (typeof window !== 'undefined') {
+      console.log('🔧 ApiClient initialized')
+      console.log('   Base URL:', this.baseUrl)
+      console.log('   Environment:', config.environment)
     }
   }
 
