@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { EnhancedCard, StatusBadge, EnhancedInput, EnhancedSelect } from '@/components/ui/enhanced-components'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { databaseService } from '@/lib/supabase/database'
-import type { Building, Room, Tenant, Operator } from '@/lib/supabase/types'
+import { buildingsApi, roomsApi, tenantsApi, operatorsApi } from '@/lib/api'
+import type { Building, Room, Tenant, Operator } from '@/lib/api/types'
 import {
   Database,
   Building as BuildingIcon,
@@ -108,32 +108,32 @@ export default function DataManagementPage({}: DataManagementPageProps) {
   // Fetch total counts for stats (independent of active tab and pagination)
   const fetchTotalCounts = async () => {
     try {
-      // Fetch all counts in parallel for better performance
+      // Fetch all counts in parallel for better performance via backend API
       const [buildingsResponse, roomsResponse, tenantsResponse, activeTenantsResponse, operatorsResponse, activeOperatorsResponse] = await Promise.all([
         // Total buildings
-        databaseService.buildings.list({ limit: 1 }),
-        // Total rooms  
-        databaseService.rooms.list({ limit: 1 }),
+        buildingsApi.getAll({ limit: 1 }),
+        // Total rooms
+        roomsApi.getAll({ limit: 1 }),
         // Total tenants
-        databaseService.tenants.list({ limit: 1 }),
+        tenantsApi.getAll({ limit: 1 }),
         // Active tenants
-        databaseService.tenants.list({ limit: 1, filters: { status: 'ACTIVE' } }),
+        tenantsApi.getAll({ limit: 1, filters: { status: 'ACTIVE' } }),
         // Total operators
-        databaseService.operators.list({ limit: 1 }),
-        // Active operators (assuming active field is boolean)
-        databaseService.operators.list({ limit: 1, filters: { active: true } })
+        operatorsApi.getAll({ limit: 1 }),
+        // Active operators
+        operatorsApi.getAll({ limit: 1, filters: { active: true } })
       ])
 
       setTotalCounts({
-        buildings: buildingsResponse.count || 0,
-        rooms: roomsResponse.count || 0,
-        tenants: tenantsResponse.count || 0,
-        activeTenants: activeTenantsResponse.count || 0,
-        operators: operatorsResponse.count || 0,
-        activeOperators: activeOperatorsResponse.count || 0
+        buildings: buildingsResponse.data?.length || 0,
+        rooms: roomsResponse.data?.length || 0,
+        tenants: tenantsResponse.data?.length || 0,
+        activeTenants: activeTenantsResponse.data?.length || 0,
+        operators: operatorsResponse.data?.length || 0,
+        activeOperators: activeOperatorsResponse.data?.length || 0
       })
-    } catch (error) {
-      console.error('Error fetching total counts:', error)
+    } catch (error: any) {
+      // Silent fail for count statistics
     }
   }
 
@@ -143,7 +143,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     try {
       switch (activeTab) {
         case 'buildings':
-          const buildingsResponse = await databaseService.buildings.list({
+          const buildingsResponse = await buildingsApi.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -156,9 +156,9 @@ export default function DataManagementPage({}: DataManagementPageProps) {
             setBuildings(buildingsResponse.data)
           }
           break
-          
+
         case 'rooms':
-          const roomsResponse = await databaseService.rooms.list({
+          const roomsResponse = await roomsApi.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -171,9 +171,9 @@ export default function DataManagementPage({}: DataManagementPageProps) {
             setRooms(roomsResponse.data)
           }
           break
-          
+
         case 'tenants':
-          const tenantsResponse = await databaseService.tenants.list({
+          const tenantsResponse = await tenantsApi.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -186,9 +186,9 @@ export default function DataManagementPage({}: DataManagementPageProps) {
             setTenants(tenantsResponse.data)
           }
           break
-          
+
         case 'operators':
-          const operatorsResponse = await databaseService.operators.list({
+          const operatorsResponse = await operatorsApi.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -202,8 +202,8 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           }
           break
       }
-    } catch (error) {
-      console.error('Error fetching data:', error)
+    } catch (error: any) {
+      showWarningMessage('Data Fetch Error', error?.message || 'Failed to load data. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -250,31 +250,34 @@ export default function DataManagementPage({}: DataManagementPageProps) {
 
   const handleDelete = async (id: string | number) => {
     if (!confirm('Are you sure you want to delete this item?')) return
-    
+
     setIsLoading(true)
     try {
       let response
       switch (activeTab) {
         case 'buildings':
-          response = await databaseService.buildings.delete(id)
+          response = await buildingsApi.delete(String(id))
           break
         case 'rooms':
-          response = await databaseService.rooms.delete(id)
+          response = await roomsApi.delete(String(id))
           break
         case 'tenants':
-          response = await databaseService.tenants.delete(id)
+          response = await tenantsApi.delete(String(id))
           break
         case 'operators':
-          response = await databaseService.operators.delete(id)
+          response = await operatorsApi.delete(String(id))
           break
       }
-      
+
       if (response?.success) {
+        showSuccessMessage('Deleted Successfully', 'Item has been removed.')
         fetchData()
         fetchTotalCounts() // Update total counts after deletion
+      } else {
+        showWarningMessage('Delete Failed', response?.error || 'Failed to delete item.')
       }
-    } catch (error) {
-      console.error('Error deleting item:', error)
+    } catch (error: any) {
+      showWarningMessage('Delete Error', error?.message || 'Failed to delete item. Please try again.')
     } finally {
       setIsLoading(false)
       setShowActionMenu(false)

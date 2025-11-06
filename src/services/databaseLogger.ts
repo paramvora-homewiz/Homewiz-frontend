@@ -55,15 +55,12 @@ class DatabaseLogger {
   private triggerNotifications(logEntry: LogEntry): void {
     // Skip notifications for now to avoid webpack chunking issues
     // TODO: Implement proper notification system without dynamic imports
-    try {
-      console.log('📢 Database operation notification:', {
-        operation: logEntry.operation.operation,
-        table: logEntry.operation.table,
-        success: logEntry.success,
-        timestamp: logEntry.timestamp
-      })
-    } catch (error) {
-      console.error('Failed to log notification:', error)
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        // Only log in development mode
+      } catch (error) {
+        // Silent fail in production
+      }
     }
   }
 
@@ -71,11 +68,13 @@ class DatabaseLogger {
    * Log when data is added to the database
    */
   logDataAdded(table: string, data: any, id?: string | number): void {
-    console.group(`🆕 NEW ${table.toUpperCase()} ADDED`)
-    console.log('📅 Timestamp:', new Date().toLocaleString())
-    console.log('🆔 ID:', id || 'Auto-generated')
-    console.log('📊 Data Added:', data)
-    console.groupEnd()
+    if (process.env.NODE_ENV === 'development') {
+      console.group(`🆕 NEW ${table.toUpperCase()} ADDED`)
+      console.log('📅 Timestamp:', new Date().toLocaleString())
+      console.log('🆔 ID:', id || 'Auto-generated')
+      console.log('📊 Data Added:', data)
+      console.groupEnd()
+    }
 
     this.logOperation({
       operation: 'INSERT',
@@ -90,11 +89,13 @@ class DatabaseLogger {
    * Log when data is updated in the database
    */
   logDataUpdated(table: string, data: any, id: string | number): void {
-    console.group(`✏️ ${table.toUpperCase()} UPDATED`)
-    console.log('📅 Timestamp:', new Date().toLocaleString())
-    console.log('🆔 ID:', id)
-    console.log('📊 Updated Data:', data)
-    console.groupEnd()
+    if (process.env.NODE_ENV === 'development') {
+      console.group(`✏️ ${table.toUpperCase()} UPDATED`)
+      console.log('📅 Timestamp:', new Date().toLocaleString())
+      console.log('🆔 ID:', id)
+      console.log('📊 Updated Data:', data)
+      console.groupEnd()
+    }
 
     this.logOperation({
       operation: 'UPDATE',
@@ -109,10 +110,12 @@ class DatabaseLogger {
    * Log when data is deleted from the database
    */
   logDataDeleted(table: string, id: string | number): void {
-    console.group(`🗑️ ${table.toUpperCase()} DELETED`)
-    console.log('📅 Timestamp:', new Date().toLocaleString())
-    console.log('🆔 ID:', id)
-    console.groupEnd()
+    if (process.env.NODE_ENV === 'development') {
+      console.group(`🗑️ ${table.toUpperCase()} DELETED`)
+      console.log('📅 Timestamp:', new Date().toLocaleString())
+      console.log('🆔 ID:', id)
+      console.groupEnd()
+    }
 
     this.logOperation({
       operation: 'DELETE',
@@ -127,13 +130,15 @@ class DatabaseLogger {
    * Log database operation errors
    */
   logError(operation: DatabaseOperation, error: string): void {
-    console.group(`❌ DATABASE ERROR`)
-    console.log('📅 Timestamp:', new Date().toLocaleString())
-    console.log('🔧 Operation:', operation.operation)
-    console.log('📋 Table:', operation.table)
-    console.log('💥 Error:', error)
-    console.log('📊 Data:', operation.data)
-    console.groupEnd()
+    if (process.env.NODE_ENV === 'development') {
+      console.group(`❌ DATABASE ERROR`)
+      console.log('📅 Timestamp:', new Date().toLocaleString())
+      console.log('🔧 Operation:', operation.operation)
+      console.log('📋 Table:', operation.table)
+      console.log('💥 Error:', error)
+      console.log('📊 Data:', operation.data)
+      console.groupEnd()
+    }
 
     this.logOperation(operation, false, error)
   }
@@ -164,7 +169,9 @@ class DatabaseLogger {
    */
   clearLogs(): void {
     this.logs = []
-    console.log('🧹 Database logs cleared')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🧹 Database logs cleared')
+    }
   }
 
   /**
@@ -214,18 +221,20 @@ class DatabaseLogger {
    * Console log with formatting
    */
   private consoleLog(logEntry: LogEntry): void {
-    const { operation, success, error } = logEntry
-    const emoji = success ? '✅' : '❌'
-    const opEmoji = {
-      INSERT: '🆕',
-      UPDATE: '✏️',
-      DELETE: '🗑️'
-    }[operation.operation]
+    if (process.env.NODE_ENV === 'development') {
+      const { operation, success, error } = logEntry
+      const emoji = success ? '✅' : '❌'
+      const opEmoji = {
+        INSERT: '🆕',
+        UPDATE: '✏️',
+        DELETE: '🗑️'
+      }[operation.operation]
 
-    console.log(
-      `${emoji} ${opEmoji} ${operation.operation} ${operation.table}`,
-      success ? 'SUCCESS' : `FAILED: ${error}`
-    )
+      console.log(
+        `${emoji} ${opEmoji} ${operation.operation} ${operation.table}`,
+        success ? 'SUCCESS' : `FAILED: ${error}`
+      )
+    }
   }
 
   /**

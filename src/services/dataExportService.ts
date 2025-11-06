@@ -45,7 +45,7 @@ class DataExportService {
         throw new Error(`Unsupported export format: ${options.format}`)
     }
 
-    console.log(`✅ Data exported successfully as ${options.format.toUpperCase()}`)
+    // Data exported successfully
   }
 
   /**

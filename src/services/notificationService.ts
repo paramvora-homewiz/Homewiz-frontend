@@ -183,9 +183,6 @@ class NotificationService {
       this.notifications = this.notifications.slice(0, this.maxNotifications)
     }
 
-    // Log the notification
-    console.log(`🔔 Notification: ${notification.title} - ${notification.message}`)
-
     // Notify listeners
     this.notifyListeners()
 
@@ -335,7 +332,6 @@ class NotificationService {
     const rule = this.rules.find(r => r.id === ruleId)
     if (rule) {
       rule.enabled = enabled
-      console.log(`🔔 Notification rule "${rule.name}" ${enabled ? 'enabled' : 'disabled'}`)
     }
   }
 
