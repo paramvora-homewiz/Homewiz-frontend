@@ -1,0 +1,7 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#F3F4F6"/>
+  <path d="M200 80L120 130V210H170V170H230V210H280V130L200 80Z" stroke="#9CA3AF" stroke-width="2" fill="none"/>
+  <rect x="140" y="150" width="30" height="30" stroke="#9CA3AF" stroke-width="2" fill="none"/>
+  <rect x="230" y="150" width="30" height="30" stroke="#9CA3AF" stroke-width="2" fill="none"/>
+  <text x="200" y="250" text-anchor="middle" fill="#6B7280" font-family="Arial, sans-serif" font-size="16">Room Image</text>
+</svg>
