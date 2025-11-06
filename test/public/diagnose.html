@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagnose Script Injection</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .section { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .error { color: red; }
+        .success { color: green; }
+        pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Script Injection Diagnostic</h1>
+    
+    <div class="section">
+        <h2>1. Checking for Injected Scripts</h2>
+        <div id="scripts"></div>
+    </div>
+    
+    <div class="section">
+        <h2>2. Checking for Modified Functions</h2>
+        <div id="functions"></div>
+    </div>
+    
+    <div class="section">
+        <h2>3. Checking Browser Extensions</h2>
+        <div id="extensions"></div>
+    </div>
+    
+    <div class="section">
+        <h2>4. Checking Window Object</h2>
+        <div id="window-check"></div>
+    </div>
+    
+    <div class="section">
+        <h2>5. Network Interceptors</h2>
+        <div id="network"></div>
+    </div>
+
+    <script>
+        // 1. Check all scripts
+        const scriptsDiv = document.getElementById('scripts');
+        const scripts = document.querySelectorAll('script');
+        scriptsDiv.innerHTML = '<p>Found ' + scripts.length + ' scripts:</p>';
+        scripts.forEach((script, i) => {
+            const src = script.src || 'inline script';
+            const content = script.innerHTML.substring(0, 200);
+            scriptsDiv.innerHTML += '<pre>Script ' + i + ': ' + src + '\n' + 
+                (content ? 'Content: ' + content + '...' : '') + '</pre>';
+        });
+
+        // 2. Check for function overrides
+        const functionsDiv = document.getElementById('functions');
+        const checkFunctions = ['fetch', 'XMLHttpRequest', 'setTimeout', 'setInterval'];
+        checkFunctions.forEach(fn => {
+            const isNative = window[fn] && window[fn].toString().includes('[native code]');
+            functionsDiv.innerHTML += '<p>' + fn + ': ' + 
+                (isNative ? '<span class="success">Native</span>' : '<span class="error">Modified!</span>') + '</p>';
+            if (!isNative && window[fn]) {
+                functionsDiv.innerHTML += '<pre>' + window[fn].toString().substring(0, 200) + '...</pre>';
+            }
+        });
+
+        // 3. Check for extension indicators
+        const extensionsDiv = document.getElementById('extensions');
+        const extensionIndicators = [
+            '__REACT_DEVTOOLS_GLOBAL_HOOK__',
+            '__REDUX_DEVTOOLS_EXTENSION__',
+            '__VUE_DEVTOOLS_GLOBAL_HOOK__',
+            '_phantom',
+            'callPhantom',
+            'Buffer',
+            'emit',
+            'spawn'
+        ];
+        
+        extensionIndicators.forEach(indicator => {
+            if (window[indicator]) {
+                extensionsDiv.innerHTML += '<p class="error">Found: ' + indicator + '</p>';
+            }
+        });
+
+        // 4. Check window object for suspicious properties
+        const windowDiv = document.getElementById('window-check');
+        const suspiciousProps = Object.keys(window).filter(key => {
+            return key.includes('check') || key.includes('poll') || key.includes('monitor');
+        });
+        
+        if (suspiciousProps.length > 0) {
+            windowDiv.innerHTML = '<p class="error">Suspicious window properties found:</p>';
+            suspiciousProps.forEach(prop => {
+                windowDiv.innerHTML += '<pre>' + prop + ': ' + typeof window[prop] + '</pre>';
+                if (typeof window[prop] === 'function') {
+                    windowDiv.innerHTML += '<pre>' + window[prop].toString().substring(0, 300) + '...</pre>';
+                }
+            });
+        } else {
+            windowDiv.innerHTML = '<p class="success">No suspicious window properties found</p>';
+        }
+
+        // 5. Check for network interceptors
+        const networkDiv = document.getElementById('network');
+        
+        // Save original fetch
+        const originalFetch = window.fetch;
+        
+        // Test fetch
+        window.fetch = function(...args) {
+            networkDiv.innerHTML += '<p class="error">Fetch was called with: ' + args[0] + '</p>';
+            return originalFetch.apply(this, args);
+        };
+        
+        // Check if fetch was already modified
+        if (!originalFetch.toString().includes('[native code]')) {
+            networkDiv.innerHTML = '<p class="error">Fetch has been modified!</p>';
+            networkDiv.innerHTML += '<pre>' + originalFetch.toString().substring(0, 300) + '...</pre>';
+        } else {
+            networkDiv.innerHTML = '<p class="success">Fetch appears to be native</p>';
+        }
+
+        // Additional diagnostics
+        console.log('=== Full Window Object Inspection ===');
+        console.log('Window properties:', Object.keys(window));
+        console.log('=== Document Scripts ===');
+        console.log(document.scripts);
+        console.log('=== Service Workers ===');
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                console.log('Service Workers:', regs);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#F3F4F6"/>
+  <path d="M150 100H250V200H150V100Z" fill="#D1D5DB"/>
+  <path d="M170 120H190V140H170V120Z" fill="#9CA3AF"/>
+  <path d="M210 120H230V140H210V120Z" fill="#9CA3AF"/>
+  <path d="M170 160H190V180H170V160Z" fill="#9CA3AF"/>
+  <path d="M210 160H230V180H210V160Z" fill="#9CA3AF"/>
+  <path d="M180 200H220V220H180V200Z" fill="#9CA3AF"/>
+  <path d="M140 220H260V230H140V220Z" fill="#D1D5DB"/>
+  <text x="200" y="260" font-family="Arial, sans-serif" font-size="14" fill="#6B7280" text-anchor="middle">Building Image</text>
+</svg>
