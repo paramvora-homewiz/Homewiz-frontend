@@ -13,9 +13,7 @@ import TenantForm from './TenantForm'
 import LeadForm from './LeadForm'
 import { FormDataProvider, useFormData } from './FormDataProvider'
 import { OperatorFormData, BuildingFormData, RoomFormData, TenantFormData, LeadFormData } from '@/types'
-import { createOperator, createBuilding, createRoom, createTenant, createLead } from '../../lib/api-client'
 import { formIntegration } from '../../lib/supabase/form-integration'
-import config from '../../lib/config'
 import DatabaseLogsPanel from '../dashboard/DatabaseLogsPanel'
 import AnalyticsDashboard from '../dashboard/AnalyticsDashboard'
 import AdvancedSearchPanel from '../search/AdvancedSearchPanel'
@@ -122,77 +120,43 @@ function FormsDashboardContent() {
     setIsLoading(true)
     try {
       console.log(`🚀 Submitting ${formType} form:`, data)
-      console.log('🔧 Config debug:', {
-        'config.api.disabled': config.api.disabled,
-        'NEXT_PUBLIC_DISABLE_BACKEND': process.env.NEXT_PUBLIC_DISABLE_BACKEND,
-        'config.environment': config.environment
-      })
+      console.log('🔧 Using Supabase form integration (direct database access)')
 
-      // Use Supabase form integration when backend is disabled, otherwise use API service
-      const backendDisabled = process.env.NEXT_PUBLIC_DISABLE_BACKEND === 'true' || config.api.disabled
+      // Always use Supabase form integration for all form submissions
       let result
-      
-      if (backendDisabled) {
-        console.log('🔧 Using Supabase form integration (backend disabled)')
-        switch (formType) {
-          case 'operator':
-            result = await formIntegration.operator.submitOperator(data)
-            await formData.refreshOperators()
-            break
-          case 'building':
-            result = await formIntegration.building.submitBuilding(data)
-            await formData.refreshBuildings()
-            break
-          case 'room':
-            result = await formIntegration.room.submitRoom(data)
-            await formData.refreshRooms()
-            break
-          case 'tenant':
-            result = await formIntegration.tenant.submitTenant(data)
-            await Promise.all([
-              formData.refreshRooms(),
-              formData.refreshBuildings()
-            ])
-            break
-          case 'lead':
-            result = await formIntegration.lead.submitLead(data)
-            await formData.refreshRooms()
-            break
-        }
-      } else {
-        console.log('🔌 Using API service (backend enabled)')
-        console.log('🔧 Backend disabled check:', backendDisabled)
-        switch (formType) {
-          case 'operator':
-            result = await createOperator(data)
-            await formData.refreshOperators()
-            break
-          case 'building':
-            result = await createBuilding(data)
-            await formData.refreshBuildings()
-            break
-          case 'room':
-            result = await createRoom(data)
-            await formData.refreshRooms()
-            break
-          case 'tenant':
-            result = await createTenant(data)
-            await Promise.all([
-              formData.refreshRooms(),
-              formData.refreshBuildings()
-            ])
-            break
-          case 'lead':
-            result = await createLead(data)
-            await formData.refreshRooms()
-            break
-        }
+
+      switch (formType) {
+        case 'operator':
+          result = await formIntegration.operator.submitOperator(data)
+          await formData.refreshOperators()
+          break
+        case 'building':
+          result = await formIntegration.building.submitBuilding(data)
+          await formData.refreshBuildings()
+          break
+        case 'room':
+          result = await formIntegration.room.submitRoom(data)
+          await formData.refreshRooms()
+          break
+        case 'tenant':
+          result = await formIntegration.tenant.submitTenant(data)
+          await Promise.all([
+            formData.refreshRooms(),
+            formData.refreshBuildings()
+          ])
+          break
+        case 'lead':
+          result = await formIntegration.lead.submitLead(data)
+          await formData.refreshRooms()
+          break
+        default:
+          throw new Error(`Unknown form type: ${formType}`)
       }
 
       console.log(`📋 ${formType} submission result:`, result)
 
       // Check if submission was actually successful
-      if (result.success) {
+      if (result && result.success) {
         console.log(`✅ ${formType} saved successfully`)
         
         // Return to dashboard after successful submission
@@ -201,24 +165,21 @@ function FormsDashboardContent() {
         // Show enhanced success message
         showFormSuccessMessage(formType, 'saved')
       } else {
-        console.log(`❌ ${formType} submission failed:`, result.error || result.validationErrors)
-        
+        console.log(`❌ ${formType} submission failed:`, result?.error || result?.validationErrors)
+
         // Don't redirect to dashboard - stay on form to show errors
-        if (result.validationErrors) {
+        if (result?.validationErrors) {
           console.error('Validation errors:', result.validationErrors)
           // The form should handle displaying validation errors
         }
-        
-        if (result.error) {
+
+        if (result?.error) {
           // Show error message but don't redirect
           handleFormSubmissionError(new Error(result.error), {
             additionalInfo: { formType, data }
           })
         }
       }
-
-      // Return the result for image upload and other post-processing
-      return result
 
     } catch (error) {
       console.error(`❌ Error submitting ${formType} form:`, error)
@@ -297,8 +258,7 @@ function FormsDashboardContent() {
         return (
           <RoomForm
             onSubmit={async (data) => {
-              const result = await handleFormSubmit(data, 'room')
-              return result
+              await handleFormSubmit(data, 'room')
             }}
             onCancel={handleFormCancel}
             isLoading={isLoading}
