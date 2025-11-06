@@ -13,11 +13,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import BuildingForm from '@/components/forms/BuildingForm'
-import { databaseService } from '@/lib/supabase/database'
+import { buildingsApi } from '@/lib/api'
 import { showSuccessMessage, showWarningMessage } from '@/lib/error-handler'
 import { transformBackendDataForFrontend } from '@/lib/backend-sync'
 import { Building as BuildingIcon, Save, X } from 'lucide-react'
-import type { Building } from '@/lib/supabase/types'
+import type { Building } from '@/lib/api/types'
 
 interface EditBuildingModalProps {
   building: Building | null
@@ -47,9 +47,9 @@ export default function EditBuildingModal({
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      // Update building data
-      const response = await databaseService.buildings.update(building!.building_id, data)
-      
+      // Update building data via backend API
+      const response = await buildingsApi.update(building!.building_id, data)
+
       if (response.success) {
         showSuccessMessage(
           'Building Updated',
@@ -57,23 +57,22 @@ export default function EditBuildingModal({
         )
         onOpenChange(false)
         onSuccess?.()
-        
+
         // Return success response with building data for image upload handling
-        return { 
-          success: true, 
-          data: { 
+        return {
+          success: true,
+          data: {
             building_id: building!.building_id,
-            ...response.data 
+            ...response.data
           }
         }
       } else {
-        throw new Error(response.error?.message || 'Failed to update building')
+        throw new Error(response.error || 'Failed to update building')
       }
-    } catch (error) {
-      console.error('Error updating building:', error)
+    } catch (error: any) {
       showWarningMessage(
         'Update Failed',
-        'Failed to update building. Please try again.'
+        error?.message || 'Failed to update building. Please try again.'
       )
       // Return error response to prevent form from closing
       return { success: false, error }

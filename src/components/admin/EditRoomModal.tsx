@@ -13,11 +13,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import RoomForm from '@/components/forms/RoomForm'
-import { databaseService } from '@/lib/supabase/database'
+import { roomsApi } from '@/lib/api'
 import { showSuccessMessage, showWarningMessage } from '@/lib/error-handler'
 import { transformRoomDataForFrontend, parseBuildingImages } from '@/lib/backend-sync'
 import { Home, Save, X, Camera } from 'lucide-react'
-import type { Room } from '@/lib/supabase/types'
+import type { Room } from '@/lib/api/types'
 import UpdateRoomImagesModal from './UpdateRoomImagesModal'
 
 interface EditRoomModalProps {
@@ -51,27 +51,26 @@ export default function EditRoomModal({
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      // Update room data
-      const response = await databaseService.rooms.update(room!.room_id, data)
-      
+      // Update room data via backend API
+      const response = await roomsApi.update(room!.room_id, data)
+
       if (response.success) {
         // After successful update, fetch fresh room data to ensure we have the latest images
-        const freshRoomResponse = await databaseService.rooms.getById(room!.room_id)
+        const freshRoomResponse = await roomsApi.getById(room!.room_id)
         if (freshRoomResponse.success && freshRoomResponse.data) {
-          console.log('🔄 Fetched fresh room data after update:', freshRoomResponse.data)
           setCurrentRoomData(freshRoomResponse.data)
           // Force form to re-render with fresh data
           setFormKey(prev => prev + 1)
         }
-        
+
         showSuccessMessage(
           'Room Updated',
           `Room "${data.room_id}" has been updated successfully.`
         )
-        
+
         // Return the updated room data so RoomForm can handle image uploads
-        return { 
-          success: true, 
+        return {
+          success: true,
           data: {
             ...response.data,
             room_id: room!.room_id,
@@ -84,13 +83,12 @@ export default function EditRoomModal({
           }
         }
       } else {
-        throw new Error(response.error?.message || 'Failed to update room')
+        throw new Error(response.error || 'Failed to update room')
       }
-    } catch (error) {
-      console.error('Error updating room:', error)
+    } catch (error: any) {
       showWarningMessage(
         'Update Failed',
-        'Failed to update room. Please try again.'
+        error?.message || 'Failed to update room. Please try again.'
       )
       // Return error response to prevent form from closing
       return { success: false, error }
@@ -145,9 +143,8 @@ export default function EditRoomModal({
             onSuccess={async () => {
               // Refresh room data after successful image upload
               if (room?.room_id) {
-                const freshRoomResponse = await databaseService.rooms.getById(room.room_id)
+                const freshRoomResponse = await roomsApi.getById(room.room_id)
                 if (freshRoomResponse.success && freshRoomResponse.data) {
-                  console.log('🔄 Refreshing room data after image upload:', freshRoomResponse.data)
                   setCurrentRoomData(freshRoomResponse.data)
                   setFormKey(prev => prev + 1)
                 }
@@ -179,15 +176,7 @@ export default function EditRoomModal({
                 room_images: currentRoomData.room_images,
                 images: parseBuildingImages(currentRoomData.room_images)
               }
-              
-              console.log('🎨 EditRoomModal - Passing initial data to RoomForm:', {
-                roomId: initialData.room_id,
-                room_images: initialData.room_images,
-                images: initialData.images,
-                transformedImages: transformedData.images,
-                rawRoomImages: currentRoomData.room_images
-              })
-              
+
               return initialData
             })()}
             onSubmit={handleSubmit}

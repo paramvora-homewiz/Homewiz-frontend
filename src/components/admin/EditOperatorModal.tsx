@@ -13,10 +13,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import OperatorForm from '@/components/forms/OperatorForm'
-import { databaseService } from '@/lib/supabase/database'
+import { operatorsApi } from '@/lib/api'
 import { showSuccessMessage, showWarningMessage } from '@/lib/error-handler'
 import { Users, Save, X } from 'lucide-react'
-import type { Operator } from '@/lib/supabase/types'
+import type { Operator } from '@/lib/api/types'
 
 interface EditOperatorModalProps {
   operator: Operator | null
@@ -44,9 +44,9 @@ export default function EditOperatorModal({
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      // Update operator data
-      const response = await databaseService.operators.update(operator!.operator_id, data)
-      
+      // Update operator data via backend API
+      const response = await operatorsApi.update(operator!.operator_id, data)
+
       if (response.success) {
         showSuccessMessage(
           'Operator Updated',
@@ -55,20 +55,19 @@ export default function EditOperatorModal({
         onOpenChange(false)
         onSuccess?.()
       } else {
-        throw new Error(response.error?.message || 'Failed to update operator')
+        throw new Error(response.error || 'Failed to update operator')
       }
-    } catch (error) {
-      console.error('Error updating operator:', error)
+    } catch (error: any) {
       showWarningMessage(
         'Update Failed',
-        'Failed to update operator. Please try again.'
+        error?.message || 'Failed to update operator. Please try again.'
       )
       // Return error response to prevent form from closing
       return { success: false, error }
     } finally {
       setIsLoading(false)
     }
-    
+
     // Return success response
     return { success: true }
   }
