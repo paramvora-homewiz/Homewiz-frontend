@@ -7,14 +7,43 @@
 
 import { z } from 'zod'
 
+/**
+ * Production-Ready Environment Detection
+ * Automatically determines the correct backend URL based on environment
+ */
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
+const isDevelopment = process.env.NODE_ENV === 'development'
+
+// Production cloud backend URL
+const PRODUCTION_BACKEND_URL = 'https://homewiz-backend-335786120771.us-west2.run.app'
+const DEVELOPMENT_BACKEND_URL = 'http://localhost:8000'
+
+// Smart default: use cloud in production, localhost in development
+const getDefaultApiUrl = (): string => {
+  // 1. Check explicit environment variable
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL
+  }
+
+  // 2. Check backend-specific environment variable
+  if (process.env.NEXT_PUBLIC_BACKEND_API_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_API_URL
+  }
+
+  // 3. Smart default based on environment
+  return isProduction ? PRODUCTION_BACKEND_URL : DEVELOPMENT_BACKEND_URL
+}
+
 // Environment validation schema
 const envSchema = z.object({
   // Environment Configuration
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
   NEXT_PUBLIC_APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-  
+  VERCEL_ENV: z.enum(['development', 'preview', 'production']).optional(),
+
   // Backend API Configuration
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8000/api'),
+  NEXT_PUBLIC_API_URL: z.string().optional(),
+  NEXT_PUBLIC_BACKEND_API_URL: z.string().optional(),
   NEXT_PUBLIC_CLOUD_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
   NEXT_PUBLIC_DISABLE_BACKEND: z.string().transform(val => val === 'true').default('false'),
@@ -70,7 +99,8 @@ const envSchema = z.object({
 // Parse and validate environment variables
 const parseEnv = () => {
   try {
-    return envSchema.parse(process.env)
+    const parsed = envSchema.parse(process.env)
+    return parsed
   } catch (error) {
     console.error('❌ Invalid environment configuration:', error)
     throw new Error('Environment configuration validation failed')
@@ -80,25 +110,28 @@ const parseEnv = () => {
 // Validated environment variables
 const env = parseEnv()
 
+// Get the smart default API URL
+const smartApiUrl = getDefaultApiUrl()
+
 // Configuration object with typed values
 export const config = {
   // Environment
   environment: env.NEXT_PUBLIC_APP_ENV,
-  isDevelopment: env.NEXT_PUBLIC_APP_ENV === 'development',
+  isDevelopment: isDevelopment,
   isStaging: env.NEXT_PUBLIC_APP_ENV === 'staging',
-  isProduction: env.NEXT_PUBLIC_APP_ENV === 'production',
-  
+  isProduction: isProduction,
+
   // Application
   app: {
     name: env.NEXT_PUBLIC_APP_NAME,
     version: env.NEXT_PUBLIC_APP_VERSION,
     demoMode: env.NEXT_PUBLIC_DEMO_MODE,
   },
-  
+
   // API Configuration
   api: {
-    baseUrl: env.NEXT_PUBLIC_API_URL,
-    cloudUrl: env.NEXT_PUBLIC_CLOUD_API_URL,
+    baseUrl: smartApiUrl,
+    cloudUrl: env.NEXT_PUBLIC_CLOUD_API_URL || PRODUCTION_BACKEND_URL,
     timeout: env.NEXT_PUBLIC_API_TIMEOUT,
     // Auto-disable backend in production when Supabase is available
     disabled: env.NEXT_PUBLIC_DISABLE_BACKEND || (
@@ -288,12 +321,14 @@ export const validateApiConfig = (): boolean => {
 if (typeof window === 'undefined') {
   // Server-side validation
   console.log('🔧 HomeWiz Frontend Configuration Loaded')
-  console.log(`Environment: ${config.environment}`)
-  console.log(`Demo Mode: ${config.app.demoMode}`)
-  console.log(`API URL: ${config.api.baseUrl}`)
-  console.log(`Backend Disabled: ${config.api.disabled}`)
-  console.log(`Supabase URL: ${config.supabase.url ? 'configured' : 'not configured'}`)
-  console.log(`Clerk Configured: ${validateClerkConfig()}`)
+  console.log(`📦 Environment: ${config.environment}`)
+  console.log(`🏭 NODE_ENV: ${process.env.NODE_ENV}`)
+  console.log(`☁️  VERCEL_ENV: ${process.env.VERCEL_ENV || 'not set'}`)
+  console.log(`🎯 Demo Mode: ${config.app.demoMode}`)
+  console.log(`🌐 API URL (Smart Default): ${config.api.baseUrl}`)
+  console.log(`🔌 Backend Disabled: ${config.api.disabled}`)
+  console.log(`💾 Supabase URL: ${config.supabase.url ? 'configured' : 'not configured'}`)
+  console.log(`🔐 Clerk Configured: ${validateClerkConfig()}`)
 
   if (!validateApiConfig()) {
     console.warn('⚠️ Invalid API URL configuration')
@@ -302,6 +337,13 @@ if (typeof window === 'undefined') {
   if (!config.app.demoMode && !validateClerkConfig()) {
     console.warn('⚠️ Clerk authentication not properly configured')
   }
+}
+
+// Client-side configuration logging
+if (typeof window !== 'undefined') {
+  console.log('🌐 HomeWiz Client Configuration')
+  console.log(`API Base URL: ${config.api.baseUrl}`)
+  console.log(`Environment: ${config.environment}`)
 }
 
 export default config
