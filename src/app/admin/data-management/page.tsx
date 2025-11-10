@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { EnhancedCard, StatusBadge, EnhancedInput, EnhancedSelect } from '@/components/ui/enhanced-components'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { buildingsApi, roomsApi, tenantsApi, operatorsApi } from '@/lib/api'
-import type { Building, Room, Tenant, Operator } from '@/lib/api/types'
+import { buildingsService, roomsService, tenantsService, operatorsService } from '@/lib/supabase/database'
+import type { Building, Room, Tenant, Operator } from '@/lib/supabase/types'
 import {
   Database,
   Building as BuildingIcon,
@@ -108,20 +108,20 @@ export default function DataManagementPage({}: DataManagementPageProps) {
   // Fetch total counts for stats (independent of active tab and pagination)
   const fetchTotalCounts = async () => {
     try {
-      // Fetch all counts in parallel for better performance via backend API
+      // Fetch all counts in parallel for better performance via Supabase direct access
       const [buildingsResponse, roomsResponse, tenantsResponse, activeTenantsResponse, operatorsResponse, activeOperatorsResponse] = await Promise.all([
         // Total buildings
-        buildingsApi.getAll({ limit: 1 }),
+        buildingsService.getAll({ limit: 1 }),
         // Total rooms
-        roomsApi.getAll({ limit: 1 }),
+        roomsService.getAll({ limit: 1 }),
         // Total tenants
-        tenantsApi.getAll({ limit: 1 }),
+        tenantsService.getAll({ limit: 1 }),
         // Active tenants
-        tenantsApi.getAll({ limit: 1, filters: { status: 'ACTIVE' } }),
+        tenantsService.getAll({ limit: 1, filters: { status: 'ACTIVE' } }),
         // Total operators
-        operatorsApi.getAll({ limit: 1 }),
+        operatorsService.getAll({ limit: 1 }),
         // Active operators
-        operatorsApi.getAll({ limit: 1, filters: { active: true } })
+        operatorsService.getAll({ limit: 1, filters: { active: true } })
       ])
 
       setTotalCounts({
@@ -143,7 +143,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     try {
       switch (activeTab) {
         case 'buildings':
-          const buildingsResponse = await buildingsApi.getAll({
+          const buildingsResponse = await buildingsService.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -158,7 +158,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           break
 
         case 'rooms':
-          const roomsResponse = await roomsApi.getAll({
+          const roomsResponse = await roomsService.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -173,7 +173,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           break
 
         case 'tenants':
-          const tenantsResponse = await tenantsApi.getAll({
+          const tenantsResponse = await tenantsService.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -188,7 +188,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           break
 
         case 'operators':
-          const operatorsResponse = await operatorsApi.getAll({
+          const operatorsResponse = await operatorsService.getAll({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -256,16 +256,16 @@ export default function DataManagementPage({}: DataManagementPageProps) {
       let response
       switch (activeTab) {
         case 'buildings':
-          response = await buildingsApi.delete(String(id))
+          response = await buildingsService.delete(String(id))
           break
         case 'rooms':
-          response = await roomsApi.delete(String(id))
+          response = await roomsService.delete(String(id))
           break
         case 'tenants':
-          response = await tenantsApi.delete(String(id))
+          response = await tenantsService.delete(String(id))
           break
         case 'operators':
-          response = await operatorsApi.delete(String(id))
+          response = await operatorsService.delete(String(id))
           break
       }
 
