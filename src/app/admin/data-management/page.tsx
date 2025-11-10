@@ -111,26 +111,26 @@ export default function DataManagementPage({}: DataManagementPageProps) {
       // Fetch all counts in parallel for better performance via Supabase direct access
       const [buildingsResponse, roomsResponse, tenantsResponse, activeTenantsResponse, operatorsResponse, activeOperatorsResponse] = await Promise.all([
         // Total buildings
-        buildingsService.getAll({ limit: 1 }),
+        buildingsService.list({ limit: 1 }),
         // Total rooms
-        roomsService.getAll({ limit: 1 }),
+        roomsService.list({ limit: 1 }),
         // Total tenants
-        tenantsService.getAll({ limit: 1 }),
+        tenantsService.list({ limit: 1 }),
         // Active tenants
-        tenantsService.getAll({ limit: 1, filters: { status: 'ACTIVE' } }),
+        tenantsService.list({ limit: 1, filters: { status: 'ACTIVE' } }),
         // Total operators
-        operatorsService.getAll({ limit: 1 }),
+        operatorsService.list({ limit: 1 }),
         // Active operators
-        operatorsService.getAll({ limit: 1, filters: { active: true } })
+        operatorsService.list({ limit: 1, filters: { active: true } })
       ])
 
       setTotalCounts({
-        buildings: buildingsResponse.data?.length || 0,
-        rooms: roomsResponse.data?.length || 0,
-        tenants: tenantsResponse.data?.length || 0,
-        activeTenants: activeTenantsResponse.data?.length || 0,
-        operators: operatorsResponse.data?.length || 0,
-        activeOperators: activeOperatorsResponse.data?.length || 0
+        buildings: buildingsResponse.count || 0,
+        rooms: roomsResponse.count || 0,
+        tenants: tenantsResponse.count || 0,
+        activeTenants: activeTenantsResponse.count || 0,
+        operators: operatorsResponse.count || 0,
+        activeOperators: activeOperatorsResponse.count || 0
       })
     } catch (error: any) {
       // Silent fail for count statistics
@@ -143,7 +143,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     try {
       switch (activeTab) {
         case 'buildings':
-          const buildingsResponse = await buildingsService.getAll({
+          const buildingsResponse = await buildingsService.list({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -158,7 +158,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           break
 
         case 'rooms':
-          const roomsResponse = await roomsService.getAll({
+          const roomsResponse = await roomsService.list({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -173,7 +173,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           break
 
         case 'tenants':
-          const tenantsResponse = await tenantsService.getAll({
+          const tenantsResponse = await tenantsService.list({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
@@ -188,7 +188,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           break
 
         case 'operators':
-          const operatorsResponse = await operatorsService.getAll({
+          const operatorsResponse = await operatorsService.list({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             search: searchTerm,
