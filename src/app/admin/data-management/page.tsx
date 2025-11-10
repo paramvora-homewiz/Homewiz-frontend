@@ -209,9 +209,22 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     }
   }
 
-  // Fetch total counts on component mount
+  // Fetch operators list for dropdowns (needed by edit modals)
+  const fetchOperatorsForDropdowns = async () => {
+    try {
+      const response = await operatorsService.list({ limit: 1000 }) // Get all operators
+      if (response.success && response.data) {
+        setOperators(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch operators for dropdowns:', error)
+    }
+  }
+
+  // Fetch total counts and operators on component mount
   useEffect(() => {
     fetchTotalCounts()
+    fetchOperatorsForDropdowns()
   }, [])
 
   // Refresh data when dependencies change
