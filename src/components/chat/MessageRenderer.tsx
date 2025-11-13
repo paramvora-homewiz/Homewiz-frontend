@@ -117,6 +117,14 @@ export function MessageRenderer({ content, metadata, role }: MessageRendererProp
     }
   }
 
+  // Remove standalone "markdown" text at the beginning (leftover from backend code block cleaning)
+  if (cleanContent.trim().toLowerCase().startsWith('markdown\n') ||
+      cleanContent.trim().toLowerCase().startsWith('markdown ')) {
+    cleanContent = cleanContent.trim().slice(9).trim();
+  } else if (cleanContent.trim().toLowerCase() === 'markdown') {
+    cleanContent = '';
+  }
+
   // Check if the message contains analytics data
   const hasAnalyticsData = metadata?.analytics_data || metadata?.has_analytics;
   const analyticsType = metadata?.analytics_type;
