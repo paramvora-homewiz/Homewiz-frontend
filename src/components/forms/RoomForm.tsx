@@ -97,6 +97,23 @@ const ROOM_STATUS_OPTIONS = BACKEND_ENUMS.ROOM_STATUS.map(status => ({
   color: 'green'
 }))
 
+// User-friendly labels for bed types (maps to backend values)
+const BED_TYPE_OPTIONS = [
+  { value: 'Standard', label: 'Single Bed' },
+  { value: 'Bunk', label: 'Bunk Bed' },
+  { value: 'Loft', label: 'Loft Bed' }
+]
+
+// User-friendly labels for room views (maps to backend values)
+const VIEW_OPTIONS = [
+  { value: 'Street View', label: 'Street' },
+  { value: 'Courtyard', label: 'Courtyard' },
+  { value: 'Garden View', label: 'Garden' },
+  { value: 'City View', label: 'City' },
+  { value: 'Bay View', label: 'Water/Bay' },
+  { value: 'Limited View', label: 'Limited/No View' }
+]
+
 // Use backend-validated room type options
 const ROOM_TYPE_OPTIONS = BACKEND_ENUMS.ROOM_TYPES.map(type => ({
   value: type,
@@ -433,21 +450,6 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
               onChange={(e) => handleInputChange('floor_number', e.target.value ? parseInt(e.target.value) : 1)}
               placeholder="e.g., 1"
               min="1"
-              className="transition-colors focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Internet Speed (Mbps)
-            </label>
-            <p className="text-xs text-gray-500 mb-2">Internet speed available in this room (if WiFi is provided)</p>
-            <Input
-              type="number"
-              value={formData.internet_speed || ''}
-              onChange={(e) => handleInputChange('internet_speed', e.target.value ? parseInt(e.target.value) : undefined)}
-              placeholder="e.g., 100"
-              min="0"
               className="transition-colors focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
