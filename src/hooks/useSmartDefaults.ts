@@ -277,7 +277,7 @@ export function useFormSmartDefaults(formType: 'operator' | 'building' | 'room' 
       case 'room':
         return {
           ready_to_rent: true,
-          status: 'AVAILABLE',
+          status: 'Available',
           work_desk: true,
           work_chair: true,
           heating: true,
