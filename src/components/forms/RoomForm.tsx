@@ -1157,7 +1157,7 @@ function RoomForm({
     building_id: '',
     room_type: 'Standard', // Critical: Required field for database schema compliance
     ready_to_rent: true,
-    status: 'AVAILABLE', // Backend validated
+    status: 'Available', // Backend validated
     booked_from: undefined,
     booked_till: undefined,
     active_tenants: 0,
