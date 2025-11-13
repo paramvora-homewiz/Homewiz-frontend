@@ -109,15 +109,13 @@ export default function DataManagementPage({}: DataManagementPageProps) {
   const fetchTotalCounts = async () => {
     try {
       // Fetch all counts in parallel for better performance via Supabase direct access
-      const [buildingsResponse, roomsResponse, tenantsResponse, activeTenantsResponse, operatorsResponse, activeOperatorsResponse] = await Promise.all([
+      const [buildingsResponse, roomsResponse, tenantsResponse, operatorsResponse, activeOperatorsResponse] = await Promise.all([
         // Total buildings
         buildingsService.list({ limit: 1 }),
         // Total rooms
         roomsService.list({ limit: 1 }),
         // Total tenants
         tenantsService.list({ limit: 1 }),
-        // Active tenants
-        tenantsService.list({ limit: 1, filters: { status: 'ACTIVE' } }),
         // Total operators
         operatorsService.list({ limit: 1 }),
         // Active operators
@@ -128,7 +126,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
         buildings: buildingsResponse.count || 0,
         rooms: roomsResponse.count || 0,
         tenants: tenantsResponse.count || 0,
-        activeTenants: activeTenantsResponse.count || 0,
+        activeTenants: tenantsResponse.count || 0, // Show total tenants (status filter not working reliably)
         operators: operatorsResponse.count || 0,
         activeOperators: activeOperatorsResponse.count || 0
       })
@@ -221,10 +219,27 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     }
   }
 
-  // Fetch total counts and operators on component mount
+  // Fetch all buildings for lookup map (needed to display building names in rooms table)
+  const fetchAllBuildingsForLookup = async () => {
+    try {
+      const response = await buildingsService.list({ limit: 1000 }) // Get all buildings
+      if (response.success && response.data) {
+        // Only update if buildings is empty or we're not on the buildings tab
+        // This prevents overwriting paginated buildings data
+        if (activeTab !== 'buildings') {
+          setBuildings(response.data)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch buildings for lookup:', error)
+    }
+  }
+
+  // Fetch total counts, operators, and buildings on component mount
   useEffect(() => {
     fetchTotalCounts()
     fetchOperatorsForDropdowns()
+    fetchAllBuildingsForLookup()
   }, [])
 
   // Refresh data when dependencies change
@@ -248,11 +263,26 @@ export default function DataManagementPage({}: DataManagementPageProps) {
     }
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection)
-    
+
     return () => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection)
     }
   }, [])
+
+  // Create building lookup map for efficient name resolution
+  const buildingMap = useMemo(() => {
+    const map = new Map<string, Building>()
+    buildings.forEach(building => {
+      map.set(building.building_id, building)
+    })
+    return map
+  }, [buildings])
+
+  // Helper function to get building name from ID
+  const getBuildingName = (buildingId: string): string => {
+    const building = buildingMap.get(buildingId)
+    return building?.building_name || buildingId
+  }
 
   const handleSort = (key: string) => {
     setSortConfig({
@@ -476,15 +506,23 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           <tr className="border-b border-gray-200">
             <th className="px-4 py-3 text-left">
               <button
-                onClick={() => handleSort('room_id')}
+                onClick={() => handleSort('room_number')}
                 className="flex items-center gap-1 font-semibold text-gray-700 hover:text-gray-900"
               >
-                Room ID
+                Room Number
                 <ArrowUpDown className="w-4 h-4" />
               </button>
             </th>
             <th className="px-4 py-3 text-left">Building</th>
-            <th className="px-4 py-3 text-left">Type</th>
+            <th className="px-4 py-3 text-left">
+              <button
+                onClick={() => handleSort('room_type')}
+                className="flex items-center gap-1 font-semibold text-gray-700 hover:text-gray-900"
+              >
+                Type
+                <ArrowUpDown className="w-4 h-4" />
+              </button>
+            </th>
             <th className="px-4 py-3 text-left">Rent</th>
             <th className="px-4 py-3 text-left">Status</th>
             <th className="px-4 py-3 text-left">Occupancy</th>
@@ -505,12 +543,23 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                   <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg">
                     <Home className="w-5 h-5 text-purple-700" />
                   </div>
-                  <span className="font-medium text-gray-900">{room.room_id}</span>
+                  <div>
+                    <p className="font-medium text-gray-900">{room.room_number || room.room_id}</p>
+                    <p className="text-xs text-gray-500">ID: {room.room_id}</p>
+                  </div>
                 </div>
               </td>
-              <td className="px-4 py-4 text-gray-600">{room.building_id}</td>
               <td className="px-4 py-4">
-                <Badge variant="outline">{room.room_type}</Badge>
+                <div className="flex items-center gap-2">
+                  <BuildingIcon className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <p className="font-medium text-gray-900">{getBuildingName(room.building_id)}</p>
+                    <p className="text-xs text-gray-500">ID: {room.building_id}</p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-4">
+                <Badge variant="outline">{room.room_type || 'N/A'}</Badge>
               </td>
               <td className="px-4 py-4">
                 <div className="flex items-center gap-1 text-gray-700">
@@ -1110,7 +1159,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                 <UserCheck className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Active Tenants</p>
+                <p className="text-sm text-gray-600">Total Tenants</p>
                 <p className="text-2xl font-bold text-gray-900">{totalCounts.activeTenants}</p>
               </div>
             </div>

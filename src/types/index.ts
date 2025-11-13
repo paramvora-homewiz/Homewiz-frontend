@@ -258,7 +258,7 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
 // ROOM TYPES
 // ============================================================================
 
-export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED'
+export type RoomStatus = 'Available' | 'Occupied' | 'Maintenance' | 'Reserved'
 export type NoiseLevel = 'QUIET' | 'MODERATE' | 'LIVELY'
 export type SunlightLevel = 'BRIGHT' | 'MODERATE' | 'LOW'
 export type BathroomType = 'Private' | 'Shared' | 'En-Suite'
@@ -338,7 +338,7 @@ export interface RoomFormData extends Omit<Room, 'room_id' | 'created_at' | 'upd
   // Backend Compatibility Fields (CRITICAL FIXES)
   shared_room_rent_3?: number // Missing backend field - 3-person occupancy
   shared_room_rent_4?: number // Missing backend field - 4-person occupancy  
-  availability_status?: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' // Backend field name
+  availability_status?: 'Available' | 'Occupied' | 'Maintenance' | 'Reserved' // Backend field name
   square_footage?: number // Backend field name (not sq_footage)
   lease_start_date?: string // Backend tracking field
   lease_end_date?: string // Backend tracking field

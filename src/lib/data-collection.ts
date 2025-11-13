@@ -485,16 +485,17 @@ export class DataCollectionManager {
       // In production, this could send to analytics service, logging service, etc.
       console.log('Critical event exported:', event)
 
-      // Could also send to backend immediately
-      if (config.api.baseUrl && !config.app.demoMode) {
-        await fetch(`${config.api.baseUrl}/api/events`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(event),
-        })
-      }
+      // Temporarily disabled: Backend /events endpoint not implemented yet
+      // TODO: Re-enable when backend events endpoint is ready
+      // if (config.api.baseUrl && !config.app.demoMode) {
+      //   await fetch(`${config.api.baseUrl}/events`, {
+      //     method: 'POST',
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify(event),
+      //   })
+      // }
     } catch (error) {
       console.error('Failed to export critical event:', error)
     }

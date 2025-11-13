@@ -528,6 +528,9 @@ export function StatusBadge({ status, variant = 'default', icon, className = '' 
   }
 
   const getStatusStyles = (status: string) => {
+    // Normalize status to uppercase for consistent matching
+    const normalizedStatus = status.toUpperCase()
+
     const statusMap: Record<string, string> = {
       'AVAILABLE': 'bg-green-100 text-green-800 border-green-200',
       'OCCUPIED': 'bg-red-100 text-red-800 border-red-200',
@@ -542,7 +545,7 @@ export function StatusBadge({ status, variant = 'default', icon, className = '' 
       'CONVERTED': 'bg-green-100 text-green-800 border-green-200',
       'UNAVAILABLE': 'bg-gray-100 text-gray-800 border-gray-200'
     }
-    return statusMap[status] || 'bg-gray-100 text-gray-800 border-gray-200'
+    return statusMap[normalizedStatus] || 'bg-gray-100 text-gray-800 border-gray-200'
   }
 
   const sizeClasses = variant === 'large' 
