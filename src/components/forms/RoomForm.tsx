@@ -22,7 +22,7 @@ import {
   ValidationResult,
   parseBuildingImages
 } from '@/lib/backend-sync'
-import { showSuccessMessage, showInfoMessage } from '@/lib/error-handler'
+import { showSuccessMessage, showInfoMessage, showWarningMessage } from '@/lib/error-handler'
 import { uploadRoomImages } from '@/lib/supabase/storage'
 import {
   Home,
@@ -779,7 +779,8 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages,
                           alt={`Room photo ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            console.error(`❌ Failed to load image [${index}]:`, imageUrl)
+                            console.warn(`⚠️ Failed to load image [${index}]:`, imageUrl)
+                            console.warn('💡 Tip: Make sure the "building-images" bucket is public in Supabase Storage')
                             e.currentTarget.src = '/placeholder-room.svg'
                           }}
                         />

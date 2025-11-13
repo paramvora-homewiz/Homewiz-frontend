@@ -287,26 +287,72 @@ export class BuildingFormIntegration {
   }
 
   /**
+   * Update existing building
+   */
+  static async updateBuilding(buildingId: string, formData: any): Promise<FormSubmissionResult> {
+    try {
+      const validationResult = this.validateBuildingData(formData, true)
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          validationErrors: validationResult.errors
+        }
+      }
+
+      const buildingData: BuildingUpdate = this.transformBuildingData(formData, true)
+      const result = await databaseService.buildings.update(buildingId, buildingData)
+
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data,
+          message: 'Building updated successfully!'
+        }
+      } else {
+        const enhancedError = handleDatabaseError(result.error, 'building_update')
+        return {
+          success: false,
+          error: enhancedError.userMessage
+        }
+      }
+    } catch (error) {
+      const enhancedError = handleDatabaseError(error, 'building_form_update')
+      return {
+        success: false,
+        error: enhancedError.userMessage
+      }
+    }
+  }
+
+  /**
    * Validate building form data
    */
-  private static validateBuildingData(data: any): { isValid: boolean; errors: Record<string, string> } {
+  private static validateBuildingData(data: any, isUpdate = false): { isValid: boolean; errors: Record<string, string> } {
     const errors: Record<string, string> = {}
 
-    if (!data.building_name?.trim()) {
+    // Helper to safely check if a value is empty (handles strings, numbers, etc.)
+    const isEmpty = (value: any): boolean => {
+      if (value === null || value === undefined) return true
+      if (typeof value === 'string') return value.trim() === ''
+      if (typeof value === 'number') return false // Numbers are never "empty"
+      return !value
+    }
+
+    if (isEmpty(data.building_name)) {
       errors.building_name = 'Building name is required'
     }
     // Check for street address (database uses 'street' field)
-    if (!data.street?.trim() && !data.full_address?.trim()) {
+    if (isEmpty(data.street) && isEmpty(data.full_address)) {
       errors.street = 'Street address is required'
     }
-    if (!data.city?.trim()) {
+    if (isEmpty(data.city)) {
       errors.city = 'City is required'
     }
-    if (!data.state?.trim()) {
+    if (isEmpty(data.state)) {
       errors.state = 'State is required'
     }
     // Check for zip code (database uses 'zip' field)
-    if (!data.zip?.trim()) {
+    if (isEmpty(data.zip) && isEmpty(data.zip_code)) {
       errors.zip = 'ZIP code is required'
     }
     // Note: building_type field doesn't exist in database schema, so we don't validate it
@@ -328,19 +374,24 @@ export class BuildingFormIntegration {
   /**
    * Transform building form data
    */
-  private static transformBuildingData(formData: any): BuildingInsert {
-    return {
-      building_id: formData.building_id || `BLD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate ID if missing
-      building_name: formData.building_name.trim(),
-      
+  private static transformBuildingData(formData: any, isUpdate = false): BuildingInsert | BuildingUpdate {
+    // Helper function to safely convert any value to trimmed string or null
+    const toStringOrNull = (value: any): string | null => {
+      if (value === null || value === undefined || value === '') return null
+      return String(value).trim() || null
+    }
+
+    const baseData = {
+      building_name: toStringOrNull(formData.building_name) || '',
+
       // Address fields (match database schema exactly)
-      full_address: formData.full_address?.trim() || null,
-      street: (formData.address || formData.street)?.trim() || null, // Use 'street' field as in database
-      area: formData.area?.trim() || null,
-      city: formData.city?.trim() || null,
-      state: formData.state?.trim() || null,
-      zip: (formData.zip_code || formData.zip)?.trim() || null, // Use 'zip' field as in database
-      
+      full_address: toStringOrNull(formData.full_address),
+      street: toStringOrNull(formData.address || formData.street),
+      area: toStringOrNull(formData.area),
+      city: toStringOrNull(formData.city),
+      state: toStringOrNull(formData.state),
+      zip: toStringOrNull(formData.zip_code || formData.zip),
+
       // Basic building info (building_type doesn't exist in database schema)
       year_built: formData.year_built ? parseInt(formData.year_built) : null,
       last_renovation: formData.last_renovation ? parseInt(formData.last_renovation) : null,
@@ -350,14 +401,14 @@ export class BuildingFormIntegration {
       total_rooms: formData.total_rooms ? parseInt(formData.total_rooms) : null,
       total_bathrooms: formData.total_bathrooms ? parseInt(formData.total_bathrooms) : null,
       bathrooms_on_each_floor: formData.bathrooms_on_each_floor ? parseInt(formData.bathrooms_on_each_floor) : null,
-      
+
       // Amenities and features
       common_kitchen: formData.common_kitchen || null,
       min_lease_term: formData.min_lease_term ? parseInt(formData.min_lease_term) : null,
       pref_min_lease_term: formData.pref_min_lease_term ? parseInt(formData.pref_min_lease_term) : null,
       wifi_included: Boolean(formData.wifi_included ?? false),
       laundry_onsite: Boolean(formData.laundry_onsite ?? false),
-      common_area: formData.common_area?.trim() || null,
+      common_area: toStringOrNull(formData.common_area),
       secure_access: Boolean(formData.secure_access ?? false),
       bike_storage: Boolean(formData.bike_storage ?? false),
       rooftop_access: Boolean(formData.rooftop_access ?? false),
@@ -367,26 +418,34 @@ export class BuildingFormIntegration {
       fitness_area: Boolean(formData.fitness_area ?? false),
       work_study_area: Boolean(formData.work_study_area ?? false),
       social_events: Boolean(formData.social_events ?? false),
-      nearby_conveniences_walk: formData.nearby_conveniences_walk?.trim() || null,
-      nearby_transportation: formData.nearby_transportation?.trim() || null,
+      nearby_conveniences_walk: toStringOrNull(formData.nearby_conveniences_walk),
+      nearby_transportation: toStringOrNull(formData.nearby_transportation),
       priority: formData.priority ? parseInt(formData.priority) : null,
-      
+
       // Additional info
-      building_rules: formData.building_rules?.trim() || null,
+      building_rules: toStringOrNull(formData.building_rules),
       amenities_details: formData.amenities_details || null,
-      neighborhood_description: formData.neighborhood_description?.trim() || null,
-      building_description: formData.building_description?.trim() || null,
-      public_transit_info: formData.public_transit_info?.trim() || null,
-      parking_info: formData.parking_info?.trim() || null,
-      security_features: formData.security_features?.trim() || null,
+      neighborhood_description: toStringOrNull(formData.neighborhood_description),
+      building_description: toStringOrNull(formData.building_description),
+      public_transit_info: toStringOrNull(formData.public_transit_info),
+      parking_info: toStringOrNull(formData.parking_info),
+      security_features: toStringOrNull(formData.security_features),
       disability_access: Boolean(formData.disability_access ?? false),
-      disability_features: formData.disability_features?.trim() || null,
+      disability_features: toStringOrNull(formData.disability_features),
       building_images: formData.building_images || null,
-      virtual_tour_url: formData.virtual_tour_url?.trim() || null,
-      
-      // Timestamps - let database handle these
-      created_at: new Date().toISOString()
+      virtual_tour_url: toStringOrNull(formData.virtual_tour_url),
     }
+
+    if (!isUpdate) {
+      // For new buildings, include building_id and created_at
+      return {
+        building_id: formData.building_id || `BLD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...baseData,
+        created_at: new Date().toISOString()
+      } as BuildingInsert
+    }
+
+    return baseData as BuildingUpdate
   }
 }
 
@@ -530,11 +589,11 @@ export class RoomFormIntegration {
     const errors: Record<string, string> = {}
 
     // Required fields validation
-    if (!isUpdate && !formData.room_number?.trim()) {
+    if (!isUpdate && !String(formData.room_number || '').trim()) {
       errors.room_number = 'Room number is required'
     }
 
-    if (!formData.building_id?.trim()) {
+    if (!String(formData.building_id || '').trim()) {
       errors.building_id = 'Building selection is required'
     }
 
@@ -566,8 +625,8 @@ export class RoomFormIntegration {
    */
   private static transformRoomData(formData: any, isUpdate = false): RoomInsert | RoomUpdate {
     const baseData = {
-      room_number: formData.room_number?.trim(),
-      building_id: formData.building_id?.trim(),
+      room_number: String(formData.room_number || '').trim() || null,
+      building_id: String(formData.building_id || '').trim() || null,
       ready_to_rent: formData.ready_to_rent !== undefined ? Boolean(formData.ready_to_rent) : true,
       status: formData.status || 'AVAILABLE',
       booked_from: formData.booked_from || null,
@@ -578,24 +637,24 @@ export class RoomFormIntegration {
       private_room_rent: formData.private_room_rent ? parseFloat(formData.private_room_rent) : null,
       shared_room_rent_2: formData.shared_room_rent_2 ? parseFloat(formData.shared_room_rent_2) : null,
       bed_count: formData.bed_count ? parseInt(formData.bed_count) : 1,
-      bed_type: formData.bed_type?.trim() || null,
-      bed_size: formData.bed_size?.trim() || null,
-      bathroom_type: formData.bathroom_type?.trim() || null,
+      bed_type: String(formData.bed_type || '').trim() || null,
+      bed_size: String(formData.bed_size || '').trim() || null,
+      bathroom_type: String(formData.bathroom_type || '').trim() || null,
       sq_footage: formData.sq_footage ? parseInt(formData.sq_footage) : null, // Integer in database
-      view: formData.view?.trim() || null,
-      noise_level: formData.noise_level?.trim() || null,
-      sunlight: formData.sunlight?.trim() || null,
+      view: String(formData.view || '').trim() || null,
+      noise_level: String(formData.noise_level || '').trim() || null,
+      sunlight: String(formData.sunlight || '').trim() || null,
       furnished: formData.furnished !== undefined ? Boolean(formData.furnished) : false,
-      furniture_details: formData.furniture_details?.trim() || null,
+      furniture_details: String(formData.furniture_details || '').trim() || null,
       last_renovation_date: formData.last_renovation_date || null,
-      public_notes: formData.public_notes?.trim() || null,
-      internal_notes: formData.internal_notes?.trim() || null,
-      virtual_tour_url: formData.virtual_tour_url?.trim() || null,
-      additional_features: formData.additional_features?.trim() || null,
+      public_notes: String(formData.public_notes || '').trim() || null,
+      internal_notes: String(formData.internal_notes || '').trim() || null,
+      virtual_tour_url: String(formData.virtual_tour_url || '').trim() || null,
+      additional_features: String(formData.additional_features || '').trim() || null,
       room_images: formData.room_images || null,
       // Additional fields from database schema
       floor_number: formData.floor_number ? parseInt(formData.floor_number) : null,
-      current_booking_types: formData.current_booking_types?.trim() || null,
+      current_booking_types: String(formData.current_booking_types || '').trim() || null,
       last_check: formData.last_check || null,
       last_check_by: formData.last_check_by ? parseInt(formData.last_check_by) : null,
       mini_fridge: formData.mini_fridge !== undefined ? Boolean(formData.mini_fridge) : false,
@@ -606,7 +665,7 @@ export class RoomFormIntegration {
       heating: formData.heating !== undefined ? Boolean(formData.heating) : false,
       air_conditioning: formData.air_conditioning !== undefined ? Boolean(formData.air_conditioning) : false,
       cable_tv: formData.cable_tv !== undefined ? Boolean(formData.cable_tv) : false,
-      room_storage: formData.room_storage?.trim() || null
+      room_storage: String(formData.room_storage || '').trim() || null
     }
 
     if (!isUpdate) {
@@ -763,9 +822,47 @@ export class OperatorFormIntegration {
   }
 
   /**
+   * Update existing operator
+   */
+  static async updateOperator(operatorId: number, formData: any): Promise<FormSubmissionResult> {
+    try {
+      const validationResult = this.validateOperatorData(formData, true)
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          validationErrors: validationResult.errors
+        }
+      }
+
+      const operatorData: OperatorUpdate = this.transformOperatorData(formData, true)
+      const result = await databaseService.operators.update(operatorId, operatorData)
+
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data,
+          message: 'Operator updated successfully!'
+        }
+      } else {
+        const enhancedError = handleDatabaseError(result.error, 'operator_update')
+        return {
+          success: false,
+          error: enhancedError.userMessage
+        }
+      }
+    } catch (error) {
+      const enhancedError = handleDatabaseError(error, 'operator_form_update')
+      return {
+        success: false,
+        error: enhancedError.userMessage
+      }
+    }
+  }
+
+  /**
    * Validate operator form data
    */
-  private static validateOperatorData(data: any): { isValid: boolean; errors: Record<string, string> } {
+  private static validateOperatorData(data: any, isUpdate = false): { isValid: boolean; errors: Record<string, string> } {
     const errors: Record<string, string> = {}
 
     if (!data.name?.trim()) {
@@ -791,16 +888,14 @@ export class OperatorFormIntegration {
   /**
    * Transform operator form data
    */
-  private static transformOperatorData(formData: any): OperatorInsert {
-    return {
-      // operator_id will be auto-generated, so we don't include it
+  private static transformOperatorData(formData: any, isUpdate = false): OperatorInsert | OperatorUpdate {
+    const baseData = {
       name: formData.name.trim(),
       email: formData.email.trim().toLowerCase(),
       phone: formData.phone?.trim() || null,
       role: formData.role?.trim() || null,
       active: formData.active !== undefined ? Boolean(formData.active) : true,
       operator_type: formData.operator_type || 'LEASING_AGENT',
-      date_joined: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD for Date column
       permissions: formData.permissions || null,
       notification_preferences: formData.notification_preferences || 'EMAIL',
       working_hours: formData.working_hours || null,
@@ -808,6 +903,16 @@ export class OperatorFormIntegration {
       calendar_sync_enabled: Boolean(formData.calendar_sync_enabled),
       calendar_external_id: null
     }
+
+    if (!isUpdate) {
+      // For new operators, include date_joined
+      return {
+        ...baseData,
+        date_joined: new Date().toISOString().split('T')[0] // Format as YYYY-MM-DD for Date column
+      } as OperatorInsert
+    }
+
+    return baseData as OperatorUpdate
   }
 }
 

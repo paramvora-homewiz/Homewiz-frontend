@@ -644,6 +644,10 @@ export class OperatorsService extends BaseService<Operator, OperatorInsert, Oper
     return 'operator_id' // operators table doesn't have created_at
   }
 
+  protected getTimestampField(): string | null {
+    return null // operators table doesn't have last_modified or updated_at
+  }
+
   /**
    * Get operators by type
    */
