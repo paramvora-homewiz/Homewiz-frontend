@@ -951,7 +951,7 @@ export function transformRoomDataForBackend(frontendData: any) {
     
     // Map room_type to the correct backend field if different
     // Using status field as that's what exists in the schema
-    status: frontendData.status || frontendData.availability_status || 'AVAILABLE',
+    status: frontendData.status || frontendData.availability_status || 'Available',
     
     // Numeric fields - use sq_footage as that's the actual column name
     sq_footage: frontendData.square_footage || frontendData.sq_footage || null,
