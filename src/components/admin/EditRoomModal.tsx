@@ -86,12 +86,13 @@ export default function EditRoomModal({
         throw new Error(response.error || 'Failed to update room')
       }
     } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to update room. Please try again.'
       showWarningMessage(
         'Update Failed',
-        error?.message || 'Failed to update room. Please try again.'
+        errorMessage
       )
       // Return error response to prevent form from closing
-      return { success: false, error }
+      return { success: false, error: errorMessage }
     } finally {
       setIsLoading(false)
     }

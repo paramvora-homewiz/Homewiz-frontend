@@ -506,15 +506,23 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           <tr className="border-b border-gray-200">
             <th className="px-4 py-3 text-left">
               <button
-                onClick={() => handleSort('room_id')}
+                onClick={() => handleSort('room_number')}
                 className="flex items-center gap-1 font-semibold text-gray-700 hover:text-gray-900"
               >
-                Room ID
+                Room Number
                 <ArrowUpDown className="w-4 h-4" />
               </button>
             </th>
             <th className="px-4 py-3 text-left">Building</th>
-            <th className="px-4 py-3 text-left">Type</th>
+            <th className="px-4 py-3 text-left">
+              <button
+                onClick={() => handleSort('room_type')}
+                className="flex items-center gap-1 font-semibold text-gray-700 hover:text-gray-900"
+              >
+                Type
+                <ArrowUpDown className="w-4 h-4" />
+              </button>
+            </th>
             <th className="px-4 py-3 text-left">Rent</th>
             <th className="px-4 py-3 text-left">Status</th>
             <th className="px-4 py-3 text-left">Occupancy</th>
@@ -535,7 +543,10 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                   <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg">
                     <Home className="w-5 h-5 text-purple-700" />
                   </div>
-                  <span className="font-medium text-gray-900">{room.room_id}</span>
+                  <div>
+                    <p className="font-medium text-gray-900">{room.room_number || room.room_id}</p>
+                    <p className="text-xs text-gray-500">ID: {room.room_id}</p>
+                  </div>
                 </div>
               </td>
               <td className="px-4 py-4">
@@ -548,7 +559,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                 </div>
               </td>
               <td className="px-4 py-4">
-                <Badge variant="outline">{room.room_type}</Badge>
+                <Badge variant="outline">{room.room_type || 'N/A'}</Badge>
               </td>
               <td className="px-4 py-4">
                 <div className="flex items-center gap-1 text-gray-700">
