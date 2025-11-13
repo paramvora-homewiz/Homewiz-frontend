@@ -97,6 +97,23 @@ const ROOM_STATUS_OPTIONS = BACKEND_ENUMS.ROOM_STATUS.map(status => ({
   color: 'green'
 }))
 
+// User-friendly labels for bed types (maps to backend values)
+const BED_TYPE_OPTIONS = [
+  { value: 'Standard', label: 'Single Bed' },
+  { value: 'Bunk', label: 'Bunk Bed' },
+  { value: 'Loft', label: 'Loft Bed' }
+]
+
+// User-friendly labels for room views (maps to backend values)
+const VIEW_OPTIONS = [
+  { value: 'Street View', label: 'Street' },
+  { value: 'Courtyard', label: 'Courtyard' },
+  { value: 'Garden View', label: 'Garden' },
+  { value: 'City View', label: 'City' },
+  { value: 'Bay View', label: 'Water/Bay' },
+  { value: 'Limited View', label: 'Limited/No View' }
+]
+
 // Use backend-validated room type options
 const ROOM_TYPE_OPTIONS = BACKEND_ENUMS.ROOM_TYPES.map(type => ({
   value: type,
@@ -439,21 +456,6 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Internet Speed (Mbps)
-            </label>
-            <p className="text-xs text-gray-500 mb-2">Internet speed available in this room (if WiFi is provided)</p>
-            <Input
-              type="number"
-              value={formData.internet_speed || ''}
-              onChange={(e) => handleInputChange('internet_speed', e.target.value ? parseInt(e.target.value) : undefined)}
-              placeholder="e.g., 100"
-              min="0"
-              className="transition-colors focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
               Number of Beds <span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-2">Total number of beds in this room</p>
@@ -525,10 +527,11 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
               onChange={(e) => handleInputChange('bed_type', e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 transition-colors"
             >
-              <option value="Single">Single</option>
-              <option value="Bunk">Bunk</option>
-              <option value="Loft">Loft</option>
-              <option value="Murphy">Murphy</option>
+              {BED_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -541,12 +544,11 @@ const SpecificationsStep = React.memo(({ formData, handleInputChange }: StepProp
               onChange={(e) => handleInputChange('view', e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 transition-colors"
             >
-              <option value="Street">Street</option>
-              <option value="Courtyard">Courtyard</option>
-              <option value="Garden">Garden</option>
-              <option value="City">City</option>
-              <option value="Water">Water</option>
-              <option value="Mountain">Mountain</option>
+              {VIEW_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -703,10 +705,10 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages,
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               { key: 'mini_fridge', label: 'Mini Fridge', icon: '❄️', description: 'Personal refrigerator' },
-              { key: 'sink', label: 'Sink', icon: '🚿', description: 'In-room sink' },
+              { key: 'sink', label: 'Sink', icon: '🚿', description: 'Sink available' },
               { key: 'bedding_provided', label: 'Bedding Provided', icon: '🛏️', description: 'Sheets and pillows included' },
-              { key: 'work_desk', label: 'Work Desk', icon: '🪑', description: 'Study/work area' },
-              { key: 'work_chair', label: 'Work Chair', icon: '💺', description: 'Ergonomic chair' },
+              { key: 'work_desk', label: 'Work Desk', icon: '🪑', description: 'Desk in room' },
+              { key: 'work_chair', label: 'Work Chair', icon: '💺', description: 'Chair provided' },
               { key: 'heating', label: 'Heating', icon: '🔥', description: 'Climate control' },
               { key: 'air_conditioning', label: 'Air Conditioning', icon: '❄️', description: 'Cooling system' },
               { key: 'cable_tv', label: 'Cable TV', icon: '📺', description: 'Television with cable' }
@@ -1166,8 +1168,8 @@ function RoomForm({
     bed_count: 1, // Required field
     bathroom_type: 'Shared', // Backend default
     bed_size: 'Twin', // Backend validated enum
-    bed_type: 'Single', // Backend validated enum
-    view: 'Street', // Backend validated enum
+    bed_type: 'Standard', // Backend validated enum (shown as "Single Bed" to user)
+    view: 'Street View', // Backend validated enum (shown as "Street" to user)
     sq_footage: 200, // Backend field with default
     mini_fridge: false,
     sink: false,
@@ -1191,7 +1193,6 @@ function RoomForm({
     room_photos: [], // Add room photos array
     // New fields
     room_access_type: 'KEY',
-    internet_speed: undefined,
     room_condition_score: undefined,
     cleaning_frequency: 'WEEKLY',
     utilities_meter_id: undefined,
@@ -1485,7 +1486,7 @@ function RoomForm({
       'booked_from', 'booked_till', 'available_from',
       'last_check', 'last_check_by', 'last_renovation_date',
       'virtual_tour_url', 'description', 'additional_features',
-      'room_access_type', 'internet_speed', 'room_condition_score',
+      'room_access_type', 'room_condition_score',
       'cleaning_frequency', 'utilities_meter_id', 'last_cleaning_date',
       'utilities_included'
     ]

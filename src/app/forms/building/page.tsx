@@ -32,18 +32,13 @@ function BuildingFormContent() {
         // Show enhanced success message
         showFormSuccessMessage('building', 'saved')
 
-        // Navigate back to forms dashboard (per user preference)
+        // Navigate back to forms dashboard immediately after success
         console.log('Navigating back to forms dashboard')
 
-        // Get the clean URL without step parameters
-        const cleanUrl = '/forms'
-
-        // Force navigation with window.location to ensure clean URL
-        // This bypasses any router state that might be causing issues
+        // Use router.replace to ensure URL is clean and no step parameters remain
         setTimeout(() => {
-          console.log('Attempting navigation to:', cleanUrl)
-          window.location.href = cleanUrl
-        }, 1000) // Give time for success message to show
+          router.replace('/forms')
+        }, 1500) // Give time for success message to show
       } else if (result.validationErrors) {
         // Handle validation errors - don't redirect, show errors to user
         console.error('❌ Validation errors:', result.validationErrors)

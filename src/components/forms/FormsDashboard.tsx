@@ -107,10 +107,12 @@ function FormsDashboardContent() {
   const [isLoading, setIsLoading] = useState(false)
   const formData = useFormData()
 
-  // Handle form navigation - redirect tenant form to dedicated page
+  // Handle form navigation - redirect to dedicated pages for better UX
   const handleFormNavigation = (formId: FormType) => {
     if (formId === 'tenant') {
       window.location.href = '/forms/tenant'
+    } else if (formId === 'building') {
+      window.location.href = '/forms/building'
     } else {
       setCurrentForm(formId)
     }
