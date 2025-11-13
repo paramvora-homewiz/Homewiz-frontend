@@ -555,7 +555,7 @@ export function FormDataProvider({ children, config: providerConfig }: FormDataP
   }, [rooms])
 
   const getAvailableRooms = React.useCallback((): Room[] => {
-    return rooms.filter(room => room.status === 'AVAILABLE' && room.ready_to_rent)
+    return rooms.filter(room => room.status?.toUpperCase() === 'AVAILABLE' && room.ready_to_rent)
   }, [rooms])
 
   const getBuildingsByOperator = React.useCallback((operatorId: number): Building[] => {

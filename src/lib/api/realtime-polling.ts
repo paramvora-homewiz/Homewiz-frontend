@@ -213,7 +213,7 @@ class RealtimePollingService {
    * Internal: Build API endpoint for table
    */
   private buildEndpoint(tableName: string, filters?: Record<string, any>): string {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002/api'
     const params = new URLSearchParams()
 
     if (filters) {

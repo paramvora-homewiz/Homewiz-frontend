@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import RoomForm from '@/components/forms/RoomForm'
 import { roomsApi } from '@/lib/api'
+import { RoomFormIntegration } from '@/lib/supabase/form-integration'
+import { databaseService } from '@/lib/supabase/database'
 import { showSuccessMessage, showWarningMessage } from '@/lib/error-handler'
 import { transformRoomDataForFrontend, parseBuildingImages } from '@/lib/backend-sync'
 import { Home, Save, X, Camera } from 'lucide-react'
@@ -51,14 +53,15 @@ export default function EditRoomModal({
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      // Update room data via backend API
-      const response = await roomsApi.update(room!.room_id, data)
+      // Update room data via Supabase (same as forms)
+      const response = await RoomFormIntegration.updateRoom(room!.room_id, data)
 
       if (response.success) {
-        // After successful update, fetch fresh room data to ensure we have the latest images
-        const freshRoomResponse = await roomsApi.getById(room!.room_id)
+        // After successful update, fetch fresh room data from Supabase to ensure we have the latest images
+        // Use Supabase directly instead of backend REST API
+        const freshRoomResponse = await databaseService.rooms.getById(room!.room_id)
         if (freshRoomResponse.success && freshRoomResponse.data) {
-          setCurrentRoomData(freshRoomResponse.data)
+          setCurrentRoomData(freshRoomResponse.data as Room)
           // Force form to re-render with fresh data
           setFormKey(prev => prev + 1)
         }
@@ -142,11 +145,11 @@ export default function EditRoomModal({
           <RoomForm
             key={formKey} // Force re-render with new key
             onSuccess={async () => {
-              // Refresh room data after successful image upload
+              // Refresh room data after successful image upload from Supabase
               if (room?.room_id) {
-                const freshRoomResponse = await roomsApi.getById(room.room_id)
+                const freshRoomResponse = await databaseService.rooms.getById(room.room_id)
                 if (freshRoomResponse.success && freshRoomResponse.data) {
-                  setCurrentRoomData(freshRoomResponse.data)
+                  setCurrentRoomData(freshRoomResponse.data as Room)
                   setFormKey(prev => prev + 1)
                 }
               }

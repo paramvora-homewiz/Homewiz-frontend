@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import TenantForm from '@/components/forms/TenantForm'
 import { tenantsApi } from '@/lib/api'
+import { TenantFormIntegration } from '@/lib/supabase/form-integration'
 import { showSuccessMessage, showWarningMessage } from '@/lib/error-handler'
 import { UserCheck, Save, X } from 'lucide-react'
 import type { Tenant } from '@/lib/api/types'
@@ -48,8 +49,8 @@ export default function EditTenantModal({
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      // Update tenant data via backend API
-      const response = await tenantsApi.update(tenant!.tenant_id, data)
+      // Update tenant data via Supabase (same as forms)
+      const response = await TenantFormIntegration.updateTenant(tenant!.tenant_id, data)
 
       if (response.success) {
         showSuccessMessage(
@@ -58,22 +59,23 @@ export default function EditTenantModal({
         )
         onOpenChange(false)
         onSuccess?.()
+
+        // Return success response
+        return { success: true, data: response.data }
       } else {
         throw new Error(response.error || 'Failed to update tenant')
       }
     } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to update tenant. Please try again.'
       showWarningMessage(
         'Update Failed',
-        error?.message || 'Failed to update tenant. Please try again.'
+        errorMessage
       )
       // Return error response to prevent form from closing
-      return { success: false, error }
+      return { success: false, error: errorMessage }
     } finally {
       setIsLoading(false)
     }
-
-    // Return success response
-    return { success: true }
   }
 
   const handleClose = () => {

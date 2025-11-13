@@ -87,7 +87,7 @@ If you get a GEMINI_API_KEY error:
               <div className="mt-2 p-2 bg-yellow-100 rounded text-xs font-mono">
                 <strong>Error:</strong> {status.error || 'Unknown error'}<br/>
                 <strong>Last checked:</strong> {status.lastChecked.toLocaleTimeString()}<br/>
-                <strong>Backend URL:</strong> http://localhost:8000
+                <strong>Backend URL:</strong> {config.api.baseUrl}
               </div>
             )}
           </div>
