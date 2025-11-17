@@ -8,6 +8,8 @@ import { useState } from 'react'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getForwardNavigationUrl, getBackNavigationUrl } from '../../../lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '../../../lib/error-handler'
+import { operatorsApi } from '@/lib/api'
+import { transformOperatorDataForBackend } from '@/lib/backend-sync'
 
 export default function OperatorFormPage() {
   const router = useRouter()
@@ -16,14 +18,21 @@ export default function OperatorFormPage() {
   const handleSubmit = async (data: OperatorFormData) => {
     setIsLoading(true)
     try {
-      console.log('Submitting operator to Supabase:', data)
+      console.log('Submitting operator to Backend API:', data)
 
-      // Use the form integration service for proper validation and Supabase direct access
-      const { OperatorFormIntegration } = await import('@/lib/supabase/form-integration')
-      const result = await OperatorFormIntegration.submitOperator(data)
+      // Transform data for backend compatibility
+      const transformedData = transformOperatorDataForBackend(data)
 
-      if (result.success) {
-        console.log('✅ Operator created successfully:', result.data)
+      // Generate operator_id if not present
+      if (!transformedData.operator_id) {
+        transformedData.operator_id = `OP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+
+      // Use backend API instead of Supabase
+      const result = await operatorsApi.create(transformedData)
+
+      if (result.success && result.data) {
+        console.log('✅ Operator created successfully via Backend API:', result.data)
 
         // Show enhanced success message
         showFormSuccessMessage('operator', 'saved')
@@ -31,32 +40,8 @@ export default function OperatorFormPage() {
         // Navigate back to forms dashboard (consistent with other forms)
         console.log('Navigating back to forms dashboard')
         router.push('/forms')
-      } else if (result.validationErrors) {
-        // Handle validation errors - don't redirect, show errors to user
-        console.error('❌ Validation errors:', result.validationErrors)
-
-        // Import and use the validation error handler
-        const { handleValidationError } = await import('@/lib/error-handler')
-
-        // Create a comprehensive error message from validation errors
-        const errorMessages = Object.entries(result.validationErrors)
-          .map(([field, message]) => `${field}: ${message}`)
-          .join('\n')
-
-        handleValidationError(
-          new Error(`Validation failed:\n${errorMessages}`),
-          {
-            formType: 'operator',
-            operation: 'validation',
-            validationErrors: result.validationErrors
-          }
-        )
-
-        // Don't redirect on validation errors - let user fix them
-        return
       } else {
-        // Handle other errors (database, network, etc.)
-        throw new Error(result.error || 'Failed to save operator')
+        throw new Error(result.error || 'Failed to create operator')
       }
 
     } catch (error) {
@@ -64,10 +49,10 @@ export default function OperatorFormPage() {
       handleFormSubmissionError(error, {
         additionalInfo: {
           formType: 'operator',
-          operation: 'save'
+          operation: 'save',
+          api: 'backend'
         }
       })
-      // Don't redirect on errors - let user try again
     } finally {
       setIsLoading(false)
     }

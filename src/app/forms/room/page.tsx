@@ -8,7 +8,7 @@ import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
 import { getBackNavigationUrl } from '@/lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
-import { databaseService } from '@/lib/supabase/database'
+import { roomsApi } from '@/lib/api'
 import { transformRoomDataForBackend } from '@/lib/backend-sync'
 
 function RoomFormContent() {
@@ -19,9 +19,9 @@ function RoomFormContent() {
   const handleSubmit = async (data: RoomFormData) => {
     setIsLoading(true)
     try {
-      console.log('Submitting room to Supabase:', data)
+      console.log('Submitting room to Backend API:', data)
 
-      // Transform data for database
+      // Transform data for backend compatibility
       const transformedData = transformRoomDataForBackend(data)
 
       // Generate room_id if not present
@@ -29,11 +29,11 @@ function RoomFormContent() {
         transformedData.room_id = `ROOM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       }
 
-      // Save room to Supabase database
-      const result = await databaseService.rooms.create(transformedData)
+      // Use backend API instead of Supabase
+      const result = await roomsApi.create(transformedData)
 
-      if (result.success) {
-        console.log('✅ Room created successfully:', result.data)
+      if (result.success && result.data) {
+        console.log('✅ Room created successfully via Backend API:', result.data)
 
         // Show enhanced success message
         showFormSuccessMessage('room', 'saved')
@@ -44,7 +44,7 @@ function RoomFormContent() {
         // Use push to navigate to forms dashboard
         router.push('/forms')
       } else {
-        throw new Error(result.error?.message || 'Failed to create room')
+        throw new Error(result.error || 'Failed to create room')
       }
 
     } catch (error) {
@@ -52,7 +52,8 @@ function RoomFormContent() {
       handleFormSubmissionError(error, {
         additionalInfo: {
           formType: 'room',
-          operation: 'save'
+          operation: 'save',
+          api: 'backend'
         }
       })
     } finally {

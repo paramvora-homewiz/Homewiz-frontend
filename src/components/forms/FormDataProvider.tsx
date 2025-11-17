@@ -688,24 +688,6 @@ export function FormDataLoader({
   return <>{children}</>
 }
 
-// Compatibility exports for SimpleFormDataProvider
-export function SimpleFormDataProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <FormDataProvider config={{ loadOperators: false, loadRooms: false, loadBuildings: true }}>
-      {children}
-    </FormDataProvider>
-  )
-}
-
-export function useSimpleFormData() {
-  const context = useFormData()
-  return {
-    buildings: context.buildings,
-    buildingsLoading: context.buildingsLoading,
-    buildingsError: context.buildingsError
-  }
-}
-
 // Smart select component that handles foreign key relationships
 interface SmartSelectProps {
   label: string

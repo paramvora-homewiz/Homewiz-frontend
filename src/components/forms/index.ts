@@ -17,15 +17,12 @@ export { default as EnhancedValidation, InlineValidation, ValidationSummary } fr
 export { default as FormGuidance, HelpTooltip } from './FormGuidance'
 
 // Data Provider and Utilities
-export { 
-  FormDataProvider, 
-  useFormData, 
-  withFormData, 
-  FormDataLoader, 
-  SmartSelect,
-  // Compatibility exports (deprecated - use FormDataProvider with config instead)
-  SimpleFormDataProvider,
-  useSimpleFormData
+export {
+  FormDataProvider,
+  useFormData,
+  withFormData,
+  FormDataLoader,
+  SmartSelect
 } from './FormDataProvider'
 
 // Test Suite

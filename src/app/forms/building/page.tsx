@@ -6,7 +6,7 @@ import { FormStepWrapper } from '../../../components/ui/FormStepWrapper'
 import { BuildingFormData } from '../../../types'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { databaseService } from '../../../lib/supabase/database'
+import { buildingsApi } from '@/lib/api'
 import { transformBuildingDataForBackend } from '../../../lib/backend-sync'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getForwardNavigationUrl } from '../../../lib/form-workflow'
@@ -20,14 +20,16 @@ function BuildingFormContent() {
   const handleSubmit = async (data: any) => {
     setIsLoading(true)
     try {
-      console.log('Submitting building to Supabase:', data)
+      console.log('Submitting building to Backend API:', data)
 
-      // First, use the form integration service for proper validation
-      const { BuildingFormIntegration } = await import('@/lib/supabase/form-integration')
-      const result = await BuildingFormIntegration.submitBuilding(data)
+      // Transform data for backend compatibility
+      const transformedData = transformBuildingDataForBackend(data)
 
-      if (result.success) {
-        console.log('✅ Building created successfully:', result.data)
+      // Use backend API instead of Supabase
+      const result = await buildingsApi.create(transformedData)
+
+      if (result.success && result.data) {
+        console.log('✅ Building created successfully via Backend API:', result.data)
 
         // Show enhanced success message
         showFormSuccessMessage('building', 'saved')
@@ -39,31 +41,8 @@ function BuildingFormContent() {
         setTimeout(() => {
           router.replace('/forms')
         }, 1500) // Give time for success message to show
-      } else if (result.validationErrors) {
-        // Handle validation errors - don't redirect, show errors to user
-        console.error('❌ Validation errors:', result.validationErrors)
-
-        // Import and use the validation error handler
-        const { handleValidationError } = await import('@/lib/error-handler')
-
-        // Create a comprehensive error message from validation errors
-        const errorMessages = Object.entries(result.validationErrors)
-          .map(([field, message]) => `${field}: ${message}`)
-          .join('\n')
-
-        handleValidationError(
-          new Error(`Validation failed:\n${errorMessages}`),
-          {
-            formType: 'building',
-            operation: 'validation',
-            validationErrors: result.validationErrors
-          }
-        )
-
-        // Don't redirect on validation errors - let user fix them
-        return
       } else {
-        // Handle other errors (database, network, etc.)
+        // Handle API errors
         throw new Error(result.error || 'Failed to save building')
       }
 
@@ -72,7 +51,8 @@ function BuildingFormContent() {
       handleFormSubmissionError(error, {
         additionalInfo: {
           formType: 'building',
-          operation: 'save'
+          operation: 'save',
+          api: 'backend'
         }
       })
       // Don't redirect on errors - let user try again

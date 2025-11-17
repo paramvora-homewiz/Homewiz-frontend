@@ -6,21 +6,13 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EnhancedCard, StatusBadge } from '@/components/ui/enhanced-components'
-import OperatorForm from './OperatorForm'
-import BuildingForm from './BuildingForm'
-import RoomForm from './RoomForm'
-import TenantForm from './TenantForm'
-import LeadForm from './LeadForm'
 import { FormDataProvider, useFormData } from './FormDataProvider'
-import { OperatorFormData, BuildingFormData, RoomFormData, TenantFormData, LeadFormData } from '@/types'
-import { formIntegration } from '../../lib/supabase/form-integration'
 import DatabaseLogsPanel from '../dashboard/DatabaseLogsPanel'
 import AnalyticsDashboard from '../dashboard/AnalyticsDashboard'
 import AdvancedSearchPanel from '../search/AdvancedSearchPanel'
 import DataExportPanel from '../export/DataExportPanel'
 import NotificationPanel from '../notifications/NotificationPanel'
 import { notificationService } from '../../services/notificationService'
-import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
 import {
   Users,
   Building,
@@ -107,96 +99,33 @@ function FormsDashboardContent() {
   const [isLoading, setIsLoading] = useState(false)
   const formData = useFormData()
 
-  // Handle form navigation - redirect to dedicated pages for better UX
+  // Handle form navigation - redirect ALL forms to dedicated pages for backend API integration
   const handleFormNavigation = (formId: FormType) => {
-    if (formId === 'tenant') {
-      window.location.href = '/forms/tenant'
-    } else if (formId === 'building') {
-      window.location.href = '/forms/building'
-    } else {
-      setCurrentForm(formId)
+    // Redirect all forms to their dedicated pages (backend API integration)
+    switch (formId) {
+      case 'tenant':
+        window.location.href = '/forms/tenant'
+        break
+      case 'building':
+        window.location.href = '/forms/building'
+        break
+      case 'operator':
+        window.location.href = '/forms/operator'
+        break
+      case 'room':
+        window.location.href = '/forms/room'
+        break
+      case 'lead':
+        window.location.href = '/forms/lead'
+        break
+      default:
+        // For non-form views (logs, analytics, search, export), show in dashboard
+        setCurrentForm(formId)
     }
   }
 
-  const handleFormSubmit = async (data: any, formType: FormType) => {
-    setIsLoading(true)
-    try {
-      console.log(`🚀 Submitting ${formType} form:`, data)
-      console.log('🔧 Using Supabase form integration (direct database access)')
-
-      // Always use Supabase form integration for all form submissions
-      let result
-
-      switch (formType) {
-        case 'operator':
-          result = await formIntegration.operator.submitOperator(data)
-          await formData.refreshOperators()
-          break
-        case 'building':
-          result = await formIntegration.building.submitBuilding(data)
-          await formData.refreshBuildings()
-          break
-        case 'room':
-          result = await formIntegration.room.submitRoom(data)
-          await formData.refreshRooms()
-          break
-        case 'tenant':
-          result = await formIntegration.tenant.submitTenant(data)
-          await Promise.all([
-            formData.refreshRooms(),
-            formData.refreshBuildings()
-          ])
-          break
-        case 'lead':
-          result = await formIntegration.lead.submitLead(data)
-          await formData.refreshRooms()
-          break
-        default:
-          throw new Error(`Unknown form type: ${formType}`)
-      }
-
-      console.log(`📋 ${formType} submission result:`, result)
-
-      // Check if submission was actually successful
-      if (result && result.success) {
-        console.log(`✅ ${formType} saved successfully`)
-        
-        // Return to dashboard after successful submission
-        setCurrentForm('dashboard')
-
-        // Show enhanced success message
-        showFormSuccessMessage(formType, 'saved')
-      } else {
-        console.log(`❌ ${formType} submission failed:`, result?.error || result?.validationErrors)
-
-        // Don't redirect to dashboard - stay on form to show errors
-        if (result?.validationErrors) {
-          console.error('Validation errors:', result.validationErrors)
-          // The form should handle displaying validation errors
-        }
-
-        if (result?.error) {
-          // Show error message but don't redirect
-          handleFormSubmissionError(new Error(result.error), {
-            additionalInfo: { formType, data }
-          })
-        }
-      }
-
-    } catch (error) {
-      console.error(`❌ Error submitting ${formType} form:`, error)
-
-      // Show enhanced error message with suggestions
-      handleFormSubmissionError(error, {
-        additionalInfo: {
-          formType,
-          operation: 'save'
-        }
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Form submission removed - all forms now use dedicated pages with backend API
+  // No longer needed since forms redirect to dedicated pages
 
   const handleFormCancel = () => {
     setCurrentForm('dashboard')
@@ -237,50 +166,8 @@ function FormsDashboardContent() {
 
   const renderCurrentForm = () => {
     switch (currentForm) {
-      case 'operator':
-        return (
-          <OperatorForm
-            onSubmit={(data) => handleFormSubmit(data, 'operator')}
-            onCancel={handleFormCancel}
-            isLoading={isLoading}
-          />
-        )
-      
-      case 'building':
-        return (
-          <BuildingForm
-            onSubmit={(data) => handleFormSubmit(data, 'building')}
-            onCancel={handleFormCancel}
-            isLoading={isLoading}
-            operators={formData.operators}
-          />
-        )
-      
-      case 'room':
-        return (
-          <RoomForm
-            onSubmit={async (data) => {
-              await handleFormSubmit(data, 'room')
-            }}
-            onCancel={handleFormCancel}
-            isLoading={isLoading}
-            buildings={formData.buildings}
-          />
-        )
-      
-
-      case 'lead':
-        return (
-          <LeadForm
-            onSubmit={(data) => handleFormSubmit(data, 'lead')}
-            onCancel={handleFormCancel}
-            isLoading={isLoading}
-            rooms={formData.rooms.map(room => ({
-              ...room,
-              building_name: formData.buildings.find(b => b.building_id === room.building_id)?.building_name || 'Unknown Building'
-            }))}
-          />
-        )
+      // All form cases removed - forms now use dedicated pages with backend API
+      // operator, building, room, tenant, lead all redirect to /forms/{type}
 
       case 'logs':
         return (
@@ -584,7 +471,7 @@ function FormsDashboardContent() {
                 </motion.button>
 
                 <motion.button
-                  onClick={() => setCurrentForm('lead')}
+                  onClick={() => window.location.href = '/forms/lead'}
                   className="p-4 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl border-2 border-pink-200 hover:border-pink-300 transition-all duration-200"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -604,7 +491,7 @@ function FormsDashboardContent() {
                 </motion.button>
 
                 <motion.button
-                  onClick={() => setCurrentForm('room')}
+                  onClick={() => window.location.href = '/forms/room'}
                   className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border-2 border-purple-200 hover:border-purple-300 transition-all duration-200"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

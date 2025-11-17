@@ -8,7 +8,7 @@ import { useState } from 'react'
 import FormHeader from '../../../components/ui/FormHeader'
 import { getBackNavigationUrl } from '../../../lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
-import { databaseService } from '../../../lib/supabase/database'
+import { leadsApi } from '@/lib/api'
 import { transformLeadDataForBackend } from '../../../lib/backend-sync'
 
 function LeadFormContent() {
@@ -19,9 +19,9 @@ function LeadFormContent() {
   const handleSubmit = async (data: LeadFormData) => {
     setIsLoading(true)
     try {
-      console.log('Submitting lead to Supabase:', data)
+      console.log('Submitting lead to Backend API:', data)
 
-      // Transform data for database
+      // Transform data for backend compatibility
       const transformedData = transformLeadDataForBackend(data)
 
       // Generate lead_id if not present
@@ -29,17 +29,17 @@ function LeadFormContent() {
         transformedData.lead_id = `LEAD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       }
 
-      // Save lead to Supabase database
-      const result = await databaseService.leads.create(transformedData)
+      // Use backend API instead of Supabase
+      const result = await leadsApi.create(transformedData)
 
-      if (result.success) {
-        console.log('✅ Lead created successfully:', result.data)
+      if (result.success && result.data) {
+        console.log('✅ Lead created successfully via Backend API:', result.data)
 
         // Show enhanced success message
         showFormSuccessMessage('lead', 'saved')
         router.push('/forms')
       } else {
-        throw new Error(result.error?.message || 'Failed to create lead')
+        throw new Error(result.error || 'Failed to create lead')
       }
 
     } catch (error) {
@@ -47,7 +47,8 @@ function LeadFormContent() {
       handleFormSubmissionError(error, {
         additionalInfo: {
           formType: 'lead',
-          operation: 'save'
+          operation: 'save',
+          api: 'backend'
         }
       })
     } finally {

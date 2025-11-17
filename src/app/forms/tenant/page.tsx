@@ -9,7 +9,7 @@ import { useState } from 'react'
 import FormHeader from '@/components/ui/FormHeader'
 import { getForwardNavigationUrl } from '@/lib/form-workflow'
 import { showFormSuccessMessage, handleFormSubmissionError } from '@/lib/error-handler'
-import { databaseService } from '@/lib/supabase/database'
+import { tenantsApi } from '@/lib/api'
 import { transformTenantDataForBackend } from '@/lib/backend-sync'
 
 function TenantFormContent() {
@@ -20,9 +20,9 @@ function TenantFormContent() {
   const handleSubmit = async (data: TenantFormData) => {
     setIsLoading(true)
     try {
-      console.log('Submitting tenant to Supabase:', data)
+      console.log('Submitting tenant to Backend API:', data)
 
-      // Transform data for database
+      // Transform data for backend compatibility
       const transformedData = transformTenantDataForBackend(data)
 
       // Generate tenant_id if not present
@@ -30,11 +30,11 @@ function TenantFormContent() {
         transformedData.tenant_id = `TNT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       }
 
-      // Save tenant to Supabase database
-      const result = await databaseService.tenants.create(transformedData)
+      // Use backend API instead of Supabase
+      const result = await tenantsApi.create(transformedData)
 
-      if (result.success) {
-        console.log('✅ Tenant created successfully:', result.data)
+      if (result.success && result.data) {
+        console.log('✅ Tenant created successfully via Backend API:', result.data)
 
         // Show enhanced success message
         showFormSuccessMessage('tenant', 'saved')
@@ -43,7 +43,7 @@ function TenantFormContent() {
         console.log('Navigating back to forms dashboard')
         router.push('/forms')
       } else {
-        throw new Error(result.error?.message || 'Failed to create tenant')
+        throw new Error(result.error || 'Failed to create tenant')
       }
 
     } catch (error) {
@@ -51,7 +51,8 @@ function TenantFormContent() {
       handleFormSubmissionError(error, {
         additionalInfo: {
           formType: 'tenant',
-          operation: 'save'
+          operation: 'save',
+          api: 'backend'
         }
       })
     } finally {
