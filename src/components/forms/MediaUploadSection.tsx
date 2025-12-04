@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react'
-import { Upload, X, Image, Video, FileText, Eye, Trash2, Cloud, AlertCircle } from 'lucide-react'
+import React, { useState, useCallback, useRef } from 'react'
+import { Upload, X, Image, Video, FileText, Eye, Trash2, Cloud, AlertCircle, GripVertical } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -35,6 +35,11 @@ export function MediaUploadSection({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
   const [fileValidationErrors, setFileValidationErrors] = useState<Array<{ file: File; error: string }>>([])
+  const [isDragging, setIsDragging] = useState(false)
+  // Drag to reorder state
+  const [draggedFileId, setDraggedFileId] = useState<string | null>(null)
+  const [dragOverFileId, setDragOverFileId] = useState<string | null>(null)
+  const dragCounter = useRef(0)
   const supabaseAvailable = isSupabaseAvailable()
   const supabaseStatus = getSupabaseStatus()
 
@@ -62,22 +67,19 @@ export function MediaUploadSection({
     })
   }
 
-  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    
+  // Core file processing function - used by both file input and drag-drop
+  const processFiles = useCallback(async (fileArray: File[]) => {
     // Always clear previous errors when new files are selected
     setUploadErrors([])
     setFileValidationErrors([])
-    
-    if (!files || files.length === 0) {
-      // User cancelled file selection, errors already cleared above
+
+    if (!fileArray || fileArray.length === 0) {
       return
     }
 
     setIsUploading(true)
 
     try {
-      const fileArray = Array.from(files)
 
       // Validate all files first using the comprehensive validation
       const validation = validateMultipleFiles(fileArray, 'BUILDING_IMAGES')
@@ -97,9 +99,6 @@ export function MediaUploadSection({
         )
         setUploadErrors(errorMessages)
         setIsUploading(false)
-        
-        // Reset the file input to allow immediate retry
-        event.target.value = ''
         return
       }
 
@@ -187,14 +186,136 @@ export function MediaUploadSection({
       setUploadErrors(['Error processing files. Please try again.'])
     } finally {
       setIsUploading(false)
-      // Reset the input
-      event.target.value = ''
     }
-  }, [uploadedFiles, onFilesChange, uploadImmediately, supabaseAvailable, buildingId])
+  }, [uploadedFiles, onFilesChange, uploadImmediately, supabaseAvailable, buildingId, onValidationErrors])
+
+  // Handle file input change
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files && files.length > 0) {
+      processFiles(Array.from(files))
+    }
+    // Reset the input to allow re-selecting the same files
+    event.target.value = ''
+  }, [processFiles])
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('📁 Drag Enter detected')
+    setIsDragging(true)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // Don't log this one - it fires constantly
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('📁 Drag Leave detected')
+    // Only set isDragging to false if we're leaving the drop zone entirely
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX
+    const y = e.clientY
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setIsDragging(false)
+    }
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    console.log('📁 Drop detected!', {
+      files: e.dataTransfer.files.length,
+      types: e.dataTransfer.types,
+      isUploading
+    })
+
+    if (isUploading) {
+      console.log('📁 Ignored - already uploading')
+      return
+    }
+
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      console.log('📁 Processing', files.length, 'dropped files')
+      processFiles(Array.from(files))
+    } else {
+      console.log('📁 No files in drop event')
+    }
+  }, [isUploading, processFiles])
 
   const removeFile = (fileId: string) => {
     const updatedFiles = uploadedFiles.filter(f => f.id !== fileId)
     onFilesChange(updatedFiles)
+  }
+
+  // Drag to reorder handlers
+  const handleFileDragStart = (e: React.DragEvent, fileId: string) => {
+    setDraggedFileId(fileId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', fileId)
+  }
+
+  const handleFileDragEnd = () => {
+    setDraggedFileId(null)
+    setDragOverFileId(null)
+    dragCounter.current = 0
+  }
+
+  const handleFileDragEnter = (e: React.DragEvent, fileId: string) => {
+    e.preventDefault()
+    dragCounter.current++
+    if (fileId !== draggedFileId) {
+      setDragOverFileId(fileId)
+    }
+  }
+
+  const handleFileDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setDragOverFileId(null)
+    }
+  }
+
+  const handleFileDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleFileDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    dragCounter.current = 0
+
+    if (!draggedFileId || draggedFileId === targetId) {
+      setDragOverFileId(null)
+      return
+    }
+
+    const currentOrder = uploadedFiles.map(f => f.id)
+    const draggedIndex = currentOrder.indexOf(draggedFileId)
+    const targetIndex = currentOrder.indexOf(targetId)
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDragOverFileId(null)
+      return
+    }
+
+    // Create new array with reordered files
+    const newFiles = [...uploadedFiles]
+    const [draggedFile] = newFiles.splice(draggedIndex, 1)
+    newFiles.splice(targetIndex, 0, draggedFile)
+
+    onFilesChange(newFiles)
+    setDragOverFileId(null)
   }
 
   return (
@@ -302,20 +423,34 @@ export function MediaUploadSection({
           Upload Photos & Videos
         </h3>
         
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            isDragging
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-300 hover:border-gray-400'
+          }`}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <div className="mb-4">
             <div className="flex justify-center space-x-4 mb-4">
-              <Image className="w-8 h-8 text-gray-400" />
-              <Video className="w-8 h-8 text-gray-400" />
+              <Image className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+              <Video className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
             </div>
           </div>
           <div className="mb-4">
-            <label htmlFor="media-upload" className="cursor-pointer">
-              <span className="text-blue-600 hover:text-blue-500 font-medium">
-                Click to upload photos and videos
-              </span>
-              <span className="text-gray-500"> or drag and drop</span>
-            </label>
+            {isDragging ? (
+              <span className="text-blue-600 font-medium">Drop files here</span>
+            ) : (
+              <label htmlFor="media-upload" className="cursor-pointer">
+                <span className="text-blue-600 hover:text-blue-500 font-medium">
+                  Click to upload photos and videos
+                </span>
+                <span className="text-gray-500"> or drag and drop</span>
+              </label>
+            )}
             <input
               id="media-upload"
               type="file"
@@ -344,27 +479,55 @@ export function MediaUploadSection({
       {/* Uploaded Files Display */}
       {uploadedFiles.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Uploaded Media</h3>
-          
+          <h3 className="text-lg font-semibold mb-2">Uploaded Media</h3>
+          <p className="text-sm text-gray-500 mb-4">Drag items to reorder</p>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {uploadedFiles.map((file) => (
-              <div key={file.id} className="relative group">
+            {uploadedFiles.map((file, index) => (
+              <div
+                key={file.id}
+                draggable
+                onDragStart={(e) => handleFileDragStart(e, file.id)}
+                onDragEnd={handleFileDragEnd}
+                onDragEnter={(e) => handleFileDragEnter(e, file.id)}
+                onDragLeave={handleFileDragLeave}
+                onDragOver={handleFileDragOver}
+                onDrop={(e) => handleFileDrop(e, file.id)}
+                className={`relative group cursor-move transition-all duration-200 ${
+                  dragOverFileId === file.id ? 'ring-2 ring-blue-500 ring-offset-2 scale-105' : ''
+                } ${draggedFileId === file.id ? 'opacity-50' : ''}`}
+              >
                 <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                   {file.category === 'building_image' ? (
                     <img
                       src={file.preview}
                       alt={file.name}
                       className="w-full h-full object-cover"
+                      draggable={false}
                     />
                   ) : (
                     <video
                       src={file.preview}
                       className="w-full h-full object-cover"
                       controls
+                      draggable={false}
                     />
                   )}
                 </div>
-                
+
+                {/* Position badge */}
+                <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                  {index + 1}
+                </div>
+
+                {/* Drag handle overlay */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-lg px-2 py-1 flex items-center gap-1 text-xs text-gray-600">
+                    <GripVertical className="w-4 h-4" />
+                    <span>Drag to reorder</span>
+                  </div>
+                </div>
+
                 <div className="absolute top-2 right-2">
                   <Button
                     type="button"
@@ -376,7 +539,7 @@ export function MediaUploadSection({
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
-                
+
                 <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 rounded-b-lg">
                   <div className="flex items-center gap-2">
                     {file.category === 'building_image' ? (
@@ -391,6 +554,13 @@ export function MediaUploadSection({
                   </div>
                   <p className="text-xs text-gray-300">{formatFileSize(file.size)}</p>
                 </div>
+
+                {/* Drop indicator */}
+                {dragOverFileId === file.id && draggedFileId !== file.id && (
+                  <div className="absolute inset-0 border-2 border-blue-500 border-dashed rounded-lg bg-blue-50/50 flex items-center justify-center">
+                    <span className="text-blue-600 font-medium text-sm">Drop here</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

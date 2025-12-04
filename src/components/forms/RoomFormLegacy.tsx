@@ -693,7 +693,48 @@ const AvailabilityStep = React.memo(({ formData, handleInputChange }: StepProps)
     </div>
   ));
 
-const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages, deletedImages, setDeletedImages }: AmenitiesStepProps) => (
+const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages, deletedImages, setDeletedImages }: AmenitiesStepProps) => {
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX
+    const y = e.clientY
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      const fileArray = Array.from(files).filter(file => file.type.startsWith('image/'))
+      if (fileArray.length > 0) {
+        const existingPhotos = formData.room_photos || []
+        handleInputChange('room_photos', [...existingPhotos, ...fileArray])
+      }
+    }
+  }
+
+  return (
     <div>
       <Card className="p-6 premium-card bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300">
         <div>
@@ -814,17 +855,31 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages,
             </div>
           )}
           
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              isDragging
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <div className="mb-4">
-              <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+              <Camera className={`w-12 h-12 mx-auto mb-2 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
             </div>
             <div className="mb-4">
-              <label htmlFor="room-photos-upload" className="cursor-pointer">
-                <span className="text-blue-600 hover:text-blue-500 font-medium">
-                  Click to upload room photos
-                </span>
-                <span className="text-gray-500"> or drag and drop</span>
-              </label>
+              {isDragging ? (
+                <span className="text-blue-600 font-medium">Drop images here</span>
+              ) : (
+                <label htmlFor="room-photos-upload" className="cursor-pointer">
+                  <span className="text-blue-600 hover:text-blue-500 font-medium">
+                    Click to upload room photos
+                  </span>
+                  <span className="text-gray-500"> or drag and drop</span>
+                </label>
+              )}
               <input
                 id="room-photos-upload"
                 type="file"
@@ -834,8 +889,10 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages,
                   const files = e.target.files
                   if (files) {
                     const fileArray = Array.from(files)
-                    handleInputChange('room_photos', fileArray)
+                    const existingPhotos = formData.room_photos || []
+                    handleInputChange('room_photos', [...existingPhotos, ...fileArray])
                   }
+                  e.target.value = ''
                 }}
                 className="hidden"
               />
@@ -864,7 +921,7 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages,
                     <button
                       type="button"
                       onClick={() => {
-                        const newPhotos = formData.room_photos.filter((_, i) => i !== index)
+                        const newPhotos = (formData.room_photos || []).filter((_, i) => i !== index)
                         handleInputChange('room_photos', newPhotos)
                       }}
                       className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
@@ -885,7 +942,8 @@ const AmenitiesStep = React.memo(({ formData, handleInputChange, existingImages,
         </div>
       </Card>
     </div>
-  ));
+  )
+})
 
 
 const MaintenanceStep = React.memo(({ formData, handleInputChange }: StepProps) => (

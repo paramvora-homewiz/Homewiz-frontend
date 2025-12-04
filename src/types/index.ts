@@ -109,7 +109,7 @@ export interface FileUploadConfig {
 // OPERATOR TYPES
 // ============================================================================
 
-export type OperatorType = 'LEASING_AGENT' | 'MAINTENANCE' | 'BUILDING_MANAGER' | 'ADMIN'
+export type OperatorType = 'LEASING_AGENT' | 'MAINTENANCE' | 'BUILDING_MANAGER' | 'ADMIN' | 'OWNER'
 export type NotificationPreference = 'EMAIL' | 'SMS' | 'BOTH' | 'NONE'
 
 export interface Operator {
@@ -173,7 +173,8 @@ export interface Building {
   disability_access?: boolean
   disability_features?: string
   building_images?: string[]     // Frontend alias for images
-  virtual_tour_url?: string
+  virtual_tour_url?: string      // Legacy single URL (backward compatibility)
+  virtual_tour_urls?: string[]   // Multiple video/tour URLs
   created_at?: string
   updated_at?: string
 }
@@ -215,6 +216,7 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
   social_events: boolean
   nearby_conveniences_walk?: string
   nearby_transportation?: string
+  walkscore_data?: string  // JSON string of WalkScoreData for backend storage
   priority?: number
   property_manager?: number
   available: boolean
@@ -241,7 +243,17 @@ export interface BuildingFormData extends Omit<Building, 'building_id' | 'create
   service_animal_friendly?: boolean
   accessible_emergency?: boolean
   accessibility_details?: string
-  
+
+  // Security features (frontend enhancement)
+  security_cameras?: boolean
+  keycard_access?: boolean
+  keycode_entry?: boolean
+  security_guard?: boolean
+  onsite_manager?: boolean
+  gated_community?: boolean
+  intercom_system?: boolean
+  building_alarm?: boolean
+
   // Media files for upload
   media_files?: MediaFile[]
   // New categorized media structure
@@ -493,32 +505,10 @@ export interface Reference {
   email?: string
 }
 
-// Room and Building Types
-export interface Room {
-  room_id: string
-  room_number: string
-  building_id: string
-  ready_to_rent: boolean
-  status: RoomStatus
-  booked_from?: string
-  booked_till?: string
-  active_tenants: number
-  maximum_people_in_room: number
-  private_room_rent: number
-  shared_room_rent_2?: number
-  floor_number: number
-  bed_count: number
-  bathroom_type: BathroomType
-  bed_size: string
-  bed_type: string
-  view?: string
-  room_images?: string[]
-  virtual_tour_url?: string
-  available_from?: string
-  additional_features?: string
-}
+// Room interface is defined above in ROOM TYPES section (line ~278)
+// Duplicate Room interface removed to prevent type conflicts
 
-// RoomStatus is already defined above
+// RoomStatus is already defined above in ROOM TYPES section
 
 // Duplicate Building interface removed - using the one defined above
 
@@ -747,4 +737,220 @@ export interface TemplateSelectorProps {
   onTemplateSelect: (template: FormTemplate) => void
   onRecentSelect: (submission: RecentSubmission) => void
   className?: string
+}
+
+// ============================================================================
+// ROOM POC TYPES (Proof of Concept - Dynamic Bed Management)
+// ============================================================================
+
+export type RoomPoCType = 'Private' | 'Shared'
+export type BedType = 'Single' | 'Double' | 'Queen' | 'King' | 'Bunk'
+export type ViewType = 'Street' | 'Garden' | 'Courtyard' | 'None'
+// Note: BathroomType is defined above in ROOM TYPES section as 'Private' | 'Shared' | 'En-Suite'
+export type BookingStatus = 'Available' | 'Reserved' | 'Occupied'
+
+export interface BedBookingInfo {
+  availableFrom?: string
+  availableUntil?: string
+  status?: BookingStatus
+}
+
+export interface BedData {
+  bedName?: string
+  bedType?: BedType
+  view?: ViewType
+  rent?: number
+  maxOccupancy?: number
+  bookingInfo?: BedBookingInfo
+}
+
+export interface RoomPoCFormData {
+  // Step 1: Basic Information
+  roomNumber: string
+  buildingId: string
+  roomType: RoomPoCType
+  maxBeds: number
+  bathroomType?: BathroomType
+  floorNumber?: number
+
+  // Step 2: Individual Bed Configuration
+  beds: BedData[]
+
+  // Step 3: Room Amenities & Photos
+  roomAmenities: {
+    miniFridge: boolean
+    sink: boolean
+    beddingProvided: boolean
+    workDesk: boolean
+    workChair: boolean
+    heating: boolean
+    airConditioning: boolean
+    cableTv: boolean
+  }
+  roomPhotos: File[]
+  customAmenities?: string
+
+  // Step 4: Maintenance & Utilities
+  maintenance: {
+    lastCheckDate?: string
+    lastMaintenanceStaffId?: string
+    lastRenovationDate?: string
+  }
+  condition: {
+    roomConditionScore?: number
+    cleaningFrequency?: string
+    utilitiesMeterId?: string
+    lastCleaningDate?: string
+  }
+  utilitiesIncluded: {
+    electricity: boolean
+    water: boolean
+    gas: boolean
+    internet: boolean
+    cableTv: boolean
+    trash: boolean
+    heating: boolean
+    ac: boolean
+  }
+}
+
+export interface RoomPoCFormProps {
+  onSubmit: (data: RoomPoCFormData) => void | Promise<void>
+  onCancel: () => void
+  isLoading?: boolean
+  buildings: any[] // Use any[] to avoid type conflicts with FormDataProvider
+  // Edit mode props
+  initialData?: Partial<RoomPoCFormData>
+  mode?: 'create' | 'edit'
+  roomId?: string // For edit mode - existing room_id
+}
+
+// ============================================================================
+// WALKSCORE API TYPES
+// ============================================================================
+
+// WalkScore score descriptions based on score ranges
+export type WalkScoreDescription =
+  | "Walker's Paradise"      // 90-100
+  | "Very Walkable"          // 70-89
+  | "Somewhat Walkable"      // 50-69
+  | "Car-Dependent"          // 25-49
+  | "Almost All Errands Require a Car" // 0-24
+
+export type TransitScoreDescription =
+  | "Excellent Transit"      // 90-100
+  | "Excellent Transit"      // 70-89
+  | "Good Transit"           // 50-69
+  | "Some Transit"           // 25-49
+  | "Minimal Transit"        // 0-24
+
+export type BikeScoreDescription =
+  | "Biker's Paradise"       // 90-100
+  | "Very Bikeable"          // 70-89
+  | "Bikeable"               // 50-69
+  | "Somewhat Bikeable"      // 0-49
+
+// Individual score data
+export interface WalkScoreDetail {
+  score: number              // 0-100
+  description: string        // Human-readable description
+}
+
+// Nearby amenity from WalkScore API
+export interface WalkScoreAmenity {
+  name: string               // Business name
+  type: string               // Category: grocery, restaurant, coffee, etc.
+  distance: number           // Distance in miles
+  icon?: string              // Optional icon identifier
+}
+
+// Categorized amenities for display
+export interface CategorizedAmenities {
+  dining: WalkScoreAmenity[]
+  grocery: WalkScoreAmenity[]
+  coffee: WalkScoreAmenity[]
+  shopping: WalkScoreAmenity[]
+  entertainment: WalkScoreAmenity[]
+  fitness: WalkScoreAmenity[]
+  parks: WalkScoreAmenity[]
+  schools: WalkScoreAmenity[]
+  other: WalkScoreAmenity[]
+}
+
+// Transit options nearby
+export interface TransitOption {
+  name: string               // Station/stop name
+  type: 'bus' | 'subway' | 'rail' | 'light_rail' | 'ferry' | 'cable_car' | 'other'
+  distance: number           // Distance in miles
+  routes?: string[]          // Route numbers/names
+}
+
+// Complete WalkScore data structure
+export interface WalkScoreData {
+  // Core scores
+  walk_score: WalkScoreDetail
+  transit_score?: WalkScoreDetail
+  bike_score?: WalkScoreDetail
+
+  // Nearby amenities organized by category
+  nearby_amenities: CategorizedAmenities
+
+  // Transit options
+  transit_options: TransitOption[]
+
+  // Metadata
+  address_used: string       // The address that was looked up
+  fetched_at: string         // ISO timestamp of when data was fetched
+  logo_url: string           // WalkScore logo URL (required for attribution)
+  more_info_url: string      // Link to full WalkScore page
+
+  // Status
+  status: 'success' | 'error' | 'no_data'
+  error_message?: string
+}
+
+// API response from WalkScore
+export interface WalkScoreApiResponse {
+  status: number
+  walkscore?: number
+  description?: string
+  updated?: string
+  logo_url?: string
+  more_info_icon?: string
+  more_info_link?: string
+  ws_link?: string
+  help_link?: string
+  snapped_lat?: number
+  snapped_lon?: number
+  // Transit score (requires separate API call or premium)
+  transit?: {
+    score?: number
+    description?: string
+    summary?: string
+  }
+  // Bike score
+  bike?: {
+    score?: number
+    description?: string
+  }
+}
+
+// Component props for WalkScore display
+export interface WalkScoreDisplayProps {
+  data: WalkScoreData | null
+  isLoading: boolean
+  error?: string
+  onRetry?: () => void
+  compact?: boolean          // Compact view for smaller spaces
+  showAmenities?: boolean    // Whether to show nearby amenities
+  className?: string
+}
+
+// Hook return type for useWalkScore
+export interface UseWalkScoreReturn {
+  data: WalkScoreData | null
+  isLoading: boolean
+  error: string | null
+  fetchWalkScore: (address: string, city: string, state: string, zip: string) => Promise<void>
+  clearData: () => void
 }

@@ -8,11 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { EnhancedCard, StatusBadge } from '@/components/ui/enhanced-components'
 import OperatorForm from './OperatorForm'
 import BuildingForm from './BuildingForm'
-import RoomForm from './RoomForm'
+import RoomPoCForm from './RoomPoCForm'
 import TenantForm from './TenantForm'
 import LeadForm from './LeadForm'
 import { FormDataProvider, useFormData } from './FormDataProvider'
-import { OperatorFormData, BuildingFormData, RoomFormData, TenantFormData, LeadFormData } from '@/types'
+import { OperatorFormData, BuildingFormData, RoomPoCFormData, TenantFormData, LeadFormData } from '@/types'
+import { databaseService } from '@/lib/supabase/database'
 import { formIntegration } from '../../lib/supabase/form-integration'
 import DatabaseLogsPanel from '../dashboard/DatabaseLogsPanel'
 import AnalyticsDashboard from '../dashboard/AnalyticsDashboard'
@@ -241,6 +242,34 @@ function FormsDashboardContent() {
         return (
           <OperatorForm
             onSubmit={(data) => handleFormSubmit(data, 'operator')}
+            onSaveAndAddAnother={async (data) => {
+              // Handle Save & Add Another - save but don't navigate away
+              try {
+                console.log('🔄 FormsDashboard: Save & Add Another operator')
+                const result = await formIntegration.operator.submitOperator(data)
+                if (result.success) {
+                  await formData.refreshOperators()
+                  showFormSuccessMessage('operator', 'saved')
+                  return true // Success - form will reset itself
+                } else {
+                  if (result.validationErrors) {
+                    console.error('Validation errors:', result.validationErrors)
+                  }
+                  if (result.error) {
+                    handleFormSubmissionError(new Error(result.error), {
+                      additionalInfo: { formType: 'operator', data }
+                    })
+                  }
+                  return false
+                }
+              } catch (error) {
+                console.error('Error in Save & Add Another:', error)
+                handleFormSubmissionError(error, {
+                  additionalInfo: { formType: 'operator', operation: 'saveAndAddAnother' }
+                })
+                return false
+              }
+            }}
             onCancel={handleFormCancel}
             isLoading={isLoading}
           />
@@ -258,14 +287,116 @@ function FormsDashboardContent() {
       
       case 'room':
         return (
-          <RoomForm
-            onSubmit={async (data) => {
-              await handleFormSubmit(data, 'room')
-            }}
-            onCancel={handleFormCancel}
-            isLoading={isLoading}
-            buildings={formData.buildings}
-          />
+          <div className="container mx-auto px-4 py-8">
+            <RoomPoCForm
+              onSubmit={async (data: RoomPoCFormData) => {
+                // Transform RoomPoCFormData to Supabase rooms table format
+                // Using the new database columns from migration 20241202_add_room_poc_fields.sql
+
+                const roomId = `ROOM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+                // Process beds with proper structure for AI consumption
+                // Each bed gets: id, status, rent, availability dates
+                const processedBeds = data.beds.map((bed, index) => ({
+                  bed_id: `${roomId}_BED_${index + 1}`,
+                  bedName: bed.bedName || `Bed ${index + 1}`,
+                  bedType: bed.bedType || null,
+                  view: bed.view || null,
+                  rent: bed.rent || null,
+                  maxOccupancy: bed.maxOccupancy || 1,
+                  status: bed.bookingInfo?.status || 'Available',
+                  availableFrom: bed.bookingInfo?.availableFrom || null,
+                  availableUntil: bed.bookingInfo?.availableUntil || null,
+                }))
+
+                // Compute AI-friendly summary data (stored inside beds_configuration JSON)
+                const bedRents = processedBeds.map(b => b.rent).filter((r): r is number => r != null && r > 0)
+                const availableBeds = processedBeds.filter(b => b.status === 'Available' || !b.status)
+
+                // Wrap beds with computed fields for AI queries
+                const bedsConfigWithMeta = {
+                  beds: processedBeds,
+                  // AI-optimized computed fields (stored in JSON since DB columns may not exist)
+                  min_rent: bedRents.length > 0 ? Math.min(...bedRents) : null,
+                  max_rent: bedRents.length > 0 ? Math.max(...bedRents) : null,
+                  available_count: availableBeds.length,
+                  has_available: availableBeds.length > 0,
+                  total_beds: processedBeds.length,
+                }
+
+                // Transform to ACTUAL database columns that exist
+                // Based on backend/app/db/models.py Room class
+                const transformedData = {
+                  // Required identifiers
+                  room_id: roomId,
+                  building_id: data.buildingId,
+                  room_number: data.roomNumber,
+
+                  // Room classification (columns that EXIST)
+                  room_type: data.roomType,
+                  floor_number: data.floorNumber || 1,
+                  bathroom_type: data.bathroomType || 'Shared',
+                  bed_count: data.maxBeds,
+
+                  // Status fields (these columns EXIST in backend model)
+                  status: 'Available',
+                  ready_to_rent: true,
+
+                  // Beds configuration as JSON string (column EXISTS)
+                  // Store all bed data + computed fields here for AI to parse
+                  beds_configuration: JSON.stringify(bedsConfigWithMeta),
+
+                  // Boolean amenity fields (these columns EXIST)
+                  mini_fridge: data.roomAmenities.miniFridge || false,
+                  sink: data.roomAmenities.sink || false,
+                  bedding_provided: data.roomAmenities.beddingProvided || false,
+                  work_desk: data.roomAmenities.workDesk || false,
+                  work_chair: data.roomAmenities.workChair || false,
+                  heating: data.roomAmenities.heating || false,
+                  air_conditioning: data.roomAmenities.airConditioning || false,
+                  cable_tv: data.roomAmenities.cableTv || false,
+                  furnished: data.roomAmenities.beddingProvided || false,
+
+                  // Maintenance tracking (columns EXIST)
+                  last_renovation_date: data.maintenance.lastRenovationDate || null,
+                  room_condition_score: data.condition.roomConditionScore || null,
+                  cleaning_frequency: data.condition.cleaningFrequency || null,
+                  utilities_meter_id: data.condition.utilitiesMeterId || null,
+                  last_cleaning_date: data.condition.lastCleaningDate || null,
+
+                  // Utilities as JSON string (column is utilities_included_details, NOT utilities_included)
+                  utilities_included_details: JSON.stringify(data.utilitiesIncluded),
+
+                  // Description for AI context
+                  description: data.customAmenities || null,
+
+                  // Legacy rent fields (columns EXIST) - for backward compatibility
+                  private_room_rent: data.beds[0]?.rent || null,
+                  shared_room_rent_2: data.beds.length >= 2 ? data.beds[1]?.rent : null,
+                  shared_room_rent_3: data.beds.length >= 3 ? data.beds[2]?.rent : null,
+                  shared_room_rent_4: data.beds.length >= 4 ? data.beds[3]?.rent : null,
+                }
+
+                try {
+                  console.log('Submitting room data:', transformedData)
+                  const result = await databaseService.rooms.create(transformedData)
+                  if (result.success) {
+                    showFormSuccessMessage('room', 'saved')
+                    handleFormCancel()
+                  } else {
+                    console.error('Room creation failed:', result.error)
+                    throw new Error(result.error?.message || 'Failed to create room')
+                  }
+                } catch (error) {
+                  console.error('Room submission error:', error)
+                  handleFormSubmissionError(error, { additionalInfo: { formType: 'room', operation: 'save' } })
+                }
+              }}
+              onCancel={handleFormCancel}
+              isLoading={isLoading}
+              buildings={formData.buildings}
+            />
+          </div>
         )
       
 

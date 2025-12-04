@@ -10,9 +10,12 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { EnhancedCard, EnhancedInput, EnhancedSelect, QuickSelectButtons, StatusBadge, ProgressIndicator } from '@/components/ui/enhanced-components'
 import AddressAutocomplete, { AddressData } from '@/components/ui/AddressAutocomplete'
 import CopyFromPrevious from '@/components/ui/CopyFromPrevious'
+import WalkScoreDisplay from '@/components/ui/WalkScoreDisplay'
+import GoogleDrivePicker from '@/components/ui/GoogleDrivePicker'
 import { useFormSmartDefaults } from '@/hooks/useSmartDefaults'
 import { useFormStepNavigation } from '@/hooks/useFormStepNavigation'
-import { BuildingFormData, MediaFile } from '@/types'
+import { useAutoWalkScore } from '@/hooks/useWalkScore'
+import { BuildingFormData, MediaFile, WalkScoreData } from '@/types'
 import { 
   validateBuildingFormData, 
   transformBuildingDataForBackend, 
@@ -23,6 +26,7 @@ import {
 } from '@/lib/backend-sync'
 import { MediaUploadSection } from './MediaUploadSection'
 import { ValidationSummary } from './ValidationSummary'
+import OperatorDrawer from './OperatorDrawer'
 import { createFormDataWithFiles } from '@/utils/fileUpload'
 import {
   Building,
@@ -43,7 +47,8 @@ import {
   Dumbbell,
   Users,
   Accessibility,
-  AlertCircle
+  AlertCircle,
+  UserPlus
 } from 'lucide-react'
 import '@/styles/design-system.css'
 
@@ -271,6 +276,74 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     videos: []
   })
 
+  // Drag-drop state for image upload zones
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null)
+
+  // Drag-to-reorder state for uploaded images
+  const [draggedImage, setDraggedImage] = useState<{ category: string; index: number } | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  // State for inline operator creation
+  const [isOperatorDrawerOpen, setIsOperatorDrawerOpen] = useState(false)
+  const [localOperators, setLocalOperators] = useState(operators)
+
+  // Update local operators when prop changes
+  useEffect(() => {
+    setLocalOperators(operators)
+  }, [operators])
+
+  // Handle new operator created from drawer
+  const handleOperatorCreated = (newOperator: any) => {
+    setLocalOperators(prev => [...prev, {
+      operator_id: newOperator.operator_id,
+      name: newOperator.name,
+      operator_type: newOperator.operator_type
+    }])
+    // Auto-select the newly created operator as building manager
+    handleInputChange('operator_id', newOperator.operator_id)
+  }
+
+  // WalkScore integration - auto-fetch when address is complete
+  const {
+    data: walkScoreData,
+    isLoading: walkScoreLoading,
+    error: walkScoreError,
+    retry: retryWalkScore,
+    isAddressComplete: hasCompleteAddress
+  } = useAutoWalkScore({
+    address: formData.address,
+    city: formData.city,
+    state: formData.state,
+    zip: formData.zip_code,
+    enabled: true,
+    debounceMs: 1500 // Wait 1.5s after last keystroke
+  })
+
+  // Store WalkScore data in form when fetched
+  useEffect(() => {
+    if (walkScoreData && walkScoreData.status === 'success') {
+      // Store as JSON string for backend compatibility
+      handleInputChange('walkscore_data', JSON.stringify(walkScoreData))
+
+      // Also update nearby_conveniences_walk and nearby_transportation for backward compatibility
+      const amenitiesSummary = Object.entries(walkScoreData.nearby_amenities)
+        .filter(([_, items]) => items.length > 0)
+        .map(([category, items]) => `${category}: ${items.map(i => i.name).join(', ')}`)
+        .join('; ')
+
+      const transitSummary = walkScoreData.transit_options
+        .map(t => `${t.name} (${t.distance} mi)`)
+        .join(', ')
+
+      if (amenitiesSummary) {
+        handleInputChange('nearby_conveniences_walk', amenitiesSummary)
+      }
+      if (transitSummary) {
+        handleInputChange('nearby_transportation', transitSummary)
+      }
+    }
+  }, [walkScoreData])
+
   const steps = [
     { id: 'basic', title: 'Basic Information', icon: <Building className="w-5 h-5" /> },
     { id: 'location', title: 'Location & Address', icon: <MapPin className="w-5 h-5" /> },
@@ -450,7 +523,7 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
   const handleAddressSelect = (addressData: AddressData) => {
     console.log('📍 Address selected:', addressData)
-    
+
     setFormData(prev => {
       const updatedData = {
         ...prev,
@@ -460,9 +533,11 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         city: addressData.city,
         state: addressData.state,
         zip_code: addressData.zip, // Map to zip_code field for validation
-        zip: addressData.zip // Keep for compatibility
+        zip: addressData.zip, // Keep for compatibility
+        // Auto-fill neighborhood from Google Places if available
+        area: addressData.neighborhood || addressData.sublocality || prev.area || ''
       }
-      
+
       // Clear all address-related validation errors
       setErrors(prevErrors => {
         const newErrors = { ...prevErrors }
@@ -474,15 +549,19 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         delete newErrors.zip_code // Clear legacy error too
         return newErrors
       })
-      
+
       return updatedData
     })
 
-    // Show success feedback
+    // Show success feedback with neighborhood info
+    const neighborhoodInfo = addressData.neighborhood
+      ? ` | Neighborhood: ${addressData.neighborhood}`
+      : ''
+
     import('@/lib/error-handler').then(({ showSuccessMessage }) => {
       showSuccessMessage(
         'Address Auto-filled! ✅',
-        `All location fields have been populated from: ${addressData.street}, ${addressData.city}, ${addressData.state}`,
+        `All location fields populated: ${addressData.street}, ${addressData.city}, ${addressData.state}${neighborhoodInfo}`,
         { duration: 3000 }
       )
     })
@@ -643,14 +722,114 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
     Promise.all(mediaFilePromises).then((newFiles) => {
       if (category === 'videos') return // Videos handled separately
-      
+
       setCategorizedMedia(prev => ({
         ...prev,
         [category]: [...prev[category], ...newFiles]
       }))
-      
+
       // Reset the file input after successful upload
       resetImageInput(e.target)
+    })
+  }
+
+  // Drag-drop handlers for image upload zones
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, category: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverCategory(category)
+  }
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, category: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverCategory(category)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // Only clear if we're actually leaving the drop zone (not entering a child)
+    const relatedTarget = e.relatedTarget as HTMLElement
+    if (!e.currentTarget.contains(relatedTarget)) {
+      setDragOverCategory(null)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, category: keyof typeof categorizedMedia) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverCategory(null)
+
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length === 0) return
+
+    // Clear previous image validation errors for this category
+    clearImageValidationErrors(category)
+
+    // Validate image files
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+    const validFiles: File[] = []
+    const newErrors: Array<{ file: File; error: string }> = []
+
+    files.forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        newErrors.push({
+          file,
+          error: 'Only image files are allowed in this section'
+        })
+      } else if (file.size > MAX_IMAGE_SIZE) {
+        newErrors.push({
+          file,
+          error: `File size (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds maximum allowed size (10 MB)`
+        })
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    // Update file validation errors if any
+    if (newErrors.length > 0) {
+      setFileValidationErrors(prev => [...prev, ...newErrors])
+
+      // Show user-friendly error message
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Image Upload Error',
+          newErrors.map(err => `${err.file.name}: ${err.error}`).join('\n'),
+          { duration: 6000 }
+        )
+      })
+    }
+
+    // Only process valid files
+    if (validFiles.length === 0) return
+
+    // Create MediaFile objects with category tagging
+    const mediaFilePromises = validFiles.map(async (file) => {
+      return new Promise<MediaFile>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          resolve({
+            id: `${category}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            file: file,
+            preview: reader.result as string,
+            category: 'building_image',
+            metadata: { category, tag: category }
+          })
+        }
+        reader.readAsDataURL(file)
+      })
+    })
+
+    Promise.all(mediaFilePromises).then((newFiles) => {
+      setCategorizedMedia(prev => ({
+        ...prev,
+        [category]: [...prev[category], ...newFiles]
+      }))
     })
   }
 
@@ -730,9 +909,89 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
         ...prev,
         videos: [...prev.videos, ...newFiles]
       }))
-      
+
       // Reset the file input after successful upload
       resetVideoInput(e.target)
+    })
+  }
+
+  // Video drag-drop handler
+  const handleVideoDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverCategory(null)
+
+    // Check if we've already reached the video limit
+    if (categorizedMedia.videos.length >= 3) return
+
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length === 0) return
+
+    // Clear previous video validation errors
+    clearVideoValidationErrors()
+
+    // Limit to remaining available slots
+    const availableSlots = 3 - categorizedMedia.videos.length
+    const filesToProcess = files.slice(0, availableSlots)
+
+    // Validate video files
+    const MAX_VIDEO_SIZE = 500 * 1024 * 1024 // 500MB
+    const validFiles: File[] = []
+    const newErrors: Array<{ file: File; error: string }> = []
+
+    filesToProcess.forEach(file => {
+      if (!file.type.startsWith('video/')) {
+        newErrors.push({
+          file,
+          error: 'Only video files are allowed in this section'
+        })
+      } else if (file.size > MAX_VIDEO_SIZE) {
+        newErrors.push({
+          file,
+          error: `File size (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds maximum allowed size (500 MB)`
+        })
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    // Update file validation errors if any
+    if (newErrors.length > 0) {
+      setFileValidationErrors(prev => [...prev, ...newErrors])
+
+      // Show user-friendly error message
+      import('@/lib/error-handler').then(({ showWarningMessage }) => {
+        showWarningMessage(
+          'Video Upload Error',
+          newErrors.map(err => `${err.file.name}: ${err.error}`).join('\n'),
+          { duration: 8000 }
+        )
+      })
+    }
+
+    // Only process valid files
+    if (validFiles.length === 0) return
+
+    const mediaFilePromises = validFiles.map(async (file) => {
+      return new Promise<MediaFile>((resolve) => {
+        resolve({
+          id: `video_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          file: file,
+          preview: '',
+          category: 'building_video',
+          metadata: { category: 'videos', tag: 'video' }
+        })
+      })
+    })
+
+    Promise.all(mediaFilePromises).then((newFiles) => {
+      setCategorizedMedia(prev => ({
+        ...prev,
+        videos: [...prev.videos, ...newFiles]
+      }))
     })
   }
 
@@ -764,19 +1023,136 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
     input.value = ''
   }
 
+  // Handle files imported from Google Drive
+  const handleGoogleDriveFiles = async (files: File[], category: keyof typeof categorizedMedia) => {
+    const isVideoCategory = category === 'videos'
+    const MAX_SIZE = isVideoCategory ? 500 * 1024 * 1024 : 10 * 1024 * 1024
+    const validFiles: File[] = []
+
+    files.forEach(file => {
+      const isImage = file.type.startsWith('image/')
+      const isVideo = file.type.startsWith('video/')
+
+      if (isVideoCategory && !isVideo) {
+        return // Skip non-video files in video category
+      } else if (!isVideoCategory && !isImage) {
+        return // Skip non-image files in image category
+      } else if (file.size > MAX_SIZE) {
+        return // Skip files that are too large
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    if (validFiles.length === 0) return
+
+    // Create MediaFile objects
+    const mediaFilePromises = validFiles.map(async (file) => {
+      return new Promise<MediaFile>((resolve) => {
+        if (isVideoCategory) {
+          resolve({
+            id: `video_gdrive_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            file: file,
+            preview: '',
+            category: 'building_video',
+            metadata: { category: 'videos', tag: 'video', source: 'google_drive' }
+          })
+        } else {
+          const reader = new FileReader()
+          reader.onload = () => {
+            resolve({
+              id: `${category}_gdrive_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              file: file,
+              preview: reader.result as string,
+              category: 'building_image',
+              metadata: { category, tag: category, source: 'google_drive' }
+            })
+          }
+          reader.readAsDataURL(file)
+        }
+      })
+    })
+
+    const newFiles = await Promise.all(mediaFilePromises)
+
+    // For videos, check max limit
+    if (isVideoCategory) {
+      const availableSlots = 3 - categorizedMedia.videos.length
+      const filesToAdd = newFiles.slice(0, availableSlots)
+      setCategorizedMedia(prev => ({ ...prev, videos: [...prev.videos, ...filesToAdd] }))
+    } else {
+      setCategorizedMedia(prev => ({ ...prev, [category]: [...prev[category], ...newFiles] }))
+    }
+  }
+
   const removeMedia = (category: keyof typeof categorizedMedia, fileId: string) => {
     setCategorizedMedia(prev => ({
       ...prev,
       [category]: prev[category].filter(file => file.id !== fileId)
     }))
-    
+
     // Also remove any validation errors for this file
     const removedFile = categorizedMedia[category].find(file => file.id === fileId)
     if (removedFile) {
-      setFileValidationErrors(prev => 
+      setFileValidationErrors(prev =>
         prev.filter(err => err.file.name !== removedFile.name)
       )
     }
+  }
+
+  // Reorder images within a category
+  const reorderImages = (category: keyof typeof categorizedMedia, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+
+    setCategorizedMedia(prev => {
+      const images = [...prev[category]]
+      const [movedImage] = images.splice(fromIndex, 1)
+      images.splice(toIndex, 0, movedImage)
+      return { ...prev, [category]: images }
+    })
+  }
+
+  // Drag handlers for reordering images
+  const handleImageDragStart = (e: React.DragEvent<HTMLDivElement>, category: string, index: number) => {
+    setDraggedImage({ category, index })
+    e.dataTransfer.effectAllowed = 'move'
+    // Add a visual cue
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = '0.5'
+    }
+  }
+
+  const handleImageDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    setDraggedImage(null)
+    setDragOverIndex(null)
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = '1'
+    }
+  }
+
+  const handleImageDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverIndex(index)
+  }
+
+  const handleImageDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>, category: keyof typeof categorizedMedia, toIndex: number) => {
+    e.preventDefault()
+    if (draggedImage && draggedImage.category === category) {
+      reorderImages(category, draggedImage.index, toIndex)
+    }
+    setDraggedImage(null)
+    setDragOverIndex(null)
   }
 
   const renderImagePreview = (category: keyof typeof categorizedMedia) => {
@@ -787,20 +1163,44 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
 
     return (
       <div className="grid grid-cols-2 gap-2 mt-3">
-        {images.map((file) => (
-          <div key={file.id} className="relative">
+        {images.map((file, index) => (
+          <div
+            key={file.id}
+            draggable
+            onDragStart={(e) => handleImageDragStart(e, category, index)}
+            onDragEnd={handleImageDragEnd}
+            onDragOver={(e) => handleImageDragOver(e, index)}
+            onDragLeave={handleImageDragLeave}
+            onDrop={(e) => handleImageDrop(e, category, index)}
+            className={`relative cursor-grab active:cursor-grabbing transition-all duration-200 ${
+              draggedImage?.category === category && dragOverIndex === index
+                ? 'ring-2 ring-blue-500 ring-offset-2 scale-105'
+                : ''
+            } ${
+              draggedImage?.category === category && draggedImage?.index === index
+                ? 'opacity-50'
+                : ''
+            }`}
+          >
             <img
               src={file.preview}
               alt={file.name}
-              className="w-full h-20 object-cover rounded border"
+              className="w-full h-20 object-cover rounded border pointer-events-none"
             />
             <button
               type="button"
               onClick={() => removeMedia(category, file.id)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 z-10"
             >
               <X className="w-3 h-3" />
             </button>
+            {/* Drag handle indicator */}
+            <div className="absolute top-1 left-1 bg-black bg-opacity-50 text-white rounded px-1 py-0.5 text-xs flex items-center gap-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
+              </svg>
+              {index + 1}
+            </div>
             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
               {file.name}
             </div>
@@ -1280,20 +1680,31 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Building Manager <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formData.operator_id?.toString() || ''}
-                  onChange={(e) => handleInputChange('operator_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className={`w-full p-2 border rounded-md ${
-                    errors.operator_id ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select a manager</option>
-                  {operators.filter(op => op.operator_type === 'BUILDING_MANAGER' || op.operator_type === 'ADMIN').map(operator => (
-                    <option key={operator.operator_id} value={operator.operator_id}>
-                      {operator.name} ({operator.operator_type})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={formData.operator_id?.toString() || ''}
+                    onChange={(e) => handleInputChange('operator_id', e.target.value ? parseInt(e.target.value) : undefined)}
+                    className={`flex-1 p-2 border rounded-md ${
+                      errors.operator_id ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Select a manager</option>
+                    {localOperators.filter(op => op.operator_type === 'BUILDING_MANAGER' || op.operator_type === 'ADMIN' || op.operator_type === 'OWNER').map(operator => (
+                      <option key={operator.operator_id} value={operator.operator_id}>
+                        {operator.name} ({operator.operator_type.replace(/_/g, ' ')})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsOperatorDrawerOpen(true)}
+                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                    title="Add new operator"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Add New</span>
+                  </button>
+                </div>
                 {errors.operator_id && (
                   <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                     <span className="text-red-500">⚠</span>
@@ -1306,18 +1717,29 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Property Manager
                 </label>
-                <select
-                  value={formData.property_manager || ''}
-                  onChange={(e) => handleInputChange('property_manager', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Select property manager</option>
-                  {operators.map(operator => (
-                    <option key={operator.operator_id} value={operator.operator_id}>
-                      {operator.name} ({operator.operator_type})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={formData.property_manager || ''}
+                    onChange={(e) => handleInputChange('property_manager', e.target.value ? parseInt(e.target.value) : undefined)}
+                    className="flex-1 p-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select property manager</option>
+                    {localOperators.map(operator => (
+                      <option key={operator.operator_id} value={operator.operator_id}>
+                        {operator.name} ({operator.operator_type.replace(/_/g, ' ')})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsOperatorDrawerOpen(true)}
+                    className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                    title="Add new operator"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Add New</span>
+                  </button>
+                </div>
               </div>
 
 
@@ -1608,79 +2030,15 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nearby Conveniences (Walking Distance)
-                </label>
-
-                {/* Quick add buttons */}
-                <div className="mb-2">
-                  <label className="text-xs text-gray-500 mb-1 block">Quick Add:</label>
-                  <div className="flex flex-wrap gap-1">
-                    {COMMON_CONVENIENCES.map((convenience) => (
-                      <button
-                        key={convenience}
-                        type="button"
-                        onClick={() => {
-                          const current = formData.nearby_conveniences_walk || ''
-                          const newValue = current ? `${current}, ${convenience}` : convenience
-                          handleInputChange('nearby_conveniences_walk', newValue)
-                        }}
-                        className="px-2 py-0.5 text-xs bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition-colors"
-                      >
-                        + {convenience}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <textarea
-                  value={formData.nearby_conveniences_walk || ''}
-                  onChange={(e) => handleInputChange('nearby_conveniences_walk', e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Click buttons above or type manually..."
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Transportation Options
-                </label>
-
-                {/* Quick add buttons */}
-                <div className="mb-2">
-                  <label className="text-xs text-gray-500 mb-1 block">Quick Add:</label>
-                  <div className="flex flex-wrap gap-1">
-                    {TRANSPORTATION_OPTIONS.map((transport) => (
-                      <button
-                        key={transport}
-                        type="button"
-                        onClick={() => {
-                          const current = formData.nearby_transportation || ''
-                          const newValue = current ? `${current}, ${transport}` : transport
-                          handleInputChange('nearby_transportation', newValue)
-                        }}
-                        className="px-2 py-0.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 transition-colors"
-                      >
-                        + {transport}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <textarea
-                  value={formData.nearby_transportation || ''}
-                  onChange={(e) => handleInputChange('nearby_transportation', e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Click buttons above or type manually..."
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  rows={3}
-                />
-              </div>
-            </div>
+            {/* WalkScore Integration - Auto-fetched location data */}
+            <WalkScoreDisplay
+              data={walkScoreData}
+              isLoading={walkScoreLoading}
+              error={walkScoreError || undefined}
+              onRetry={retryWalkScore}
+              showAmenities={true}
+              className="mt-4"
+            />
 
           </div>
         )
@@ -1983,7 +2341,9 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 {[
                   { key: 'security_cameras', label: 'Security Cameras', icon: '📹' },
                   { key: 'keycard_access', label: 'Keycard Access', icon: '🗝️' },
+                  { key: 'keycode_entry', label: 'Keycode Entry', icon: '🔢' },
                   { key: 'security_guard', label: 'Security Guard', icon: '👮' },
+                  { key: 'onsite_manager', label: 'Onsite Manager', icon: '🏠' },
                   { key: 'gated_community', label: 'Gated Community', icon: '🚪' },
                   { key: 'intercom_system', label: 'Intercom System', icon: '📞' },
                   { key: 'building_alarm', label: 'Building Alarm', icon: '🚨' }
@@ -2087,20 +2447,40 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <Building className="w-4 h-4" />
                   Outside Building
                 </h4>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => handleCategorizedImageUpload(e, 'outside')}
-                    className="hidden"
-                    id="outside-images"
+                <div className="flex gap-2">
+                  <div
+                    className={`flex-1 border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                      dragOverCategory === 'outside'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, 'outside')}
+                    onDragEnter={(e) => handleDragEnter(e, 'outside')}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, 'outside')}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleCategorizedImageUpload(e, 'outside')}
+                      className="hidden"
+                      id="outside-images"
+                    />
+                    <label htmlFor="outside-images" className="cursor-pointer">
+                      <Camera className={`w-8 h-8 mx-auto mb-2 ${dragOverCategory === 'outside' ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <p className={`text-sm ${dragOverCategory === 'outside' ? 'text-blue-600' : 'text-gray-600'}`}>
+                        {dragOverCategory === 'outside' ? 'Drop images here' : 'Click or drag to upload'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
+                    </label>
+                  </div>
+                  <GoogleDrivePicker
+                    fileTypes="images"
+                    maxFiles={10}
+                    variant="icon-only"
+                    onFilesDownloaded={(files) => handleGoogleDriveFiles(files, 'outside')}
                   />
-                  <label htmlFor="outside-images" className="cursor-pointer">
-                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Upload exterior photos</p>
-                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
-                  </label>
                 </div>
                 {renderImagePreview('outside')}
               </div>
@@ -2111,20 +2491,40 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <Users className="w-4 h-4" />
                   Common Areas
                 </h4>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => handleCategorizedImageUpload(e, 'common_areas')}
-                    className="hidden"
-                    id="common-images"
+                <div className="flex gap-2">
+                  <div
+                    className={`flex-1 border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                      dragOverCategory === 'common_areas'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, 'common_areas')}
+                    onDragEnter={(e) => handleDragEnter(e, 'common_areas')}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, 'common_areas')}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleCategorizedImageUpload(e, 'common_areas')}
+                      className="hidden"
+                      id="common-images"
+                    />
+                    <label htmlFor="common-images" className="cursor-pointer">
+                      <Camera className={`w-8 h-8 mx-auto mb-2 ${dragOverCategory === 'common_areas' ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <p className={`text-sm ${dragOverCategory === 'common_areas' ? 'text-blue-600' : 'text-gray-600'}`}>
+                        {dragOverCategory === 'common_areas' ? 'Drop images here' : 'Click or drag to upload'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
+                    </label>
+                  </div>
+                  <GoogleDrivePicker
+                    fileTypes="images"
+                    maxFiles={10}
+                    variant="icon-only"
+                    onFilesDownloaded={(files) => handleGoogleDriveFiles(files, 'common_areas')}
                   />
-                  <label htmlFor="common-images" className="cursor-pointer">
-                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Upload common space photos</p>
-                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
-                  </label>
                 </div>
                 {renderImagePreview('common_areas')}
               </div>
@@ -2135,20 +2535,40 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <Dumbbell className="w-4 h-4" />
                   Amenities
                 </h4>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => handleCategorizedImageUpload(e, 'amenities')}
-                    className="hidden"
-                    id="amenity-images"
+                <div className="flex gap-2">
+                  <div
+                    className={`flex-1 border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                      dragOverCategory === 'amenities'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, 'amenities')}
+                    onDragEnter={(e) => handleDragEnter(e, 'amenities')}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, 'amenities')}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleCategorizedImageUpload(e, 'amenities')}
+                      className="hidden"
+                      id="amenity-images"
+                    />
+                    <label htmlFor="amenity-images" className="cursor-pointer">
+                      <Camera className={`w-8 h-8 mx-auto mb-2 ${dragOverCategory === 'amenities' ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <p className={`text-sm ${dragOverCategory === 'amenities' ? 'text-blue-600' : 'text-gray-600'}`}>
+                        {dragOverCategory === 'amenities' ? 'Drop images here' : 'Click or drag to upload'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
+                    </label>
+                  </div>
+                  <GoogleDrivePicker
+                    fileTypes="images"
+                    maxFiles={10}
+                    variant="icon-only"
+                    onFilesDownloaded={(files) => handleGoogleDriveFiles(files, 'amenities')}
                   />
-                  <label htmlFor="amenity-images" className="cursor-pointer">
-                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Upload gym, rooftop, etc.</p>
-                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
-                  </label>
                 </div>
                 {renderImagePreview('amenities')}
               </div>
@@ -2159,20 +2579,40 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                   <Home className="w-4 h-4" />
                   Kitchen & Bathrooms
                 </h4>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => handleCategorizedImageUpload(e, 'kitchen_bathrooms')}
-                    className="hidden"
-                    id="kitchen-images"
+                <div className="flex gap-2">
+                  <div
+                    className={`flex-1 border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                      dragOverCategory === 'kitchen_bathrooms'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, 'kitchen_bathrooms')}
+                    onDragEnter={(e) => handleDragEnter(e, 'kitchen_bathrooms')}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, 'kitchen_bathrooms')}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleCategorizedImageUpload(e, 'kitchen_bathrooms')}
+                      className="hidden"
+                      id="kitchen-images"
+                    />
+                    <label htmlFor="kitchen-images" className="cursor-pointer">
+                      <Camera className={`w-8 h-8 mx-auto mb-2 ${dragOverCategory === 'kitchen_bathrooms' ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <p className={`text-sm ${dragOverCategory === 'kitchen_bathrooms' ? 'text-blue-600' : 'text-gray-600'}`}>
+                        {dragOverCategory === 'kitchen_bathrooms' ? 'Drop images here' : 'Click or drag to upload'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
+                    </label>
+                  </div>
+                  <GoogleDrivePicker
+                    fileTypes="images"
+                    maxFiles={10}
+                    variant="icon-only"
+                    onFilesDownloaded={(files) => handleGoogleDriveFiles(files, 'kitchen_bathrooms')}
                   />
-                  <label htmlFor="kitchen-images" className="cursor-pointer">
-                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Upload shared facilities</p>
-                    <p className="text-xs text-gray-500 mt-1">Max 10MB • JPEG, PNG, WebP</p>
-                  </label>
                 </div>
                 {renderImagePreview('kitchen_bathrooms')}
               </div>
@@ -2184,43 +2624,124 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
                 <FileText className="w-4 h-4" />
                 Videos (Maximum 3)
               </h4>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                <input
-                  type="file"
-                  multiple
-                  accept="video/*"
-                  onChange={handleVideoUpload}
-                  className="hidden"
-                  id="video-upload"
+              <div className="flex gap-2">
+                <div
+                  className={`flex-1 border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    categorizedMedia.videos.length >= 3
+                      ? 'border-gray-200 bg-gray-50'
+                      : dragOverCategory === 'videos'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-400'
+                  }`}
+                  onDragOver={(e) => categorizedMedia.videos.length < 3 && handleDragOver(e, 'videos')}
+                  onDragEnter={(e) => categorizedMedia.videos.length < 3 && handleDragEnter(e, 'videos')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleVideoDrop}
+                >
+                  <input
+                    type="file"
+                    multiple
+                    accept="video/*"
+                    onChange={handleVideoUpload}
+                    className="hidden"
+                    id="video-upload"
+                    disabled={categorizedMedia.videos.length >= 3}
+                  />
+                  <label htmlFor="video-upload" className={`cursor-pointer ${categorizedMedia.videos.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <FileText className={`w-8 h-8 mx-auto mb-2 ${dragOverCategory === 'videos' ? 'text-blue-500' : 'text-gray-400'}`} />
+                    <p className={`text-sm ${dragOverCategory === 'videos' ? 'text-blue-600' : 'text-gray-600'}`}>
+                      {categorizedMedia.videos.length >= 3
+                        ? 'Maximum 3 videos reached'
+                        : dragOverCategory === 'videos'
+                          ? 'Drop videos here'
+                          : `Click or drag to upload (${categorizedMedia.videos.length}/3)`}
+                    </p>
+                    {categorizedMedia.videos.length < 3 && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Max 500MB per video • MP4, WebM, QuickTime, AVI
+                      </p>
+                    )}
+                  </label>
+                </div>
+                <GoogleDrivePicker
+                  fileTypes="videos"
+                  maxFiles={3 - categorizedMedia.videos.length}
+                  variant="icon-only"
+                  onFilesDownloaded={(files) => handleGoogleDriveFiles(files, 'videos')}
                   disabled={categorizedMedia.videos.length >= 3}
                 />
-                <label htmlFor="video-upload" className={`cursor-pointer ${categorizedMedia.videos.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
-                    {categorizedMedia.videos.length >= 3 ? 'Maximum 3 videos reached' : `Upload videos (${categorizedMedia.videos.length}/3)`}
-                  </p>
-                  {categorizedMedia.videos.length < 3 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Max 500MB per video • MP4, WebM, QuickTime, AVI
-                    </p>
-                  )}
-                </label>
               </div>
               {renderVideoPreview()}
             </div>
 
-            {/* Virtual Tour URL */}
+            {/* Virtual Tour URLs - Multiple URLs supported */}
             <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Virtual Tour URL (Optional)
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video/Virtual Tour URLs (Optional)
               </label>
-              <Input
-                type="url"
-                value={formData.virtual_tour_url || ''}
-                onChange={(e) => handleInputChange('virtual_tour_url', e.target.value)}
-                placeholder="https://example.com/virtual-tour"
-                className="w-full"
-              />
+              <p className="text-xs text-gray-500 mb-3">
+                Add YouTube, Vimeo, Matterport, or other video/tour URLs
+              </p>
+
+              {/* List of existing URLs */}
+              <div className="space-y-2 mb-3">
+                {(formData.virtual_tour_urls || []).map((url: string, index: number) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      type="url"
+                      value={url}
+                      onChange={(e) => {
+                        const urls = [...(formData.virtual_tour_urls || [])]
+                        urls[index] = e.target.value
+                        handleInputChange('virtual_tour_urls', urls)
+                      }}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const urls = (formData.virtual_tour_urls || []).filter((_: string, i: number) => i !== index)
+                        handleInputChange('virtual_tour_urls', urls)
+                      }}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remove URL"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add new URL button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const urls = [...(formData.virtual_tour_urls || []), '']
+                  handleInputChange('virtual_tour_urls', urls)
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              >
+                <span className="text-lg">+</span>
+                Add Video/Tour URL
+              </button>
+
+              {/* Legacy single URL field - hidden but maintains backward compatibility */}
+              {formData.virtual_tour_url && !formData.virtual_tour_urls?.length && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Existing URL (click to convert to new format):</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleInputChange('virtual_tour_urls', [formData.virtual_tour_url])
+                      handleInputChange('virtual_tour_url', '')
+                    }}
+                    className="text-sm text-blue-600 hover:underline truncate block max-w-full"
+                  >
+                    {formData.virtual_tour_url}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )
@@ -2428,6 +2949,13 @@ export default function BuildingForm({ initialData, onSubmit, onCancel, isLoadin
             </div>
           </motion.div>
         </form>
+
+        {/* Operator Drawer for inline creation */}
+        <OperatorDrawer
+          isOpen={isOperatorDrawerOpen}
+          onClose={() => setIsOperatorDrawerOpen(false)}
+          onOperatorCreated={handleOperatorCreated}
+        />
     </div>
   )
 }

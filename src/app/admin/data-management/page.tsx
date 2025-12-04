@@ -163,7 +163,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
             searchFields: ['room_id'],
             filters,
             sortBy: sortConfig.key || 'room_id',
-            sortOrder: sortConfig.direction
+            sortOrder: sortConfig.key ? sortConfig.direction : 'desc' // Default to show recent rooms first
           })
           if (roomsResponse.success && roomsResponse.data) {
             setRooms(roomsResponse.data)
@@ -952,7 +952,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <EnhancedCard variant="premium" className="p-6">
+          <EnhancedCard variant="premium" className="p-6 overflow-visible">
             <div className="flex flex-col md:flex-row items-center gap-4">
               <div className="flex-1 w-full">
                 <EnhancedInput
@@ -981,12 +981,14 @@ export default function DataManagementPage({}: DataManagementPageProps) {
             <AnimatePresence>
               {showFilterPanel && (
                 <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                   className="mt-4 pt-4 border-t border-gray-200"
+                  style={{ overflow: 'visible' }}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-visible">
                     {/* Dynamic filters based on active tab */}
                     {activeTab === 'buildings' && (
                       <>
@@ -1006,14 +1008,37 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                     {activeTab === 'rooms' && (
                       <>
                         <EnhancedSelect
+                          label="Building"
+                          value={String(filters.building_id || '')}
+                          onChange={(value) => setFilters({ ...filters, building_id: value })}
+                          options={[
+                            { value: '', label: 'All Buildings' },
+                            ...buildings.map(b => ({ value: b.building_id, label: b.building_name }))
+                          ]}
+                          searchable
+                        />
+                        <EnhancedSelect
                           label="Status"
                           value={String(filters.status || '')}
                           onChange={(value) => setFilters({ ...filters, status: value })}
                           options={[
                             { value: '', label: 'All Statuses' },
-                            { value: 'AVAILABLE', label: 'Available' },
-                            { value: 'OCCUPIED', label: 'Occupied' },
-                            { value: 'MAINTENANCE', label: 'Maintenance' }
+                            { value: 'Available', label: 'Available' },
+                            { value: 'Occupied', label: 'Occupied' },
+                            { value: 'Maintenance', label: 'Maintenance' },
+                            { value: 'Reserved', label: 'Reserved' }
+                          ]}
+                        />
+                        <EnhancedSelect
+                          label="Room Type"
+                          value={String(filters.room_type || '')}
+                          onChange={(value) => setFilters({ ...filters, room_type: value })}
+                          options={[
+                            { value: '', label: 'All Types' },
+                            { value: 'Standard', label: 'Standard' },
+                            { value: 'Master', label: 'Master' },
+                            { value: 'Ensuite', label: 'En-suite' },
+                            { value: 'Studio', label: 'Studio' }
                           ]}
                         />
                       </>
@@ -1083,40 +1108,160 @@ export default function DataManagementPage({}: DataManagementPageProps) {
                 {renderContent()}
                 
                 {/* Pagination */}
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    {getTotalCountForTab() === 0 
-                      ? 'No data available'
-                      : `Page ${currentPage} of ${Math.ceil(getTotalCountForTab() / ITEMS_PER_PAGE) || 1}`
+                {(() => {
+                  const totalPages = Math.ceil(getTotalCountForTab() / ITEMS_PER_PAGE) || 1
+                  const showPageNumbers = totalPages > 1
+
+                  // Generate page numbers to show
+                  const getPageNumbers = () => {
+                    const pages: (number | string)[] = []
+                    if (totalPages <= 7) {
+                      // Show all pages if 7 or less
+                      for (let i = 1; i <= totalPages; i++) pages.push(i)
+                    } else {
+                      // Always show first page
+                      pages.push(1)
+
+                      if (currentPage > 3) {
+                        pages.push('...')
+                      }
+
+                      // Show pages around current page
+                      const start = Math.max(2, currentPage - 1)
+                      const end = Math.min(totalPages - 1, currentPage + 1)
+
+                      for (let i = start; i <= end; i++) {
+                        if (!pages.includes(i)) pages.push(i)
+                      }
+
+                      if (currentPage < totalPages - 2) {
+                        pages.push('...')
+                      }
+
+                      // Always show last page
+                      if (!pages.includes(totalPages)) pages.push(totalPages)
                     }
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                        className="shadow-sm hover:shadow-md transition-all duration-300"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-                    </motion.div>
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        disabled={currentPage >= Math.ceil(getTotalCountForTab() / ITEMS_PER_PAGE)}
-                        className="shadow-sm hover:shadow-md transition-all duration-300"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </motion.div>
-                  </div>
-                </div>
+                    return pages
+                  }
+
+                  return (
+                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-sm text-gray-600">
+                        {getTotalCountForTab() === 0
+                          ? 'No data available'
+                          : `Page ${currentPage} of ${totalPages} (${getTotalCountForTab()} total)`
+                        }
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap justify-center">
+                        {/* First & Previous */}
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="shadow-sm hover:shadow-md transition-all duration-300"
+                            title="First page"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-4 h-4 -ml-2" />
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            className="shadow-sm hover:shadow-md transition-all duration-300"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                        </motion.div>
+
+                        {/* Page Numbers */}
+                        {showPageNumbers && (
+                          <div className="flex items-center gap-1">
+                            {getPageNumbers().map((page, index) => (
+                              page === '...' ? (
+                                <span key={`ellipsis-${index}`} className="px-2 text-gray-400">...</span>
+                              ) : (
+                                <motion.div
+                                  key={page}
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  <Button
+                                    variant={currentPage === page ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(page as number)}
+                                    className={`min-w-[36px] shadow-sm hover:shadow-md transition-all duration-300 ${
+                                      currentPage === page
+                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                                        : ''
+                                    }`}
+                                  >
+                                    {page}
+                                  </Button>
+                                </motion.div>
+                              )
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Next & Last */}
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(currentPage + 1)}
+                            disabled={currentPage >= totalPages}
+                            className="shadow-sm hover:shadow-md transition-all duration-300"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage >= totalPages}
+                            className="shadow-sm hover:shadow-md transition-all duration-300"
+                            title="Last page"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-4 h-4 -ml-2" />
+                          </Button>
+                        </motion.div>
+
+                        {/* Page Jump Input */}
+                        {totalPages > 5 && (
+                          <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200">
+                            <span className="text-sm text-gray-500">Go to:</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={totalPages}
+                              placeholder="#"
+                              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const value = parseInt((e.target as HTMLInputElement).value)
+                                  if (value >= 1 && value <= totalPages) {
+                                    setCurrentPage(value)
+                                    ;(e.target as HTMLInputElement).value = ''
+                                  }
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
               </>
             )}
           </EnhancedCard>
@@ -1260,6 +1405,7 @@ export default function DataManagementPage({}: DataManagementPageProps) {
         room={viewingRoom}
         open={!!viewingRoom}
         onOpenChange={(open) => !open && setViewingRoom(null)}
+        building={viewingRoom ? buildingMap.get(viewingRoom.building_id) : null}
       />
 
       <ViewTenantModal

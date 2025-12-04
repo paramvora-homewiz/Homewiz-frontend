@@ -5,6 +5,8 @@
  * Provides similar API but uses periodic HTTP requests instead of WebSocket
  */
 
+import { backendConfig } from '../config/backend'
+
 type PollingCallback<T> = (data: T[]) => void
 type ChangeCallback<T> = (change: {
   type: 'INSERT' | 'UPDATE' | 'DELETE'
@@ -213,7 +215,12 @@ class RealtimePollingService {
    * Internal: Build API endpoint for table
    */
   private buildEndpoint(tableName: string, filters?: Record<string, any>): string {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002/api'
+    // Use centralized backend config - no localhost fallback in production
+    const baseUrl = backendConfig.http.chat || ''
+    if (!baseUrl) {
+      console.warn('Backend API URL not configured for polling')
+      return ''
+    }
     const params = new URLSearchParams()
 
     if (filters) {

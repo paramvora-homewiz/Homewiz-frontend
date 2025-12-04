@@ -13,8 +13,8 @@ export default function OperatorFormPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (data: OperatorFormData) => {
-    setIsLoading(true)
+  // Shared submission logic - returns true on success, false on failure
+  const submitOperator = async (data: OperatorFormData): Promise<boolean> => {
     try {
       console.log('Submitting operator to Supabase:', data)
 
@@ -24,13 +24,8 @@ export default function OperatorFormPage() {
 
       if (result.success) {
         console.log('✅ Operator created successfully:', result.data)
-
-        // Show enhanced success message
         showFormSuccessMessage('operator', 'saved')
-
-        // Navigate back to forms dashboard (consistent with other forms)
-        console.log('Navigating back to forms dashboard')
-        router.push('/forms')
+        return true
       } else if (result.validationErrors) {
         // Handle validation errors - don't redirect, show errors to user
         console.error('❌ Validation errors:', result.validationErrors)
@@ -51,9 +46,7 @@ export default function OperatorFormPage() {
             validationErrors: result.validationErrors
           }
         )
-
-        // Don't redirect on validation errors - let user fix them
-        return
+        return false
       } else {
         // Handle other errors (database, network, etc.)
         throw new Error(result.error || 'Failed to save operator')
@@ -67,7 +60,34 @@ export default function OperatorFormPage() {
           operation: 'save'
         }
       })
-      // Don't redirect on errors - let user try again
+      return false
+    }
+  }
+
+  const handleSubmit = async (data: OperatorFormData) => {
+    setIsLoading(true)
+    try {
+      const success = await submitOperator(data)
+      if (success) {
+        // Navigate back to forms dashboard after successful submission
+        console.log('Navigating back to forms dashboard')
+        router.push('/forms')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Save & Add Another - saves but stays on the page
+  const handleSaveAndAddAnother = async (data: OperatorFormData): Promise<boolean> => {
+    console.log('🔄 handleSaveAndAddAnother called')
+    setIsLoading(true)
+    try {
+      const success = await submitOperator(data)
+      console.log('🔄 submitOperator returned:', success)
+      // Return success status - form will reset itself if true
+      // DO NOT navigate - the form handles the reset
+      return success
     } finally {
       setIsLoading(false)
     }
@@ -83,6 +103,11 @@ export default function OperatorFormPage() {
     router.push(backUrl)
   }
 
+  const handleFinish = () => {
+    // Called when user clicks "Done" after adding multiple operators
+    router.push('/forms')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <FormHeader
@@ -94,8 +119,10 @@ export default function OperatorFormPage() {
       <FormDataProvider>
         <OperatorForm
           onSubmit={handleSubmit}
+          onSaveAndAddAnother={handleSaveAndAddAnother}
           onCancel={handleCancel}
           onBack={handleBack}
+          onFinish={handleFinish}
           isLoading={isLoading}
         />
       </FormDataProvider>

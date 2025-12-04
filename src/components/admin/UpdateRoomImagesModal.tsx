@@ -17,8 +17,9 @@ import { parseBuildingImages } from '@/lib/backend-sync'
 import { uploadRoomImages } from '@/lib/supabase/storage'
 import { RoomFormIntegration } from '@/lib/supabase/form-integration'
 import { showSuccessMessage, showWarningMessage, showInfoMessage } from '@/lib/error-handler'
-import { Camera, X, Upload, Image } from 'lucide-react'
+import { Camera, X, Upload, Image, GripVertical } from 'lucide-react'
 import type { Room } from '@/lib/supabase/types'
+import { DraggableFileImageGrid, DraggableUrlImageGrid } from '@/components/ui/DraggableImageGrid'
 
 interface UpdateRoomImagesModalProps {
   room: Room | null
@@ -37,11 +38,12 @@ export default function UpdateRoomImagesModal({
   const [existingImages, setExistingImages] = useState<string[]>([])
   const [deletedImages, setDeletedImages] = useState<string[]>([])
   const [newImages, setNewImages] = useState<File[]>([])
+  const [isDragging, setIsDragging] = useState(false)
 
   // Initialize existing images when modal opens
   useEffect(() => {
     if (open && room) {
-      const images = parseBuildingImages(room.room_images)
+      const images = parseBuildingImages(room.images)
       setExistingImages(images)
       setDeletedImages([])
       setNewImages([])
@@ -53,6 +55,47 @@ export default function UpdateRoomImagesModal({
     if (files) {
       const fileArray = Array.from(files)
       setNewImages(prev => [...prev, ...fileArray])
+    }
+    e.target.value = ''
+  }
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX
+    const y = e.clientY
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    if (isLoading) return
+
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      const fileArray = Array.from(files).filter(file => file.type.startsWith('image/'))
+      if (fileArray.length > 0) {
+        setNewImages(prev => [...prev, ...fileArray])
+      }
     }
   }
 
@@ -80,7 +123,7 @@ export default function UpdateRoomImagesModal({
         console.log(`📸 Uploading ${newImages.length} new room images...`)
         const uploadResults = await uploadRoomImages(room.building_id, room.room_id, newImages)
         const successfulUploads = uploadResults.filter(result => result.success)
-        newImageUrls = successfulUploads.map(result => result.url).filter(Boolean)
+        newImageUrls = successfulUploads.map(result => result.url).filter((url): url is string => Boolean(url))
         
         if (successfulUploads.length < newImages.length) {
           const failedCount = newImages.length - successfulUploads.length
@@ -146,118 +189,68 @@ export default function UpdateRoomImagesModal({
           {/* Current Images */}
           {existingImages.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
                 <Image className="w-5 h-5" />
                 Current Images ({remainingImages.length} of {existingImages.length})
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {existingImages.map((imageUrl, index) => {
-                  const isDeleted = deletedImages.includes(imageUrl)
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`relative group ${isDeleted ? 'opacity-50' : ''}`}
-                    >
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={imageUrl}
-                          alt={`Room photo ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Show a broken image icon instead of placeholder
-                            const parent = e.currentTarget.parentElement
-                            if (parent) {
-                              parent.innerHTML = `
-                                <div class="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                  </svg>
-                                </div>
-                              `
-                            }
-                          }}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleDeleteExistingImage(imageUrl)}
-                        className={`absolute top-2 right-2 w-8 h-8 ${
-                          isDeleted 
-                            ? 'bg-green-500 hover:bg-green-600' 
-                            : 'bg-red-500 hover:bg-red-600'
-                        } text-white rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100`}
-                      >
-                        {isDeleted ? '↺' : <X className="w-4 h-4" />}
-                      </button>
-                      {isDeleted && (
-                        <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                          <span className="text-red-700 font-medium bg-white px-2 py-1 rounded">
-                            Will be deleted
-                          </span>
-                        </div>
-                      )}
-                    </motion.div>
-                  )
-                })}
-              </div>
+              <p className="text-sm text-gray-500 mb-3">Drag to reorder. Click X to mark for deletion.</p>
+              <DraggableUrlImageGrid
+                urls={existingImages}
+                onReorder={(newUrls) => setExistingImages(newUrls)}
+                onRemove={(url) => toggleDeleteExistingImage(url)}
+                columns={4}
+                imageHeight="h-32"
+              />
+              {deletedImages.length > 0 && (
+                <p className="mt-2 text-sm text-red-600">
+                  {deletedImages.length} image(s) marked for deletion
+                </p>
+              )}
             </div>
           )}
 
           {/* New Images to Upload */}
           {newImages.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
                 <Upload className="w-5 h-5" />
                 New Images to Upload ({newImages.length})
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {newImages.map((file, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="relative group"
-                  >
-                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`New image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeNewImage(index)}
-                      className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 rounded-b-lg">
-                      <p className="text-xs truncate">{file.name}</p>
-                      <p className="text-xs text-gray-300">
-                        {(file.size / 1024 / 1024).toFixed(1)}MB
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              <p className="text-sm text-gray-500 mb-3">Drag to reorder</p>
+              <DraggableFileImageGrid
+                files={newImages}
+                onReorder={(reorderedFiles) => setNewImages(reorderedFiles)}
+                onRemove={removeNewImage}
+                columns={4}
+                imageHeight="h-32"
+              />
             </div>
           )}
 
           {/* Upload Area */}
-          <Card className="p-6 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
+          <Card
+            className={`p-6 border-2 border-dashed transition-colors ${
+              isDragging
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <div className="text-center">
-              <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <span className="text-blue-600 hover:text-blue-500 font-medium">
-                  Click to upload more images
-                </span>
-                <span className="text-gray-500"> or drag and drop</span>
-              </label>
+              <Camera className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
+              {isDragging ? (
+                <span className="text-blue-600 font-medium">Drop images here</span>
+              ) : (
+                <label htmlFor="image-upload" className="cursor-pointer">
+                  <span className="text-blue-600 hover:text-blue-500 font-medium">
+                    Click to upload more images
+                  </span>
+                  <span className="text-gray-500"> or drag and drop</span>
+                </label>
+              )}
               <input
                 id="image-upload"
                 type="file"

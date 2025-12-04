@@ -1,31 +1,115 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/ui/enhanced-components'
 import { Room } from '@/lib/supabase/types'
 import { parseBuildingImages } from '@/lib/backend-sync'
-import { 
-  Home, 
-  DollarSign, 
-  Users, 
-  Bed, 
+import {
+  Home,
+  DollarSign,
+  Users,
+  Bed,
   Bath,
   Eye,
   Calendar,
   MapPin,
-  Building
+  Building,
+  BedDouble,
+  CheckCircle,
+  Clock,
+  XCircle
 } from 'lucide-react'
+
+interface BedConfig {
+  bed_id?: string
+  bedName?: string
+  bedType?: string
+  rent?: number
+  status?: string
+  availableFrom?: string | null
+  availableUntil?: string | null
+  view?: string
+  maxOccupancy?: number
+}
+
+interface BedsConfigurationData {
+  beds?: BedConfig[]
+  min_rent?: number
+  max_rent?: number
+  available_count?: number
+  has_available?: boolean
+  total_beds?: number
+}
+
+interface BuildingInfo {
+  building_id: string
+  building_name: string
+  address?: string
+  city?: string
+  state?: string
+}
 
 interface ViewRoomModalProps {
   room: Room | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  building?: BuildingInfo | null
 }
 
-export function ViewRoomModal({ room, open, onOpenChange }: ViewRoomModalProps) {
+export function ViewRoomModal({ room, open, onOpenChange, building }: ViewRoomModalProps) {
+  // Parse beds_configuration
+  const bedsData = useMemo(() => {
+    if (!room?.beds_configuration) return null
+
+    try {
+      let parsed: BedsConfigurationData | BedConfig[]
+      if (typeof room.beds_configuration === 'string') {
+        parsed = JSON.parse(room.beds_configuration)
+      } else {
+        parsed = room.beds_configuration as BedsConfigurationData | BedConfig[]
+      }
+
+      // Handle both formats: {beds: [...]} and direct array [...]
+      if (Array.isArray(parsed)) {
+        return { beds: parsed, min_rent: null, max_rent: null, available_count: parsed.length, total_beds: parsed.length }
+      }
+      return parsed
+    } catch (e) {
+      console.error('Failed to parse beds_configuration:', e)
+      return null
+    }
+  }, [room?.beds_configuration])
+
   if (!room) return null
+
+  // Get bed status badge color
+  const getBedStatusColor = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case 'available':
+        return 'bg-green-100 text-green-800 border-green-300'
+      case 'reserved':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      case 'occupied':
+        return 'bg-red-100 text-red-800 border-red-300'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300'
+    }
+  }
+
+  const getBedStatusIcon = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case 'available':
+        return <CheckCircle className="w-4 h-4 text-green-600" />
+      case 'reserved':
+        return <Clock className="w-4 h-4 text-yellow-600" />
+      case 'occupied':
+        return <XCircle className="w-4 h-4 text-red-600" />
+      default:
+        return null
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,17 +137,24 @@ export function ViewRoomModal({ room, open, onOpenChange }: ViewRoomModalProps) 
                   <p className="text-blue-900 font-semibold text-lg">{room.room_number}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-blue-700 font-medium">Room ID</label>
-                  <p className="text-blue-800 font-mono text-sm">{room.room_id}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-blue-700 font-medium">Building ID</label>
-                  <p className="text-blue-800 font-mono text-sm">{room.building_id}</p>
+                  <label className="text-sm text-blue-700 font-medium">Building</label>
+                  <div className="flex items-center gap-2">
+                    <Building className="w-4 h-4 text-blue-600" />
+                    <p className="text-blue-900 font-semibold">
+                      {building?.building_name || 'Unknown Building'}
+                    </p>
+                  </div>
+                  {(building?.city || building?.address) && (
+                    <p className="text-blue-700 text-sm flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" />
+                      {building?.address ? `${building.address}, ` : ''}{building?.city}{building?.state ? `, ${building.state}` : ''}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-blue-700 font-medium">Status</label>
                   <div className="mt-1">
-                    <StatusBadge status={room.availability_status || 'UNKNOWN'} />
+                    <StatusBadge status={room.status || 'Available'} />
                   </div>
                 </div>
                 <div>
@@ -75,37 +166,73 @@ export function ViewRoomModal({ room, open, onOpenChange }: ViewRoomModalProps) 
               </div>
             </div>
 
-            {/* Occupancy & Pricing */}
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Occupancy & Pricing
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {room.square_footage && (
-                  <div>
-                    <label className="text-sm text-green-700 font-medium">Square Footage</label>
-                    <p className="text-green-900 font-semibold text-lg">{room.square_footage} sq ft</p>
-                  </div>
-                )}
-                {room.floor_number && (
-                  <div>
-                    <label className="text-sm text-green-700 font-medium">Floor Number</label>
-                    <p className="text-green-900 font-semibold text-lg">{room.floor_number}</p>
-                  </div>
-                )}
-                <div className="col-span-2">
-                  <label className="text-sm text-green-700 font-medium">Private Room Rent</label>
-                  <p className="text-green-900 font-semibold text-xl">${room.private_room_rent}/month</p>
+            {/* Occupancy & Pricing - Only show for rooms WITHOUT beds_configuration */}
+            {(!bedsData || !bedsData.beds || bedsData.beds.length === 0) && (room.private_room_rent || room.shared_room_rent_2) && (
+              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Occupancy & Pricing
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {room.square_footage && (
+                    <div>
+                      <label className="text-sm text-green-700 font-medium">Square Footage</label>
+                      <p className="text-green-900 font-semibold text-lg">{room.square_footage} sq ft</p>
+                    </div>
+                  )}
+                  {room.floor_number && (
+                    <div>
+                      <label className="text-sm text-green-700 font-medium">Floor Number</label>
+                      <p className="text-green-900 font-semibold text-lg">{room.floor_number}</p>
+                    </div>
+                  )}
+                  {room.private_room_rent && (
+                    <div className="col-span-2">
+                      <label className="text-sm text-green-700 font-medium">Private Room Rent</label>
+                      <p className="text-green-900 font-semibold text-xl">${room.private_room_rent}/month</p>
+                    </div>
+                  )}
+                  {room.shared_room_rent_2 && (
+                    <div className="col-span-2">
+                      <label className="text-sm text-green-700 font-medium">Shared Room Rent</label>
+                      <p className="text-green-900 font-semibold text-lg">${room.shared_room_rent_2}/month</p>
+                    </div>
+                  )}
                 </div>
-                {room.shared_room_rent_2 && (
-                  <div className="col-span-2">
-                    <label className="text-sm text-green-700 font-medium">Shared Room Rent</label>
-                    <p className="text-green-900 font-semibold text-lg">${room.shared_room_rent_2}/month</p>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
+
+            {/* Pricing Summary - Show for rooms WITH beds_configuration */}
+            {bedsData && bedsData.beds && bedsData.beds.length > 0 && (
+              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Pricing Summary
+                </h3>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-sm text-green-700 font-medium">Starting From</label>
+                    <p className="text-green-900 font-semibold text-xl">
+                      ${bedsData.min_rent || Math.min(...bedsData.beds.filter(b => b.rent).map(b => b.rent!))}/month
+                    </p>
+                  </div>
+                  {bedsData.available_count !== undefined && (
+                    <div>
+                      <label className="text-sm text-green-700 font-medium">Available Beds</label>
+                      <p className="text-green-900 font-semibold">
+                        {bedsData.available_count} of {bedsData.total_beds || bedsData.beds.length}
+                      </p>
+                    </div>
+                  )}
+                  {room.square_footage && (
+                    <div>
+                      <label className="text-sm text-green-700 font-medium">Square Footage</label>
+                      <p className="text-green-900 font-semibold">{room.square_footage} sq ft</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Booking Information */}
             {(room.booked_from || room.booked_till) && (
@@ -174,6 +301,75 @@ export function ViewRoomModal({ room, open, onOpenChange }: ViewRoomModalProps) 
                 )}
               </div>
             </div>
+
+            {/* Individual Beds Configuration */}
+            {bedsData && bedsData.beds && bedsData.beds.length > 0 && (
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-lg">
+                <h3 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
+                  <BedDouble className="w-5 h-5" />
+                  Beds in this Room ({bedsData.beds.length})
+                </h3>
+                {bedsData.min_rent && bedsData.max_rent && (
+                  <p className="text-sm text-amber-700 mb-3">
+                    Price range: ${bedsData.min_rent} - ${bedsData.max_rent}/month
+                  </p>
+                )}
+                <div className="space-y-3">
+                  {bedsData.beds.map((bed, index) => (
+                    <div
+                      key={bed.bed_id || index}
+                      className="bg-white/70 rounded-lg p-3 border border-amber-200"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Bed className="w-4 h-4 text-amber-700" />
+                          <span className="font-semibold text-amber-900">
+                            {bed.bedName || `Bed ${index + 1}`}
+                          </span>
+                          {bed.bedType && (
+                            <Badge variant="outline" className="text-xs">
+                              {bed.bedType}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getBedStatusIcon(bed.status)}
+                          <Badge variant="outline" className={`text-xs ${getBedStatusColor(bed.status)}`}>
+                            {bed.status || 'Available'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {bed.rent && (
+                          <div className="flex items-center gap-1 text-amber-800">
+                            <DollarSign className="w-3 h-3" />
+                            <span className="font-medium">${bed.rent}/month</span>
+                          </div>
+                        )}
+                        {bed.view && (
+                          <div className="flex items-center gap-1 text-amber-700">
+                            <Eye className="w-3 h-3" />
+                            <span>{bed.view} view</span>
+                          </div>
+                        )}
+                        {bed.availableFrom && (
+                          <div className="flex items-center gap-1 text-amber-700">
+                            <Calendar className="w-3 h-3" />
+                            <span>From: {new Date(bed.availableFrom).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {bed.availableUntil && (
+                          <div className="flex items-center gap-1 text-amber-700">
+                            <Calendar className="w-3 h-3" />
+                            <span>Until: {new Date(bed.availableUntil).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Amenities */}
             <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg">
