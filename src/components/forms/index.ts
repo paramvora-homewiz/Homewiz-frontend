@@ -1,7 +1,10 @@
 // Form Components
 export { default as OperatorForm } from './OperatorForm'
 export { default as BuildingForm } from './BuildingForm'
-export { default as RoomForm, NewRoomForm, SimpleRoomForm } from './RoomForm'
+// Legacy RoomForm for editing - exports as RoomForm for backward compatibility
+export { default as RoomForm, NewRoomForm, SimpleRoomForm } from './RoomFormLegacy'
+// New RoomPoCForm for creating rooms with bed configuration
+export { default as RoomPoCForm } from './RoomPoCForm'
 export { default as TenantForm } from './TenantForm'
 export { default as LeadForm } from './LeadForm'
 

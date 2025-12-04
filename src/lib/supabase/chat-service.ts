@@ -373,6 +373,162 @@ export class SupabaseChatService {
       throw error
     }
   }
+
+  /**
+   * Search for individual BEDS (not rooms) - AI-optimized query
+   * Allows queries like "find a bed under $800" or "available beds"
+   */
+  static async searchBeds(params: {
+    maxRent?: number
+    minRent?: number
+    status?: 'Available' | 'Reserved' | 'Occupied'
+    availableFrom?: string
+    bedType?: string
+    city?: string
+  }): Promise<BedSearchResult[]> {
+    try {
+      console.log('🛏️ Searching beds with params:', params)
+
+      // Build query - get rooms with beds_configuration
+      // Note: Bed-level computed fields are stored inside beds_configuration JSON
+      // We fetch all rooms with beds_configuration and filter in JS
+      let query = supabase
+        .from('rooms')
+        .select(`
+          room_id,
+          room_number,
+          floor_number,
+          bathroom_type,
+          room_type,
+          beds_configuration,
+          private_room_rent,
+          buildings (
+            building_id,
+            building_name,
+            city,
+            address,
+            state
+          )
+        `)
+        .eq('ready_to_rent', true)
+        .not('beds_configuration', 'is', null)
+
+      // Only apply building-level filters at SQL level
+      if (params.city) {
+        query = query.ilike('buildings.city', `%${params.city}%`)
+      }
+
+      const { data: rooms, error } = await query
+
+      if (error) {
+        console.error('Error querying rooms for beds:', error)
+        throw error
+      }
+
+      // Extract and filter individual beds from rooms
+      const beds: BedSearchResult[] = []
+
+      for (const room of rooms || []) {
+        // Parse beds_configuration - handle both JSON object and string
+        let bedsConfig = room.beds_configuration
+        if (typeof bedsConfig === 'string') {
+          try {
+            bedsConfig = JSON.parse(bedsConfig)
+          } catch {
+            continue
+          }
+        }
+
+        // Handle both old format (direct array) and new format (object with beds array)
+        let bedsList: any[] = []
+        if (Array.isArray(bedsConfig)) {
+          // Old format: direct array of beds
+          bedsList = bedsConfig
+        } else if (bedsConfig && typeof bedsConfig === 'object' && Array.isArray(bedsConfig.beds)) {
+          // New format: {beds: [...], min_rent: ..., max_rent: ..., ...}
+          bedsList = bedsConfig.beds
+        }
+
+        if (bedsList.length === 0) continue
+
+        for (const bed of bedsList) {
+          // Apply bed-level filters
+          if (params.maxRent && bed.rent && bed.rent > params.maxRent) continue
+          if (params.minRent && bed.rent && bed.rent < params.minRent) continue
+          if (params.status && bed.status && bed.status !== params.status) continue
+          if (params.bedType && bed.bedType && bed.bedType !== params.bedType) continue
+          if (params.availableFrom && bed.availableFrom && bed.availableFrom > params.availableFrom) continue
+
+          // Only include beds with status Available (or no status set)
+          if (params.status === 'Available' && bed.status && bed.status !== 'Available') continue
+
+          // Handle buildings - can be object or array from Supabase
+          const building = Array.isArray(room.buildings) ? room.buildings[0] : room.buildings
+
+          beds.push({
+            // Bed details
+            bed_id: bed.bed_id || `${room.room_id}_BED_unknown`,
+            bedName: bed.bedName || 'Unnamed Bed',
+            bedType: bed.bedType || null,
+            rent: bed.rent || null,
+            status: bed.status || 'Available',
+            availableFrom: bed.availableFrom || null,
+            availableUntil: bed.availableUntil || null,
+            view: bed.view || null,
+            maxOccupancy: bed.maxOccupancy || 1,
+            // Room context
+            room_id: room.room_id,
+            room_number: room.room_number,
+            room_type: room.room_type,
+            floor_number: room.floor_number,
+            bathroom_type: room.bathroom_type,
+            // Building context
+            building_id: building?.building_id || null,
+            building_name: building?.building_name || null,
+            building_city: building?.city || null,
+            building_address: building?.address || null,
+            building_state: building?.state || null,
+          })
+        }
+      }
+
+      // Sort by rent (cheapest first)
+      beds.sort((a, b) => (a.rent || 0) - (b.rent || 0))
+
+      console.log(`🛏️ Found ${beds.length} beds matching criteria`)
+      return beds
+
+    } catch (error) {
+      console.error('Error searching beds:', error)
+      throw error
+    }
+  }
+}
+
+// Type for bed search results
+export interface BedSearchResult {
+  // Bed details
+  bed_id: string
+  bedName: string
+  bedType: string | null
+  rent: number | null
+  status: string
+  availableFrom: string | null
+  availableUntil: string | null
+  view: string | null
+  maxOccupancy: number
+  // Room context
+  room_id: string
+  room_number: string
+  room_type: string
+  floor_number: number | null
+  bathroom_type: string | null
+  // Building context
+  building_id: string | null
+  building_name: string | null
+  building_city: string | null
+  building_address: string | null
+  building_state: string | null
 }
 
 export default SupabaseChatService

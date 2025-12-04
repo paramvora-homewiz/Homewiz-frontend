@@ -94,7 +94,7 @@ export function transformRoomDataForFrontend(backendData: any) {
 
 // Backend Enum Values (Must match backend exactly)
 export const BACKEND_ENUMS = {
-  OPERATOR_TYPES: ['LEASING_AGENT', 'BUILDING_MANAGER', 'ADMIN', 'MAINTENANCE'] as const,
+  OPERATOR_TYPES: ['LEASING_AGENT', 'BUILDING_MANAGER', 'ADMIN', 'MAINTENANCE', 'OWNER'] as const,
   BATHROOM_TYPES: ['Private', 'En-Suite', 'Shared', 'Semi-Private'] as const,
   BED_SIZES: ['Twin', 'Full', 'Queen'] as const,
   BED_TYPES: ['Standard', 'Bunk', 'Loft'] as const,

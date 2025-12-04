@@ -7,14 +7,27 @@
 
 import { z } from 'zod'
 
+// Detect if running in production (Vercel sets this)
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1'
+
+// Get API URL with production safety
+const getDefaultApiUrl = () => {
+  // In production, require explicit configuration - don't fall back to localhost
+  if (isProduction && !process.env.NEXT_PUBLIC_API_URL) {
+    console.warn('⚠️ NEXT_PUBLIC_API_URL not set in production environment')
+    return '' // Return empty to disable backend calls
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002/api'
+}
+
 // Environment validation schema
 const envSchema = z.object({
   // Environment Configuration
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
   NEXT_PUBLIC_APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-  
-  // Backend API Configuration
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:8002/api'),
+
+  // Backend API Configuration - no default in production
+  NEXT_PUBLIC_API_URL: z.string().default(getDefaultApiUrl()),
   NEXT_PUBLIC_CLOUD_API_URL: z.string().url().optional(),
   NEXT_PUBLIC_API_TIMEOUT: z.string().transform(Number).default('30000'),
   NEXT_PUBLIC_DISABLE_BACKEND: z.string().transform(val => val === 'true').default('false'),

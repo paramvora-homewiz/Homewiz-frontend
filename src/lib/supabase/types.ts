@@ -114,6 +114,19 @@ export interface Database {
           utilities_included: Json | null
           images: Json | null
           description: string | null
+          // New fields from RoomPoCForm
+          max_beds: number | null
+          beds_configuration: Json | null
+          room_amenities: Json | null
+          custom_amenities: string | null
+          room_photos: Json | null
+          last_check_date: string | null
+          last_maintenance_staff_id: string | null
+          last_renovation_date: string | null
+          room_condition_score: number | null
+          cleaning_frequency: string | null
+          utilities_meter_id: string | null
+          last_cleaning_date: string | null
         }
         Insert: {
           room_id?: string
@@ -137,6 +150,19 @@ export interface Database {
           utilities_included?: Json | null
           images?: Json | null
           description?: string | null
+          // New fields from RoomPoCForm
+          max_beds?: number | null
+          beds_configuration?: Json | null
+          room_amenities?: Json | null
+          custom_amenities?: string | null
+          room_photos?: Json | null
+          last_check_date?: string | null
+          last_maintenance_staff_id?: string | null
+          last_renovation_date?: string | null
+          room_condition_score?: number | null
+          cleaning_frequency?: string | null
+          utilities_meter_id?: string | null
+          last_cleaning_date?: string | null
         }
         Update: {
           room_id?: string
@@ -160,6 +186,19 @@ export interface Database {
           utilities_included?: Json | null
           images?: Json | null
           description?: string | null
+          // New fields from RoomPoCForm
+          max_beds?: number | null
+          beds_configuration?: Json | null
+          room_amenities?: Json | null
+          custom_amenities?: string | null
+          room_photos?: Json | null
+          last_check_date?: string | null
+          last_maintenance_staff_id?: string | null
+          last_renovation_date?: string | null
+          room_condition_score?: number | null
+          cleaning_frequency?: string | null
+          utilities_meter_id?: string | null
+          last_cleaning_date?: string | null
         }
         Relationships: [
           {

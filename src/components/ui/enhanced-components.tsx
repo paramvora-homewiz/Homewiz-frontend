@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Check, Search, X, Star, TrendingUp, Users, Building, Home, Save, Wifi, WifiOff, Eye, AlertCircle } from 'lucide-react'
 
@@ -205,9 +206,16 @@ export function EnhancedSelect({
 }: EnhancedSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom')
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const selectRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // Ensure we only render portal on client side
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const filteredOptions = searchable
     ? options.filter(option =>
@@ -217,27 +225,36 @@ export function EnhancedSelect({
 
   const selectedOption = options.find(opt => opt.value === value)
 
-  // Calculate dropdown position to avoid viewport cutoff
+  // Calculate dropdown position based on button's screen position
   const calculateDropdownPosition = () => {
     if (!selectRef.current) return
 
-    const rect = selectRef.current.getBoundingClientRect()
+    const buttonRect = selectRef.current.getBoundingClientRect()
     const viewportHeight = window.innerHeight
-    const dropdownHeight = 320 // max-h-80 = 20rem = 320px
-    const spaceBelow = viewportHeight - rect.bottom
-    const spaceAbove = rect.top
+    const dropdownHeight = Math.min(320, filteredOptions.length * 56 + 16) // Estimate dropdown height
+    const spaceBelow = viewportHeight - buttonRect.bottom
+    const spaceAbove = buttonRect.top
 
-    if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-      setDropdownPosition('top')
-    } else {
-      setDropdownPosition('bottom')
-    }
+    // Determine if dropdown should open above or below
+    const openAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+
+    setDropdownStyle({
+      position: 'fixed',
+      left: buttonRect.left,
+      width: buttonRect.width,
+      top: openAbove ? buttonRect.top - dropdownHeight - 4 : buttonRect.bottom + 4,
+      maxHeight: openAbove ? spaceAbove - 8 : spaceBelow - 8,
+    })
   }
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const isInsideSelect = selectRef.current?.contains(target)
+      const isInsideDropdown = dropdownRef.current?.contains(target)
+
+      if (!isInsideSelect && !isInsideDropdown) {
         setIsOpen(false)
         setSearchTerm('')
       }
@@ -251,6 +268,23 @@ export function EnhancedSelect({
       }
     }
   }, [isOpen])
+
+  // Update position on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handlePositionUpdate = () => {
+      calculateDropdownPosition()
+    }
+
+    window.addEventListener('scroll', handlePositionUpdate, true)
+    window.addEventListener('resize', handlePositionUpdate)
+
+    return () => {
+      window.removeEventListener('scroll', handlePositionUpdate, true)
+      window.removeEventListener('resize', handlePositionUpdate)
+    }
+  }, [isOpen, filteredOptions.length])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -286,23 +320,100 @@ export function EnhancedSelect({
       clearTimeout(blurTimeoutRef.current)
     }
 
-    // Check if the new focus target is within our dropdown
-    const relatedTarget = e.relatedTarget as HTMLElement
-    if (selectRef.current && relatedTarget && selectRef.current.contains(relatedTarget)) {
-      return // Don't close if focus is moving within our component
-    }
-
     // Increased timeout to give users more time to interact with dropdown
     blurTimeoutRef.current = setTimeout(() => {
-      // Double-check that we should still close (user might have clicked back in)
-      if (!selectRef.current?.contains(document.activeElement)) {
-        setIsOpen(false)
-        setSearchTerm('')
-        onBlur?.()
-      }
+      setIsOpen(false)
+      setSearchTerm('')
+      onBlur?.()
       blurTimeoutRef.current = null
-    }, 200)
+    }, 150)
   }
+
+  // Dropdown content - rendered via portal
+  const dropdownContent = isOpen && mounted ? (
+    <AnimatePresence>
+      <motion.div
+        ref={dropdownRef}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        className="bg-white border border-gray-200 rounded-lg shadow-2xl z-[99999]"
+        style={{
+          ...dropdownStyle,
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+        }}
+        onMouseDown={(e) => {
+          e.preventDefault()
+          // Clear blur timeout when interacting with dropdown
+          if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current)
+            blurTimeoutRef.current = null
+          }
+        }}
+      >
+        {searchable && (
+          <div className="p-3 border-b border-gray-100 bg-gray-50/50 rounded-t-lg">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search options..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="max-h-64 overflow-y-auto bg-white rounded-b-lg">
+          {filteredOptions.length === 0 ? (
+            <div className="px-4 py-3 text-gray-500 text-center">
+              No options found
+            </div>
+          ) : (
+            filteredOptions.map((option) => (
+              <div
+                key={option.value}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onChange(option.value)
+                  setIsOpen(false)
+                  setSearchTerm('')
+                }}
+                className={`
+                  px-4 py-3 cursor-pointer transition-colors duration-150
+                  hover:bg-blue-50 border-b border-gray-100 last:border-b-0
+                  ${value === option.value ? 'bg-blue-100 text-blue-900' : 'text-gray-700'}
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  {option.icon && (
+                    <div className="flex-shrink-0">
+                      {option.icon}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm leading-5">{option.label}</div>
+                    {option.description && (
+                      <div className="text-xs text-gray-500 mt-0.5 leading-4">{option.description}</div>
+                    )}
+                  </div>
+                  {value === option.value && (
+                    <div className="flex-shrink-0">
+                      <Check className="w-4 h-4 text-blue-600" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  ) : null
 
   return (
     <div className={`relative ${className}`} ref={selectRef}>
@@ -339,93 +450,15 @@ export function EnhancedSelect({
               {selectedOption?.label || placeholder}
             </span>
           </div>
-          <ChevronDown 
+          <ChevronDown
             className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
               isOpen ? 'rotate-180' : ''
-            }`} 
+            }`}
           />
         </motion.button>
 
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: dropdownPosition === 'bottom' ? -10 : 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: dropdownPosition === 'bottom' ? -10 : 10 }}
-              className={`absolute z-[9999] w-full bg-white border border-gray-200 rounded-lg shadow-2xl max-h-80 overflow-hidden ${
-                dropdownPosition === 'bottom' ? 'mt-1 top-full' : 'mb-1 bottom-full'
-              }`}
-              style={{
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-              onMouseUp={(e) => e.preventDefault()}
-            >
-              {searchable && (
-                <div className="p-3 border-b border-gray-100 bg-gray-50/50">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Search options..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="max-h-64 overflow-y-auto bg-white">
-                {filteredOptions.length === 0 ? (
-                  <div className="px-4 py-3 text-gray-500 text-center">
-                    No options found
-                  </div>
-                ) : (
-                  filteredOptions.map((option) => (
-                  <motion.div
-                    key={option.value}
-                    onMouseDown={(e) => {
-                      // Prevent blur event from firing when clicking on option
-                      e.preventDefault()
-                    }}
-                    onClick={() => {
-                      onChange(option.value)
-                      setIsOpen(false)
-                      setSearchTerm('')
-                    }}
-                    className={`
-                      px-4 py-4 cursor-pointer transition-colors duration-150
-                      hover:bg-blue-50 border-b border-gray-100 last:border-b-0
-                      ${value === option.value ? 'bg-blue-100 text-blue-900' : 'text-gray-700'}
-                    `}
-                    whileHover={{ backgroundColor: 'rgb(239 246 255)' }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {option.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm leading-5 break-words">{option.label}</div>
-                        {option.description && (
-                          <div className="text-xs text-gray-500 mt-1 leading-4 break-words">{option.description}</div>
-                        )}
-                      </div>
-                      {value === option.value && (
-                        <div className="flex-shrink-0">
-                          <Check className="w-4 h-4 text-blue-600" />
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Render dropdown via portal to escape overflow constraints */}
+        {mounted && typeof document !== 'undefined' && createPortal(dropdownContent, document.body)}
       </div>
 
       {error && (

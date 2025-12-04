@@ -1,6 +1,9 @@
 // Service to call backend analytics endpoints directly
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8002';
+import { backendConfig } from '../config/backend'
+
+// Use centralized backend config - no localhost fallback in production
+const BACKEND_API_URL = backendConfig.http.base
 
 interface AnalyticsResponse {
   success: boolean;
